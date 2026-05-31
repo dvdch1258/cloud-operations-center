@@ -1,10 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ServiceBase(BaseModel):
-    name: str
-    type: str
-    endpoint: str
+    name: str = Field(example="Grafana")
+    type: str = Field(example="dashboard")
+    endpoint: str = Field(example="http://grafana.local")
 
 
 class ServiceCreate(ServiceBase):
@@ -12,5 +12,5 @@ class ServiceCreate(ServiceBase):
 
 
 class ServiceResponse(ServiceBase):
-    id: int
-    status: str
+    id: int = Field(example=1)
+    status: str = Field(example="up")
