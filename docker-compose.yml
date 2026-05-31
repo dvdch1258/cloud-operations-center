@@ -6,6 +6,8 @@ services:
       - "8000:8000"
     depends_on:
       - postgres
+    environment:
+      DATABASE_URL: postgresql://coc_user:REDACTED_PASSWORD@postgres:5432/coc_db
 
   postgres:
     image: postgres:16
