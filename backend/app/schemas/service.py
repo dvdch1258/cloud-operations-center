@@ -1,10 +1,10 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class ServiceBase(BaseModel):
-    name: str = Field(example="Grafana")
-    type: str = Field(example="dashboard")
-    endpoint: str = Field(example="http://grafana.local")
+    name: str
+    type: str
+    endpoint: str
 
 
 class ServiceCreate(ServiceBase):
@@ -12,5 +12,7 @@ class ServiceCreate(ServiceBase):
 
 
 class ServiceResponse(ServiceBase):
-    id: int = Field(example=1)
-    status: str = Field(example="up")
+    id: int
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)

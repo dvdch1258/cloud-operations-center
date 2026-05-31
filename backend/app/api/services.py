@@ -1,35 +1,32 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
+from app.core.database import get_db
+from app.models.service import Service
 from app.schemas.service import ServiceCreate, ServiceResponse
 
 router = APIRouter(prefix="/services", tags=["services"])
 
-services_db = [
-    {
-        "id": 1,
-        "name": "VPN Producción",
-        "type": "vpn",
-        "endpoint": "10.0.0.1",
-        "status": "up"
-    }
-]
-
 
 @router.get("/", response_model=list[ServiceResponse])
-def get_services():
-    return services_db
+def get_services(db: Session = Depends(get_db)):
+    return db.query(Service).all()
 
 
 @router.post("/", response_model=ServiceResponse)
-def create_service(service: ServiceCreate):
-    new_service = {
-        "id": len(services_db) + 1,
-        "name": service.name,
-        "type": service.type,
-        "endpoint": service.endpoint,
-        "status": "unknown"
-    }
+def create_service(
+    service: ServiceCreate,
+    db: Session = Depends(get_db)
+):
+    new_service = Service(
+        name=service.name,
+        type=service.type,
+        endpoint=service.endpoint,
+        status="unknown"
+    )
 
-    services_db.append(new_service)
+    db.add(new_service)
+    db.commit()
+    db.refresh(new_service)
 
     return new_service
