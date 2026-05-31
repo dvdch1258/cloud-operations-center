@@ -4,3 +4,20 @@ services:
     container_name: coc-backend
     ports:
       - "8000:8000"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    container_name: coc-postgres
+    environment:
+      POSTGRES_USER: coc_user
+      POSTGRES_PASSWORD: REDACTED_PASSWORD
+      POSTGRES_DB: coc_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
