@@ -3,7 +3,11 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.incident import Incident
-from app.schemas.incident import IncidentCreate, IncidentResponse
+from app.schemas.incident import (
+    IncidentCreate,
+    IncidentUpdate,
+    IncidentResponse
+)
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
@@ -60,3 +64,25 @@ def delete_incident(
     db.commit()
 
     return {"message": "Incident deleted successfully"}
+
+@router.put("/{incident_id}", response_model=IncidentResponse)
+def update_incident(
+    incident_id: int,
+    incident_update: IncidentUpdate,
+    db: Session = Depends(get_db)
+):
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    incident.title = incident_update.title
+    incident.description = incident_update.description
+    incident.severity = incident_update.severity
+    incident.status = incident_update.status
+    incident.service_id = incident_update.service_id
+
+    db.commit()
+    db.refresh(incident)
+
+    return incident
