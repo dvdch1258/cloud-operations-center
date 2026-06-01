@@ -10,6 +10,8 @@ class ServiceBase(BaseModel):
 class ServiceCreate(ServiceBase):
     pass
 
+class ServiceUpdate(ServiceBase):
+    status: str
 
 class ServiceResponse(ServiceBase):
     id: int

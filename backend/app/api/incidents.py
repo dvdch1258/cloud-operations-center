@@ -65,6 +65,7 @@ def delete_incident(
 
     return {"message": "Incident deleted successfully"}
 
+
 @router.put("/{incident_id}", response_model=IncidentResponse)
 def update_incident(
     incident_id: int,

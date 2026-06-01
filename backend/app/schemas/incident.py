@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class IncidentBase(BaseModel):
@@ -12,6 +12,12 @@ class IncidentCreate(IncidentBase):
     pass
 
 
+class IncidentUpdate(IncidentBase):
+    status: str
+
+
 class IncidentResponse(IncidentBase):
     id: int
     status: str
+
+    model_config = ConfigDict(from_attributes=True)
