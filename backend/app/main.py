@@ -8,7 +8,6 @@ from app.core.config import settings
 from app.core.database import Base, engine
 from app.models import Service
 
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.app_name,

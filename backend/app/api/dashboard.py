@@ -1,15 +1,39 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
+from app.core.database import get_db
+from app.models.incident import Incident
+from app.models.service import Service
 from app.schemas.dashboard import DashboardSummary
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/summary", response_model=DashboardSummary)
-def get_dashboard_summary():
+def get_dashboard_summary(db: Session = Depends(get_db)):
+    services_total = db.query(Service).count()
+
+    services_up = (
+        db.query(Service)
+        .filter(Service.status == "up")
+        .count()
+    )
+
+    services_down = (
+        db.query(Service)
+        .filter(Service.status == "down")
+        .count()
+    )
+
+    incidents_open = (
+        db.query(Incident)
+        .filter(Incident.status == "open")
+        .count()
+    )
+
     return {
-        "services_total": 3,
-        "services_up": 2,
-        "services_down": 1,
-        "incidents_open": 1
+        "services_total": services_total,
+        "services_up": services_up,
+        "services_down": services_down,
+        "incidents_open": incidents_open
     }
