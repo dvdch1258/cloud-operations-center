@@ -41,5 +41,15 @@ services:
     depends_on:
       - tempo
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: coc-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:

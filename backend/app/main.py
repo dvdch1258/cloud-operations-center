@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
@@ -12,8 +13,11 @@ app = FastAPI(
     version=settings.version
 )
 
-# OpenTelemetry
+# OpenTelemetry traces
 setup_telemetry(app)
+
+# Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 # Routers
 app.include_router(health_router)

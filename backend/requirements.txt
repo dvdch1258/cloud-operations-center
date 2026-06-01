@@ -28,6 +28,8 @@ opentelemetry-sdk==1.42.1
 opentelemetry-semantic-conventions==0.63b1
 opentelemetry-util-http==0.63b1
 packaging==26.2
+prometheus-fastapi-instrumentator==8.0.0
+prometheus_client==0.25.0
 protobuf==6.33.6
 psycopg2-binary==2.9.12
 pydantic==2.13.4

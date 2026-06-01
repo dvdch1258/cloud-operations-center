@@ -38,3 +38,17 @@ Construir una plataforma similar a las herramientas utilizadas por equipos de op
 - Grafana
 - Loki
 - Tempo
+
+
+El backend está instrumentado con OpenTelemetry y exporta trazas a Grafana Tempo mediante OTLP.
+
+### Flujo de trazas
+
+```text
+FastAPI
+  ↓
+OpenTelemetry
+  ↓
+Tempo
+  ↓
+Grafana
