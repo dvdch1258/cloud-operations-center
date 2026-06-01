@@ -52,3 +52,10 @@ OpenTelemetry
 Tempo
   ↓
 Grafana
+
+## Métricas con Prometheus
+
+El backend expone métricas en:
+
+```text
+http://localhost:8000/metrics
