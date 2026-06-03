@@ -7,6 +7,7 @@ from app.api.incidents import router as incidents_router
 from app.api.services import router as services_router
 from app.core.config import settings
 from app.core.telemetry import setup_telemetry
+from app.core.logging_config import setup_logging
 
 app = FastAPI(
     title=settings.app_name,

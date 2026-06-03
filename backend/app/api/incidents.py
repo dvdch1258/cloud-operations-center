@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -9,11 +11,14 @@ from app.schemas.incident import (
     IncidentResponse
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
 
 @router.get("/", response_model=list[IncidentResponse])
 def get_incidents(db: Session = Depends(get_db)):
+    logger.info("incidents_list_requested")
     return db.query(Incident).all()
 
 
@@ -25,7 +30,16 @@ def get_incident(
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
 
     if not incident:
+        logger.warning(
+            "incident_not_found",
+            extra={"incident_id": incident_id}
+        )
         raise HTTPException(status_code=404, detail="Incident not found")
+
+    logger.info(
+        "incident_detail_requested",
+        extra={"incident_id": incident.id}
+    )
 
     return incident
 
@@ -47,6 +61,16 @@ def create_incident(
     db.commit()
     db.refresh(new_incident)
 
+    logger.info(
+        "incident_created",
+        extra={
+            "incident_id": new_incident.id,
+            "incident_title": new_incident.title,
+            "incident_severity": new_incident.severity,
+            "service_id": new_incident.service_id
+        }
+    )
+
     return new_incident
 
 
@@ -58,10 +82,19 @@ def delete_incident(
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
 
     if not incident:
+        logger.warning(
+            "incident_delete_not_found",
+            extra={"incident_id": incident_id}
+        )
         raise HTTPException(status_code=404, detail="Incident not found")
 
     db.delete(incident)
     db.commit()
+
+    logger.info(
+        "incident_deleted",
+        extra={"incident_id": incident_id}
+    )
 
     return {"message": "Incident deleted successfully"}
 
@@ -75,6 +108,10 @@ def update_incident(
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
 
     if not incident:
+        logger.warning(
+            "incident_update_not_found",
+            extra={"incident_id": incident_id}
+        )
         raise HTTPException(status_code=404, detail="Incident not found")
 
     incident.title = incident_update.title
@@ -85,5 +122,15 @@ def update_incident(
 
     db.commit()
     db.refresh(incident)
+
+    logger.info(
+        "incident_updated",
+        extra={
+            "incident_id": incident.id,
+            "incident_status": incident.status,
+            "incident_severity": incident.severity,
+            "service_id": incident.service_id
+        }
+    )
 
     return incident
