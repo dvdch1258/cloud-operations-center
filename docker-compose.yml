@@ -51,5 +51,25 @@ services:
     depends_on:
       - backend
 
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: coc-loki
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./observability/loki/loki.yaml:/etc/loki/loki.yaml
+
+  promtail:
+    image: grafana/promtail:3.2.1
+    container_name: coc-promtail
+    command: ["-config.file=/etc/promtail/promtail.yaml"]
+    volumes:
+      - ./observability/promtail/promtail.yaml:/etc/promtail/promtail.yaml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - loki
+
 volumes:
   postgres_data:
