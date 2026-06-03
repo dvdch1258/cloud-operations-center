@@ -59,3 +59,21 @@ El backend expone métricas en:
 
 ```text
 http://localhost:8000/metrics
+
+
+## Logs con Loki
+
+El backend genera logs estructurados en JSON y Promtail los envía a Loki.
+
+### Flujo de logs
+
+```text
+FastAPI
+  ↓
+stdout JSON logs
+  ↓
+Promtail
+  ↓
+Loki
+  ↓
+Grafana

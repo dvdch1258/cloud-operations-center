@@ -71,5 +71,12 @@ services:
     depends_on:
       - loki
 
+  traffic-generator:
+    build: ./traffic-generator
+    container_name: coc-traffic-generator
+    depends_on:
+      - backend
+    restart: unless-stopped
+
 volumes:
   postgres_data:
