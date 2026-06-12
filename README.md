@@ -77,3 +77,29 @@ Promtail
 Loki
   ↓
 Grafana
+
+
+## Traffic Generator
+
+El laboratorio incluye un generador de tráfico automático para simular uso real de la plataforma.
+
+### Objetivo
+
+Generar actividad continua contra la API para alimentar:
+
+- Métricas en Prometheus
+- Trazas en Tempo
+- Logs en Loki
+
+### Flujo
+
+```text
+Traffic Generator
+  ↓
+FastAPI Backend
+  ↓
+PostgreSQL
+  ↓
+OpenTelemetry / Prometheus / Loki
+  ↓
+Grafana
