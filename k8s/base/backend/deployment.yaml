@@ -3,40 +3,57 @@ kind: Deployment
 metadata:
   name: backend
   namespace: cloud-ops
+
 spec:
   replicas: 1
+
   selector:
     matchLabels:
       app: backend
+
   template:
     metadata:
       labels:
         app: backend
+
     spec:
       containers:
         - name: backend
           image: cloud-operations-backend:latest
           imagePullPolicy: IfNotPresent
+
           ports:
-            - containerPort: 8000
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+
           env:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
                   key: DATABASE_URL
+
           envFrom:
             - configMapRef:
                 name: backend-config
+
           readinessProbe:
             httpGet:
               path: /health
-              port: 8000
-            initialDelaySeconds: 10
+              port: http
+            initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+
           livenessProbe:
             httpGet:
               path: /health
-              port: 8000
-            initialDelaySeconds: 20
+              port: http
+            initialDelaySeconds: 15
             periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
