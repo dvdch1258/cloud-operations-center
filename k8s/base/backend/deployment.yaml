@@ -21,7 +21,10 @@ spec:
             - containerPort: 8000
           env:
             - name: DATABASE_URL
-              value: postgresql://coc_user:REDACTED_PASSWORD@postgres:5432/coc_db
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DATABASE_URL
           envFrom:
             - configMapRef:
                 name: backend-config

@@ -8,16 +8,16 @@ services:
       - postgres
       - tempo
     environment:
-      DATABASE_URL: postgresql://coc_user:REDACTED_PASSWORD@postgres:5432/coc_db
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-coc_user}:${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-coc_db}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4317"
 
   postgres:
     image: postgres:16
     container_name: coc-postgres
     environment:
-      POSTGRES_USER: coc_user
-      POSTGRES_PASSWORD: REDACTED_PASSWORD
-      POSTGRES_DB: coc_db
+      POSTGRES_USER: "${POSTGRES_USER:-coc_user}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD in .env}"
+      POSTGRES_DB: "${POSTGRES_DB:-coc_db}"
     ports:
       - "5432:5432"
     volumes:
@@ -26,9 +26,10 @@ services:
   tempo:
     image: grafana/tempo:2.6.1
     container_name: coc-tempo
-    command: ["-config.file=/etc/tempo.yaml"]
+    command:
+      - "-config.file=/etc/tempo.yaml"
     volumes:
-      - ./observability/tempo/tempo.yaml:/etc/tempo.yaml
+      - ./observability/tempo/tempo.yaml:/etc/tempo.yaml:ro
     ports:
       - "3200:3200"
       - "4317:4317"
@@ -47,27 +48,29 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     depends_on:
       - backend
 
   loki:
     image: grafana/loki:3.2.1
     container_name: coc-loki
-    command: ["-config.file=/etc/loki/loki.yaml"]
+    command:
+      - "-config.file=/etc/loki/loki.yaml"
     ports:
       - "3100:3100"
     volumes:
-      - ./observability/loki/loki.yaml:/etc/loki/loki.yaml
+      - ./observability/loki/loki.yaml:/etc/loki/loki.yaml:ro
 
   promtail:
     image: grafana/promtail:3.2.1
     container_name: coc-promtail
-    command: ["-config.file=/etc/promtail/promtail.yaml"]
+    command:
+      - "-config.file=/etc/promtail/promtail.yaml"
     volumes:
-      - ./observability/promtail/promtail.yaml:/etc/promtail/promtail.yaml
+      - ./observability/promtail/promtail.yaml:/etc/promtail/promtail.yaml:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - loki
 
