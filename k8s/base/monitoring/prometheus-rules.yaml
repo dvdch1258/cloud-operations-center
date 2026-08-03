@@ -98,3 +98,62 @@ data:
             annotations:
               summary: "kube-state-metrics no disponible"
               description: "Prometheus no puede obtener métricas del estado de Kubernetes."
+
+          - alert: BackendHighErrorRate
+            expr: |
+              (
+                sum(
+                  rate(
+                    http_requests_total{
+                      job="backend",
+                      status=~"5.."
+                    }[5m]
+                  )
+                )
+                /
+                clamp_min(
+                  sum(
+                    rate(
+                      http_requests_total{
+                        job="backend"
+                      }[5m]
+                    )
+                  ),
+                  0.001
+                )
+              ) > 0.05
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Tasa elevada de errores HTTP 5xx"
+              description: "Más del 5 % de las peticiones del backend están terminando con errores 5xx durante al menos 2 minutos."
+
+          - alert: BackendHighLatency
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (le) (
+                  rate(
+                    http_request_duration_highr_seconds_bucket{
+                      job="backend"
+                    }[5m]
+                  )
+                )
+              ) > 0.5
+            for: 3m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Latencia elevada en el backend"
+              description: "El percentil 95 de latencia del backend supera los 500 ms durante al menos 3 minutos."
+
+          - alert: TooManyOpenIncidents
+            expr: |
+              coc_incidents_open{job="backend"} >= 5
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Demasiadas incidencias abiertas"
+              description: "Hay {{ printf \"%.0f\" $value }} incidencias abiertas durante al menos 5 minutos."
