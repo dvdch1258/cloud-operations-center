@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+
+data:
+  cloud-operations-alerts.yml: |
+    groups:
+      - name: cloud-operations
+        rules:
+          - alert: PodPendingTooLong
+            expr: |
+              kube_pod_status_phase{
+                namespace=~"cloud-ops|monitoring",
+                phase="Pending"
+              } == 1
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Pod bloqueado en Pending"
+              description: "El pod {{ $labels.namespace }}/{{ $labels.pod }} lleva más de 2 minutos en estado Pending."
+
+          - alert: ContainerRestarting
+            expr: |
+              increase(
+                kube_pod_container_status_restarts_total{
+                  namespace=~"cloud-ops|monitoring"
+                }[10m]
+              ) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: "Contenedor reiniciado"
+              description: "El contenedor {{ $labels.container }} del pod {{ $labels.namespace }}/{{ $labels.pod }} se ha reiniciado durante los últimos 10 minutos."
+
+          - alert: BackendUnavailable
+            expr: |
+              kube_deployment_status_replicas_available{
+                namespace="cloud-ops",
+                deployment="backend"
+              } < 1
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Backend no disponible"
+              description: "El deployment backend no tiene ninguna réplica disponible."
+
+          - alert: PostgreSQLUnavailable
+            expr: |
+              kube_deployment_status_replicas_available{
+                namespace="cloud-ops",
+                deployment="postgres"
+              } < 1
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "PostgreSQL no disponible"
+              description: "El deployment postgres no tiene ninguna réplica disponible."
+
+          - alert: BackendHPAAtMaximum
+            expr: |
+              kube_horizontalpodautoscaler_status_current_replicas{
+                namespace="cloud-ops",
+                horizontalpodautoscaler="backend"
+              }
+              >=
+              kube_horizontalpodautoscaler_spec_max_replicas{
+                namespace="cloud-ops",
+                horizontalpodautoscaler="backend"
+              }
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "HPA del backend en su máximo"
+              description: "El backend lleva más de 5 minutos utilizando el máximo de réplicas permitido."
+
+          - alert: BackendTargetDown
+            expr: |
+              up{job="backend"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Prometheus no puede consultar el backend"
+              description: "El target del backend lleva más de 1 minuto sin responder a Prometheus."
+
+          - alert: KubeStateMetricsDown
+            expr: |
+              up{job="kube-state-metrics"} == 0
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "kube-state-metrics no disponible"
+              description: "Prometheus no puede obtener métricas del estado de Kubernetes."
