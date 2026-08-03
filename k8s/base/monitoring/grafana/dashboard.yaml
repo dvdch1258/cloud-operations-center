@@ -537,6 +537,40 @@ data:
             "x": 16,
             "y": 29
           }
+        },
+        {
+          "id": 16,
+          "type": "logs",
+          "title": "Logs del backend",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{namespace=\"cloud-ops\",container=\"backend\"}",
+              "queryType": "range",
+              "direction": "backward",
+              "editorMode": "code"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "showCommonLabels": false,
+            "wrapLogMessage": true,
+            "prettifyLogMessage": false,
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "sortOrder": "Descending"
+          },
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 37
+          }
         }
       ],
       "refresh": "15s",
@@ -556,7 +590,7 @@ data:
       "timezone": "browser",
       "title": "Cloud Operations Center",
       "uid": "cloud-operations-center",
-      "version": 2
+      "version": 3
     }
 kind: ConfigMap
 metadata:
