@@ -3,21 +3,87 @@ kind: Deployment
 metadata:
   name: postgres
   namespace: cloud-ops
+
 spec:
   replicas: 1
+
+  strategy:
+    type: Recreate
+
   selector:
     matchLabels:
       app: postgres
+
   template:
     metadata:
       labels:
         app: postgres
+
     spec:
       containers:
         - name: postgres
           image: postgres:16
+          imagePullPolicy: IfNotPresent
+
           ports:
-            - containerPort: 5432
-          envFrom:
-            - secretRef:
-                name: postgres-secret
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "256Mi"
+            limits:
+              cpu: "750m"
+              memory: "768Mi"
+
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
