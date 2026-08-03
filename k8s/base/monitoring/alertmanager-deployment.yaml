@@ -60,6 +60,10 @@ spec:
               mountPath: /etc/alertmanager
               readOnly: true
 
+            - name: telegram-secret
+              mountPath: /etc/alertmanager/secrets
+              readOnly: true
+
             - name: data
               mountPath: /alertmanager
 
@@ -67,6 +71,10 @@ spec:
         - name: config
           configMap:
             name: alertmanager-config
+
+        - name: telegram-secret
+          secret:
+            secretName: alertmanager-telegram
 
         - name: data
           emptyDir: {}

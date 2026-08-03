@@ -10,7 +10,7 @@ data:
       resolve_timeout: 5m
 
     route:
-      receiver: default
+      receiver: telegram
       group_by:
         - alertname
         - namespace
@@ -19,4 +19,19 @@ data:
       repeat_interval: 4h
 
     receivers:
-      - name: default
+      - name: telegram
+        telegram_configs:
+          - bot_token_file: /etc/alertmanager/secrets/bot-token
+            chat_id_file: /etc/alertmanager/secrets/chat-id
+            send_resolved: true
+            parse_mode: HTML
+            message: |-
+              {{ if eq .Status "firing" }}🚨 <b>ALERTA ACTIVA</b>{{ else }}✅ <b>ALERTA RESUELTA</b>{{ end }}
+
+              {{ range .Alerts }}
+              <b>{{ .Labels.alertname }}</b>
+              Severidad: {{ .Labels.severity }}
+              Namespace: {{ .Labels.namespace }}
+              Resumen: {{ .Annotations.summary }}
+              Descripción: {{ .Annotations.description }}
+              {{ end }}

@@ -29,3 +29,4 @@ id_ed25519
 .vscode/
 .idea/
 .DS_Store
+k8s/base/monitoring/telegram-secret.env
