@@ -5,7 +5,7 @@ metadata:
   namespace: monitoring
 
 data:
-  prometheus.yaml: |
+  datasources.yaml: |
     apiVersion: 1
 
     datasources:
@@ -23,3 +23,58 @@ data:
         access: proxy
         url: http://loki.monitoring.svc.cluster.local:3100
         editable: false
+
+        jsonData:
+          derivedFields:
+            - name: TraceID
+              matcherRegex: 'trace_id=([a-fA-F0-9]{32})'
+              datasourceUid: tempo
+              url: '$${__value.raw}'
+
+      - name: Tempo
+        uid: tempo
+        type: tempo
+        access: proxy
+        url: http://tempo.monitoring.svc.cluster.local:3200
+        editable: false
+
+        jsonData:
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: "-5m"
+            spanEndTimeShift: "5m"
+            filterByTraceID: true
+            filterBySpanID: false
+            customQuery: true
+            query: '{namespace="cloud-ops",container="backend"} |= "$${__trace.traceId}"'
+
+          tracesToMetrics:
+            datasourceUid: prometheus
+            spanStartTimeShift: "-5m"
+            spanEndTimeShift: "5m"
+            tags:
+              - key: service.name
+                value: service
+            queries:
+              - name: Backend request rate
+                query: 'sum(rate(http_requests_total[5m]))'
+
+              - name: Backend error rate
+                query: 'sum(rate(http_requests_total{status=~"5.."}[5m]))'
+
+              - name: Backend p95 latency
+                query: 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))'
+
+          serviceMap:
+            datasourceUid: prometheus
+
+          nodeGraph:
+            enabled: true
+
+          search:
+            hide: false
+
+          traceQuery:
+            timeShiftEnabled: true
+            spanStartTimeShift: "-5m"
+            spanEndTimeShift: "5m"
