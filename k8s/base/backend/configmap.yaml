@@ -4,4 +4,4 @@ metadata:
   name: backend-config
   namespace: cloud-ops
 data:
-  OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4317"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo.monitoring.svc.cluster.local:4317"

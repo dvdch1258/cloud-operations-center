@@ -21,7 +21,7 @@ def setup_telemetry(app):
 
     otlp_endpoint = os.getenv(
         "OTEL_EXPORTER_OTLP_ENDPOINT",
-        "http://tempo:4317"
+        "http://tempo.monitoring.svc.cluster.local:4317"
     )
 
     otlp_exporter = OTLPSpanExporter(

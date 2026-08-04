@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, Request
 from prometheus_fastapi_instrumentator import Instrumentator
+from opentelemetry import trace
 
 from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
@@ -8,14 +11,48 @@ from app.services.metrics_service import update_business_metrics
 from app.api.services import router as services_router
 from app.core.config import settings
 from app.core.telemetry import setup_telemetry
-from app.core.logging_config import setup_logging
+from app.core.logging_config import configure_logging
+
+configure_logging()
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.version
 )
 
-# OpenTelemetry traces
+request_logger = logging.getLogger("app.requests")
+
+
+@app.middleware("http")
+async def trace_logging_middleware(request: Request, call_next):
+    response = await call_next(request)
+
+    span_context = trace.get_current_span().get_span_context()
+
+    if span_context.is_valid:
+        trace_id = f"{span_context.trace_id:032x}"
+        span_id = f"{span_context.span_id:016x}"
+    else:
+        trace_id = "0" * 32
+        span_id = "0" * 16
+
+    request_logger.info(
+        "http_request method=%s path=%s status_code=%s "
+        "trace_id=%s span_id=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        trace_id,
+        span_id,
+    )
+
+    if span_context.is_valid:
+        response.headers["X-Trace-ID"] = trace_id
+
+    return response
+
+
+# OpenTelemetry must wrap the trace logging middleware
 setup_telemetry(app)
 
 # Prometheus metrics
