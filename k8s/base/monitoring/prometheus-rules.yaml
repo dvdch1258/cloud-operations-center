@@ -26,14 +26,17 @@ data:
             expr: |
               increase(
                 kube_pod_container_status_restarts_total{
-                  namespace=~"cloud-ops|monitoring"
-                }[10m]
-              ) > 0
+                  namespace=~"cloud-ops|monitoring",
+                  container!="POD"
+                }[15m]
+              ) >= 3
+            for: 2m
             labels:
               severity: warning
+              category: infrastructure
             annotations:
-              summary: "Contenedor reiniciado"
-              description: "El contenedor {{ $labels.container }} del pod {{ $labels.namespace }}/{{ $labels.pod }} se ha reiniciado durante los últimos 10 minutos."
+              summary: "Contenedor con reinicios frecuentes"
+              description: "El contenedor {{ $labels.container }} del pod {{ $labels.namespace }}/{{ $labels.pod }} se ha reiniciado al menos 3 veces durante los últimos 15 minutos."
 
           - alert: BackendUnavailable
             expr: |
@@ -131,22 +134,37 @@ data:
 
           - alert: BackendHighLatency
             expr: |
-              histogram_quantile(
-                0.95,
-                sum by (le) (
+              (
+                histogram_quantile(
+                  0.95,
+                  sum by (le, handler, method) (
+                    rate(
+                      http_request_duration_seconds_bucket{
+                        job="backend",
+                        handler!~"/health|/metrics|/services/check-all|none"
+                      }[5m]
+                    )
+                  )
+                ) > 0.75
+              )
+              and on (handler, method)
+              (
+                sum by (handler, method) (
                   rate(
-                    http_request_duration_highr_seconds_bucket{
-                      job="backend"
+                    http_requests_total{
+                      job="backend",
+                      handler!~"/health|/metrics|/services/check-all|none"
                     }[5m]
                   )
-                )
-              ) > 0.5
-            for: 3m
+                ) > 0.02
+              )
+            for: 5m
             labels:
               severity: warning
+              category: application
             annotations:
               summary: "Latencia elevada en el backend"
-              description: "El percentil 95 de latencia del backend supera los 500 ms durante al menos 3 minutos."
+              description: "La ruta {{ $labels.handler }} con método {{ $labels.method }} mantiene una latencia p95 superior a 750 ms con tráfico suficiente durante al menos 5 minutos."
 
           - alert: TooManyOpenIncidents
             expr: |
