@@ -1,0 +1,103 @@
+{
+  "name": "Cloud Ops - Alertas técnicas",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cloud-ops-technical-alerts",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "e0f43b9d-a7b1-47b0-b8e5-168819790b9b",
+      "name": "Webhook Alertmanager",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst payload = input.body ?? input;\n\nif (!payload || typeof payload !== 'object') {\n  throw new Error('Payload vacío o inválido');\n}\n\nif (!['firing', 'resolved'].includes(payload.status)) {\n  throw new Error(\n    `Estado de Alertmanager no válido: ${payload.status}`\n  );\n}\n\nif (!Array.isArray(payload.alerts)) {\n  throw new Error('El payload no contiene el array alerts');\n}\n\nconst alerts = payload.alerts;\n\nif (alerts.length === 0) {\n  return [];\n}\n\nconst escapeHtml = (value) =>\n  String(value ?? '')\n    .replaceAll('&', '&amp;')\n    .replaceAll('<', '&lt;')\n    .replaceAll('>', '&gt;')\n    .replaceAll('\"', '&quot;');\n\nconst first = alerts[0] ?? {};\nconst commonLabels = payload.commonLabels ?? {};\nconst commonAnnotations = payload.commonAnnotations ?? {};\n\nconst status = payload.status;\nconst severity =\n  commonLabels.severity ??\n  first.labels?.severity ??\n  'unknown';\n\nconst severityNames = {\n  critical: 'CRÍTICA',\n  warning: 'AVISO',\n  info: 'INFORMATIVA',\n  unknown: 'SIN CLASIFICAR',\n};\n\nconst severityIcons = {\n  critical: '🔴',\n  warning: '🟠',\n  info: '🔵',\n  unknown: '⚪',\n};\n\nconst groupKey = payload.groupKey ?? 'sin-group-key';\n\nconst fingerprints = alerts\n  .map((alert) => alert.fingerprint)\n  .filter(Boolean)\n  .sort()\n  .join(',');\n\nconst dedupKey = `${status}:${groupKey}:${fingerprints}`;\nconst staticData = $getWorkflowStaticData('global');\nconst now = Date.now();\n\nstaticData.recentNotifications ??= {};\n\nfor (const [key, timestamp] of Object.entries(\n  staticData.recentNotifications\n)) {\n  if (now - timestamp > 10 * 60 * 1000) {\n    delete staticData.recentNotifications[key];\n  }\n}\n\nconst previousTimestamp =\n  staticData.recentNotifications[dedupKey];\n\nif (\n  previousTimestamp &&\n  now - previousTimestamp < 60 * 1000\n) {\n  return [];\n}\n\nstaticData.recentNotifications[dedupKey] = now;\n\nconst formatDate = (value) => {\n  if (!value) return null;\n\n  const date = new Date(value);\n\n  if (Number.isNaN(date.getTime())) return null;\n\n  return date.toLocaleString('es-ES', {\n    timeZone: 'Atlantic/Canary',\n    dateStyle: 'short',\n    timeStyle: 'medium',\n  });\n};\n\nconst header =\n  status === 'firing'\n    ? '🚨 <b>ALERTA TÉCNICA ACTIVA</b>'\n    : '✅ <b>ALERTA TÉCNICA RESUELTA</b>';\n\nconst lines = [\n  header,\n  '',\n  `${severityIcons[severity] ?? severityIcons.unknown} ` +\n    `<b>Severidad:</b> ` +\n    `${escapeHtml(severityNames[severity] ?? severity.toUpperCase())}`,\n  `<b>Número de alertas:</b> ${alerts.length}`,\n];\n\nconst groupSummary =\n  commonAnnotations.summary ??\n  first.annotations?.summary;\n\nif (groupSummary) {\n  lines.push(\n    `<b>Resumen:</b> ${escapeHtml(groupSummary)}`\n  );\n}\n\nfor (const [index, alert] of alerts.slice(0, 10).entries()) {\n  const labels = alert.labels ?? {};\n  const annotations = alert.annotations ?? {};\n\n  const alertName =\n    labels.alertname ??\n    `Alerta ${index + 1}`;\n\n  const service =\n    labels.service ??\n    labels.deployment ??\n    labels.job ??\n    labels.container;\n\n  const location = [\n    labels.namespace,\n    labels.pod,\n  ]\n    .filter(Boolean)\n    .join(' / ');\n\n  const description =\n    annotations.description ??\n    annotations.summary ??\n    'Sin descripción';\n\n  lines.push('');\n  lines.push(\n    `<b>${index + 1}. ${escapeHtml(alertName)}</b>`\n  );\n\n  if (service) {\n    lines.push(\n      `<b>Servicio:</b> ${escapeHtml(service)}`\n    );\n  }\n\n  if (location) {\n    lines.push(\n      `<b>Ubicación:</b> ${escapeHtml(location)}`\n    );\n  }\n\n  lines.push(\n    `<b>Detalle:</b> ${escapeHtml(description)}`\n  );\n\n  const start = formatDate(alert.startsAt);\n  const end = formatDate(alert.endsAt);\n\n  if (start) {\n    lines.push(`<b>Inicio:</b> ${escapeHtml(start)}`);\n  }\n\n  if (status === 'resolved' && end) {\n    lines.push(`<b>Fin:</b> ${escapeHtml(end)}`);\n  }\n}\n\nif (alerts.length > 10) {\n  lines.push('');\n  lines.push(\n    `<i>Se han omitido ${alerts.length - 10} alertas adicionales.</i>`\n  );\n}\n\nlines.push('');\nlines.push('<i>Origen: Prometheus → Alertmanager → n8n</i>');\n\nreturn [\n  {\n    json: {\n      message: lines.join('\\n'),\n      alertStatus: status,\n      severity,\n      groupKey,\n      fingerprints,\n      alertCount: alerts.length,\n      dedupKey,\n    },\n  },\n];"
+      },
+      "id": "7f6acd31-545a-443a-80f2-e1775e58941c",
+      "name": "Normalizar y deduplicar alerta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "798736de-ae07-4b85-804a-2f124556ba01",
+      "name": "Telegram - Alerta técnica",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        360,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Alertmanager": {
+      "main": [
+        [
+          {
+            "node": "Normalizar y deduplicar alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar y deduplicar alerta": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Alerta técnica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Atlantic/Canary"
+  },
+  "staticData": {
+    "global": {
+      "recentNotifications": {
+        "firing:{}:{alertname=\"CloudOpsAlertmanagerRouteTest\", namespace=\"monitoring\", severity=\"warning\"}:dc1aa6501db2f5f6": 1786019504514,
+        "firing:{}:{alertname=\"CloudOpsFinalRouteTest\", namespace=\"monitoring\", severity=\"warning\"}:48f376f3e5b75bad": 1786019752689,
+        "resolved:{}:{alertname=\"CloudOpsFinalRouteTest\", namespace=\"monitoring\", severity=\"warning\"}:48f376f3e5b75bad": 1786020052627
+      }
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionCounter": 8,
+  "tags": [],
+  "versionMetadata": {
+    "name": "Cloud Ops - Alertas técnicas",
+    "description": "v1 - Recepción de alertas de Alertmanager y envío a Telegram"
+  }
+}
