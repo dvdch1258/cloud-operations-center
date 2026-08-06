@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: service-checker
+  namespace: cloud-ops
+  labels:
+    app: service-checker
+spec:
+  schedule: "*/1 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 30
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+
+      template:
+        metadata:
+          labels:
+            app: service-checker
+
+        spec:
+          restartPolicy: Never
+
+          containers:
+            - name: service-checker
+              image: curlimages/curl:8.16.0
+
+              args:
+                - --fail-with-body
+                - --silent
+                - --show-error
+                - --request
+                - POST
+                - http://backend.cloud-ops.svc.cluster.local:8000/services/check-all
+
