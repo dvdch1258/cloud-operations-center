@@ -7,9 +7,10 @@ from app.core.database import get_db
 from app.models.service import Service
 from app.schemas.service import (
     ServiceCreate,
+    ServiceResponse,
     ServiceUpdate,
-    ServiceResponse
 )
+from app.services.service_checker import check_all_services
 
 logger = logging.getLogger(__name__)
 
@@ -22,23 +23,51 @@ def get_services(db: Session = Depends(get_db)):
     return db.query(Service).all()
 
 
+# Debe declararse antes de /{service_id}.
+@router.post("/check-all")
+def run_services_check(db: Session = Depends(get_db)):
+    logger.info("services_check_all_requested")
+
+    result = check_all_services(db)
+
+    logger.info(
+        "services_check_all_completed",
+        extra={
+            "services_checked": result["services_checked"],
+            "services_up": result["services_up"],
+            "services_down": result["services_down"],
+            "incidents_created": result["incidents_created"],
+            "incidents_resolved": result["incidents_resolved"],
+        },
+    )
+
+    return result
+
+
 @router.get("/{service_id}", response_model=ServiceResponse)
 def get_service(
     service_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    service = db.query(Service).filter(Service.id == service_id).first()
+    service = (
+        db.query(Service)
+        .filter(Service.id == service_id)
+        .first()
+    )
 
     if not service:
         logger.warning(
             "service_not_found",
-            extra={"service_id": service_id}
+            extra={"service_id": service_id},
         )
-        raise HTTPException(status_code=404, detail="Service not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Service not found",
+        )
 
     logger.info(
         "service_detail_requested",
-        extra={"service_id": service.id}
+        extra={"service_id": service.id},
     )
 
     return service
@@ -47,13 +76,13 @@ def get_service(
 @router.post("/", response_model=ServiceResponse)
 def create_service(
     service: ServiceCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     new_service = Service(
         name=service.name,
         type=service.type,
         endpoint=service.endpoint,
-        status="unknown"
+        status="unknown",
     )
 
     db.add(new_service)
@@ -65,52 +94,34 @@ def create_service(
         extra={
             "service_id": new_service.id,
             "service_name": new_service.name,
-            "service_type": new_service.type
-        }
+            "service_type": new_service.type,
+        },
     )
 
     return new_service
-
-
-@router.delete("/{service_id}")
-def delete_service(
-    service_id: int,
-    db: Session = Depends(get_db)
-):
-    service = db.query(Service).filter(Service.id == service_id).first()
-
-    if not service:
-        logger.warning(
-            "service_delete_not_found",
-            extra={"service_id": service_id}
-        )
-        raise HTTPException(status_code=404, detail="Service not found")
-
-    db.delete(service)
-    db.commit()
-
-    logger.info(
-        "service_deleted",
-        extra={"service_id": service_id}
-    )
-
-    return {"message": "Service deleted successfully"}
 
 
 @router.put("/{service_id}", response_model=ServiceResponse)
 def update_service(
     service_id: int,
     service_update: ServiceUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    service = db.query(Service).filter(Service.id == service_id).first()
+    service = (
+        db.query(Service)
+        .filter(Service.id == service_id)
+        .first()
+    )
 
     if not service:
         logger.warning(
             "service_update_not_found",
-            extra={"service_id": service_id}
+            extra={"service_id": service_id},
         )
-        raise HTTPException(status_code=404, detail="Service not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Service not found",
+        )
 
     service.name = service_update.name
     service.type = service_update.type
@@ -125,8 +136,40 @@ def update_service(
         extra={
             "service_id": service.id,
             "service_name": service.name,
-            "service_status": service.status
-        }
+            "service_status": service.status,
+        },
     )
 
     return service
+
+
+@router.delete("/{service_id}")
+def delete_service(
+    service_id: int,
+    db: Session = Depends(get_db),
+):
+    service = (
+        db.query(Service)
+        .filter(Service.id == service_id)
+        .first()
+    )
+
+    if not service:
+        logger.warning(
+            "service_delete_not_found",
+            extra={"service_id": service_id},
+        )
+        raise HTTPException(
+            status_code=404,
+            detail="Service not found",
+        )
+
+    db.delete(service)
+    db.commit()
+
+    logger.info(
+        "service_deleted",
+        extra={"service_id": service_id},
+    )
+
+    return {"message": "Service deleted successfully"}
