@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: cloud-operations-backend:0.2.0
+          image: cloud-operations-backend:0.2.2
           imagePullPolicy: IfNotPresent
 
           ports:

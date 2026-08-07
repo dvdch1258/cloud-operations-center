@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime, timezone
 
 import requests
@@ -6,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.incident import Incident
 from app.models.service import Service
+from app.models.service_check import ServiceCheck
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,11 @@ def _find_active_auto_incident(
     )
 
 
-def _check_endpoint(endpoint: str) -> tuple[str, int | None, str | None]:
+def _check_endpoint(
+    endpoint: str,
+) -> tuple[str, int | None, float, str | None]:
+    started_at = time.perf_counter()
+
     try:
         response = requests.get(
             endpoint,
@@ -38,18 +44,39 @@ def _check_endpoint(endpoint: str) -> tuple[str, int | None, str | None]:
             allow_redirects=True,
         )
 
+        response_time_ms = round(
+            (time.perf_counter() - started_at) * 1000,
+            2,
+        )
+
         # Consideramos operativo cualquier 2xx o 3xx.
         if 200 <= response.status_code < 400:
-            return "up", response.status_code, None
+            return (
+                "up",
+                response.status_code,
+                response_time_ms,
+                None,
+            )
 
         return (
             "down",
             response.status_code,
+            response_time_ms,
             f"El endpoint respondió con HTTP {response.status_code}",
         )
 
     except requests.RequestException as exc:
-        return "down", None, str(exc)
+        response_time_ms = round(
+            (time.perf_counter() - started_at) * 1000,
+            2,
+        )
+
+        return (
+            "down",
+            None,
+            response_time_ms,
+            str(exc),
+        )
 
 
 def check_all_services(db: Session) -> dict:
@@ -61,7 +88,12 @@ def check_all_services(db: Session) -> dict:
 
     for service in services:
         previous_status = service.status
-        new_status, status_code, error = _check_endpoint(service.endpoint)
+        (
+            new_status,
+            status_code,
+            response_time_ms,
+            error,
+        ) = _check_endpoint(service.endpoint)
 
         service.status = new_status
         active_incident = _find_active_auto_incident(db, service.id)
@@ -112,6 +144,15 @@ def check_all_services(db: Session) -> dict:
                 },
             )
 
+        service_check = ServiceCheck(
+            service_id=service.id,
+            status=new_status,
+            status_code=status_code,
+            response_time_ms=response_time_ms,
+            error=error,
+        )
+        db.add(service_check)
+
         results.append(
             {
                 "service_id": service.id,
@@ -120,11 +161,17 @@ def check_all_services(db: Session) -> dict:
                 "previous_status": previous_status,
                 "status": new_status,
                 "status_code": status_code,
+                "response_time_ms": response_time_ms,
                 "error": error,
             }
         )
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("services_check_commit_failed")
+        raise
 
     return {
         "checked_at": datetime.now(timezone.utc).isoformat(),

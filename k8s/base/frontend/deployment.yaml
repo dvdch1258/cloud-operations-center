@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: cloud-operations-frontend:0.2.1
+          image: cloud-operations-frontend:0.2.2
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

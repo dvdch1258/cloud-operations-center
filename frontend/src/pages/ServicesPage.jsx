@@ -16,6 +16,7 @@ const statusLabels = {
 
 export default function ServicesPage() {
   const [services, setServices] = useState([]);
+  const [uptimeByService, setUptimeByService] = useState({});
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
@@ -26,9 +27,27 @@ export default function ServicesPage() {
 
   const loadServices = useCallback(async () => {
     try {
-      const data = await api.getServices();
+      const serviceData = await api.getServices();
 
-      setServices(data);
+      const uptimeEntries = await Promise.all(
+        serviceData.map(async (service) => {
+          try {
+            const uptime = await api.getServiceUptime(
+              service.id,
+              1
+            );
+
+            return [service.id, uptime];
+          } catch {
+            return [service.id, null];
+          }
+        })
+      );
+
+      setServices(serviceData);
+      setUptimeByService(
+        Object.fromEntries(uptimeEntries)
+      );
       setLastUpdatedAt(new Date());
       setError("");
     } catch (requestError) {
@@ -306,13 +325,20 @@ export default function ServicesPage() {
                   <th>Nombre</th>
                   <th>Tipo</th>
                   <th>Estado</th>
+                  <th>Uptime 1 h</th>
+                  <th>Latencia media</th>
+                  <th>Último check</th>
                   <th>Endpoint</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
 
               <tbody>
-                {services.map((service) => (
+                {services.map((service) => {
+                  const uptime =
+                    uptimeByService[service.id];
+
+                  return (
                   <tr key={service.id}>
                     <td>{service.name}</td>
 
@@ -328,6 +354,41 @@ export default function ServicesPage() {
                         {statusLabels[service.status] ||
                           service.status}
                       </span>
+                    </td>
+
+                    <td>
+                      {uptime?.uptime_percent != null ? (
+                        <span
+                          className={
+                            `uptime-value ` +
+                            `${
+                              uptime.uptime_percent >= 99
+                                ? "uptime-value--good"
+                                : uptime.uptime_percent >= 95
+                                  ? "uptime-value--warning"
+                                  : "uptime-value--danger"
+                            }`
+                          }
+                        >
+                          {uptime.uptime_percent.toFixed(2)} %
+                        </span>
+                      ) : (
+                        <span className="metric-empty">—</span>
+                      )}
+                    </td>
+
+                    <td>
+                      {uptime?.average_response_time_ms != null
+                        ? `${uptime.average_response_time_ms.toFixed(1)} ms`
+                        : "—"}
+                    </td>
+
+                    <td>
+                      {uptime?.last_checked_at
+                        ? new Date(
+                            uptime.last_checked_at
+                          ).toLocaleTimeString()
+                        : "Sin datos"}
                     </td>
 
                     <td className="endpoint-cell">
@@ -355,11 +416,12 @@ export default function ServicesPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
 
                 {!services.length && (
                   <tr>
-                    <td colSpan="5">
+                    <td colSpan="8">
                       No hay servicios registrados.
                     </td>
                   </tr>

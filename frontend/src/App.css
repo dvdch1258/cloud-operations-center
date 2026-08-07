@@ -1184,3 +1184,38 @@ tbody tr:hover {
     font-size: 0.68rem;
   }
 }
+
+/* Métricas históricas de servicios */
+
+.uptime-value {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 8px;
+  border: 1px solid #33445d;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.uptime-value--good {
+  border-color: rgba(59, 214, 139, 0.32);
+  color: #7ce9b3;
+  background: rgba(27, 108, 72, 0.18);
+}
+
+.uptime-value--warning {
+  border-color: rgba(244, 197, 108, 0.35);
+  color: #f4c56c;
+  background: rgba(117, 82, 21, 0.2);
+}
+
+.uptime-value--danger {
+  border-color: rgba(255, 95, 109, 0.38);
+  color: #ffadb5;
+  background: rgba(112, 27, 39, 0.24);
+}
+
+.metric-empty {
+  color: #66768c;
+}

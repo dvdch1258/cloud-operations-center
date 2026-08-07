@@ -43,6 +43,12 @@ export const api = {
     request("/services/check-all", {
       method: "POST",
     }),
+
+  getServiceUptime: (id, hours = 1) =>
+    request(`/services/${id}/uptime?hours=${hours}`),
+
+  getServiceChecks: (id, limit = 100) =>
+    request(`/services/${id}/checks?limit=${limit}`),
   updateService: (id, service) =>
     request(`/services/${id}`, {
       method: "PUT",
