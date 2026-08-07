@@ -30,3 +30,4 @@ id_ed25519
 .idea/
 .DS_Store
 k8s/base/monitoring/telegram-secret.env
+*.bak-*
