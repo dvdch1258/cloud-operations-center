@@ -34,6 +34,7 @@ export const api = {
   getSummary: () => request("/dashboard/summary"),
 
   getServices: () => request("/services/"),
+  getService: (id) => request(`/services/${id}`),
   createService: (service) =>
     request("/services/", {
       method: "POST",

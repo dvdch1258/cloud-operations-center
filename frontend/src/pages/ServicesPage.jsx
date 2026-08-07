@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
 
 const emptyForm = {
@@ -396,6 +397,13 @@ export default function ServicesPage() {
                     </td>
 
                     <td className="table-actions">
+                      <Link
+                        className="table-link-button"
+                        to={`/servicios/${service.id}`}
+                      >
+                        Detalle
+                      </Link>
+
                       <button
                         type="button"
                         onClick={() =>
