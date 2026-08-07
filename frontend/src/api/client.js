@@ -39,6 +39,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(service),
     }),
+  checkServices: () =>
+    request("/services/check-all", {
+      method: "POST",
+    }),
   updateService: (id, service) =>
     request(`/services/${id}`, {
       method: "PUT",

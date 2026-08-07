@@ -23,7 +23,7 @@ export default function Layout() {
 
           <div>
             <strong>Cloud Operations</strong>
-            <span>Control Center</span>
+            <span>Observabilidad · Operaciones</span>
           </div>
         </div>
 
@@ -55,7 +55,7 @@ export default function Layout() {
 
           <div>
             <strong>Cloud Operations</strong>
-            <span>Control Center</span>
+            <span>Observabilidad · Operaciones</span>
           </div>
         </div>
 
@@ -85,7 +85,7 @@ export default function Layout() {
 
         <div className="sidebar__footer">
           <span className="connection-dot" />
-          Conectado mediante NetBird
+          Acceso seguro · NetBird
         </div>
       </aside>
 

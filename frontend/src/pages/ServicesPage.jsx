@@ -8,7 +8,6 @@ const emptyForm = {
   status: "unknown",
 };
 
-
 const statusLabels = {
   up: "Operativo",
   down: "Caído",
@@ -21,11 +20,17 @@ export default function ServicesPage() {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const [lastCheckedAt, setLastCheckedAt] = useState(null);
 
   const loadServices = useCallback(async () => {
     try {
+      const data = await api.getServices();
+
+      setServices(data);
+      setLastUpdatedAt(new Date());
       setError("");
-      setServices(await api.getServices());
     } catch (requestError) {
       setError(requestError.message);
     }
@@ -33,7 +38,40 @@ export default function ServicesPage() {
 
   useEffect(() => {
     loadServices();
+
+    const intervalId = window.setInterval(() => {
+      loadServices();
+    }, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [loadServices]);
+
+  async function checkServicesNow() {
+    if (checking) {
+      return;
+    }
+
+    setChecking(true);
+    setError("");
+
+    try {
+      const result = await api.checkServices();
+
+      setLastCheckedAt(
+        result.checked_at
+          ? new Date(result.checked_at)
+          : new Date()
+      );
+
+      await loadServices();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setChecking(false);
+    }
+  }
 
   function updateField(event) {
     setForm({
@@ -44,6 +82,7 @@ export default function ServicesPage() {
 
   function startEditing(service) {
     setEditingId(service.id);
+
     setForm({
       name: service.name,
       type: service.type,
@@ -59,6 +98,7 @@ export default function ServicesPage() {
 
   async function submitService(event) {
     event.preventDefault();
+
     setSaving(true);
     setError("");
 
@@ -91,6 +131,8 @@ export default function ServicesPage() {
       return;
     }
 
+    setError("");
+
     try {
       await api.deleteService(id);
       await loadServices();
@@ -104,9 +146,11 @@ export default function ServicesPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">INVENTARIO</p>
+
           <h1>Servicios</h1>
+
           <p className="subtitle">
-            Gestiona los componentes monitorizados.
+            Gestiona y supervisa los componentes monitorizados.
           </p>
         </div>
       </header>
@@ -119,9 +163,14 @@ export default function ServicesPage() {
       )}
 
       <section className="management-grid">
-        <form className="panel form-panel" onSubmit={submitService}>
+        <form
+          className="panel form-panel"
+          onSubmit={submitService}
+        >
           <h2>
-            {editingId ? "Editar servicio" : "Nuevo servicio"}
+            {editingId
+              ? "Editar servicio"
+              : "Nuevo servicio"}
           </h2>
 
           <label>
@@ -142,10 +191,18 @@ export default function ServicesPage() {
               onChange={updateField}
             >
               <option value="api">API</option>
-              <option value="database">Base de datos</option>
-              <option value="frontend">Frontend</option>
-              <option value="monitoring">Monitorización</option>
-              <option value="other">Otro</option>
+              <option value="database">
+                Base de datos
+              </option>
+              <option value="frontend">
+                Frontend
+              </option>
+              <option value="monitoring">
+                Monitorización
+              </option>
+              <option value="other">
+                Otro
+              </option>
             </select>
           </label>
 
@@ -168,15 +225,24 @@ export default function ServicesPage() {
                 value={form.status}
                 onChange={updateField}
               >
-                <option value="unknown">Desconocido</option>
-                <option value="up">Operativo</option>
-                <option value="down">Caído</option>
+                <option value="unknown">
+                  Desconocido
+                </option>
+                <option value="up">
+                  Operativo
+                </option>
+                <option value="down">
+                  Caído
+                </option>
               </select>
             </label>
           )}
 
           <div className="form-actions">
-            <button className="primary-button" disabled={saving}>
+            <button
+              className="primary-button"
+              disabled={saving}
+            >
               {saving
                 ? "Guardando..."
                 : editingId
@@ -198,9 +264,40 @@ export default function ServicesPage() {
 
         <section className="panel table-panel">
           <div className="panel__header">
-            <h2>Servicios registrados</h2>
-            <span>{services.length} servicios</span>
+            <div>
+              <h2>Servicios registrados</h2>
+
+              <span>
+                {services.length} servicios
+              </span>
+            </div>
+
+            <div className="table-actions">
+              <span>
+                {lastUpdatedAt
+                  ? `Actualizado ${lastUpdatedAt.toLocaleTimeString()}`
+                  : "Actualizando..."}
+              </span>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={checkServicesNow}
+                disabled={checking}
+              >
+                {checking
+                  ? "Comprobando..."
+                  : "Comprobar ahora"}
+              </button>
+            </div>
           </div>
+
+          {lastCheckedAt && (
+            <p className="subtitle">
+              Última comprobación manual:{" "}
+              {lastCheckedAt.toLocaleTimeString()}
+            </p>
+          )}
 
           <div className="responsive-table">
             <table>
@@ -218,25 +315,41 @@ export default function ServicesPage() {
                 {services.map((service) => (
                   <tr key={service.id}>
                     <td>{service.name}</td>
+
                     <td>{service.type}</td>
+
                     <td>
                       <span
-                        className={`status-badge status-badge--${service.status}`}
+                        className={
+                          `status-badge ` +
+                          `status-badge--${service.status}`
+                        }
                       >
-                        {statusLabels[service.status] || service.status}
+                        {statusLabels[service.status] ||
+                          service.status}
                       </span>
                     </td>
+
                     <td className="endpoint-cell">
                       {service.endpoint}
                     </td>
+
                     <td className="table-actions">
-                      <button onClick={() => startEditing(service)}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          startEditing(service)
+                        }
+                      >
                         Editar
                       </button>
 
                       <button
+                        type="button"
                         className="danger-button"
-                        onClick={() => removeService(service.id)}
+                        onClick={() =>
+                          removeService(service.id)
+                        }
                       >
                         Eliminar
                       </button>
@@ -246,7 +359,9 @@ export default function ServicesPage() {
 
                 {!services.length && (
                   <tr>
-                    <td colSpan="5">No hay servicios registrados.</td>
+                    <td colSpan="5">
+                      No hay servicios registrados.
+                    </td>
                   </tr>
                 )}
               </tbody>

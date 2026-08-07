@@ -59,7 +59,7 @@ export default function SummaryPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">OPERACIONES</p>
-          <h1>Resumen de la plataforma</h1>
+          <h1>Estado operativo</h1>
           <p className="subtitle">
             Estado general de servicios e incidentes.
           </p>

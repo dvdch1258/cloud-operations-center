@@ -9,17 +9,36 @@ const emptyForm = {
   status: "open",
 };
 
+const severityLabels = {
+  low: "Baja",
+  medium: "Media",
+  high: "Alta",
+  critical: "Crítica",
+};
+
+const statusLabels = {
+  open: "Abierto",
+  investigating: "Investigando",
+  resolved: "Resuelto",
+  closed: "Cerrado",
+};
+
+const activeStatuses = new Set([
+  "open",
+  "investigating",
+]);
+
 export default function IncidentsPage() {
   const [incidents, setIncidents] = useState([]);
   const [services, setServices] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
-      setError("");
-
       const [incidentData, serviceData] = await Promise.all([
         api.getIncidents(),
         api.getServices(),
@@ -27,31 +46,48 @@ export default function IncidentsPage() {
 
       setIncidents(incidentData);
       setServices(serviceData);
+      setLastUpdatedAt(new Date());
+      setError("");
 
-      if (!form.service_id && serviceData.length) {
-        setForm((current) => ({
+      setForm((current) => {
+        if (current.service_id || !serviceData.length) {
+          return current;
+        }
+
+        return {
           ...current,
           service_id: String(serviceData[0].id),
-        }));
-      }
+        };
+      });
     } catch (requestError) {
       setError(requestError.message);
     }
-  }, [form.service_id]);
+  }, []);
 
   useEffect(() => {
     loadData();
+
+    const intervalId = window.setInterval(() => {
+      loadData();
+    }, 30000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [loadData]);
 
   function updateField(event) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value,
-    });
+    const { name, value } = event.target;
+
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
   }
 
   function startEditing(incident) {
     setEditingId(incident.id);
+
     setForm({
       title: incident.title,
       description: incident.description,
@@ -63,14 +99,25 @@ export default function IncidentsPage() {
 
   function resetForm() {
     setEditingId(null);
+
     setForm({
       ...emptyForm,
-      service_id: services[0] ? String(services[0].id) : "",
+      service_id: services[0]
+        ? String(services[0].id)
+        : "",
     });
   }
 
   async function submitIncident(event) {
     event.preventDefault();
+
+    if (!form.service_id) {
+      setError("Selecciona un servicio.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
 
     const payload = {
       title: form.title,
@@ -93,13 +140,21 @@ export default function IncidentsPage() {
       await loadData();
     } catch (requestError) {
       setError(requestError.message);
+    } finally {
+      setSaving(false);
     }
   }
 
   async function removeIncident(id) {
-    if (!window.confirm("¿Eliminar este incidente?")) {
+    const confirmed = window.confirm(
+      "¿Seguro que quieres eliminar este incidente?"
+    );
+
+    if (!confirmed) {
       return;
     }
+
+    setError("");
 
     try {
       await api.deleteIncident(id);
@@ -110,17 +165,99 @@ export default function IncidentsPage() {
   }
 
   function serviceName(id) {
-    return services.find((service) => service.id === id)?.name || `#${id}`;
+    return (
+      services.find(
+        (service) => service.id === id
+      )?.name || `#${id}`
+    );
   }
+
+  function renderIncident(incident) {
+    return (
+      <article
+        className={
+          `incident-card ` +
+          `incident-card--${
+            activeStatuses.has(incident.status)
+              ? "active"
+              : "resolved"
+          }`
+        }
+        key={incident.id}
+      >
+        <div>
+          <span
+            className={
+              `severity-badge ` +
+              `severity-badge--${incident.severity}`
+            }
+          >
+            {severityLabels[incident.severity] ||
+              incident.severity}
+          </span>
+
+          <span
+            className={
+              `status-badge ` +
+              `status-badge--${incident.status}`
+            }
+          >
+            {statusLabels[incident.status] ||
+              incident.status}
+          </span>
+        </div>
+
+        <h3>{incident.title}</h3>
+
+        <p>{incident.description}</p>
+
+        <small>
+          Servicio: {serviceName(incident.service_id)}
+        </small>
+
+        <div className="table-actions">
+          <button
+            type="button"
+            onClick={() => startEditing(incident)}
+          >
+            Editar
+          </button>
+
+          <button
+            type="button"
+            className="danger-button"
+            onClick={() =>
+              removeIncident(incident.id)
+            }
+          >
+            Eliminar
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  const activeIncidents = incidents.filter(
+    (incident) =>
+      activeStatuses.has(incident.status)
+  );
+
+  const resolvedIncidents = incidents.filter(
+    (incident) =>
+      !activeStatuses.has(incident.status)
+  );
 
   return (
     <>
       <header className="topbar">
         <div>
           <p className="eyebrow">OPERACIONES</p>
+
           <h1>Incidentes</h1>
+
           <p className="subtitle">
-            Registra y gestiona incidencias operativas.
+            Registra, supervisa y gestiona incidencias
+            operativas.
           </p>
         </div>
       </header>
@@ -133,9 +270,14 @@ export default function IncidentsPage() {
       )}
 
       <section className="management-grid">
-        <form className="panel form-panel" onSubmit={submitIncident}>
+        <form
+          className="panel form-panel"
+          onSubmit={submitIncident}
+        >
           <h2>
-            {editingId ? "Editar incidente" : "Nuevo incidente"}
+            {editingId
+              ? "Editar incidente"
+              : "Nuevo incidente"}
           </h2>
 
           <label>
@@ -182,7 +324,10 @@ export default function IncidentsPage() {
               required
             >
               {services.map((service) => (
-                <option key={service.id} value={service.id}>
+                <option
+                  key={service.id}
+                  value={service.id}
+                >
                   {service.name}
                 </option>
               ))}
@@ -197,10 +342,21 @@ export default function IncidentsPage() {
                 value={form.status}
                 onChange={updateField}
               >
-                <option value="open">Abierto</option>
-                <option value="investigating">Investigando</option>
-                <option value="resolved">Resuelto</option>
-                <option value="closed">Cerrado</option>
+                <option value="open">
+                  Abierto
+                </option>
+
+                <option value="investigating">
+                  Investigando
+                </option>
+
+                <option value="resolved">
+                  Resuelto
+                </option>
+
+                <option value="closed">
+                  Cerrado
+                </option>
               </select>
             </label>
           )}
@@ -208,9 +364,15 @@ export default function IncidentsPage() {
           <div className="form-actions">
             <button
               className="primary-button"
-              disabled={!services.length}
+              disabled={
+                saving || !services.length
+              }
             >
-              {editingId ? "Guardar cambios" : "Crear incidente"}
+              {saving
+                ? "Guardando..."
+                : editingId
+                  ? "Guardar cambios"
+                  : "Crear incidente"}
             </button>
 
             {editingId && (
@@ -218,6 +380,7 @@ export default function IncidentsPage() {
                 type="button"
                 className="secondary-button"
                 onClick={resetForm}
+                disabled={saving}
               >
                 Cancelar
               </button>
@@ -227,46 +390,59 @@ export default function IncidentsPage() {
 
         <section className="panel table-panel">
           <div className="panel__header">
-            <h2>Historial de incidentes</h2>
-            <span>{incidents.length} incidentes</span>
+            <div>
+              <h2>Incidentes</h2>
+
+              <span>
+                {incidents.length} en total
+              </span>
+            </div>
+
+            <div>
+              <span>
+                {lastUpdatedAt
+                  ? `Actualizado ${lastUpdatedAt.toLocaleTimeString()}`
+                  : "Actualizando..."}
+              </span>
+            </div>
+          </div>
+
+          <div className="panel__header">
+            <div>
+              <h2>Activos</h2>
+              <span>
+                {activeIncidents.length} pendientes
+              </span>
+            </div>
           </div>
 
           <div className="incident-list">
-            {incidents.map((incident) => (
-              <article className="incident-card" key={incident.id}>
-                <div>
-                  <span
-                    className={`severity-badge severity-badge--${incident.severity}`}
-                  >
-                    {incident.severity}
-                  </span>
+            {activeIncidents.map(renderIncident)}
 
-                  <span className="status-badge">
-                    {incident.status}
-                  </span>
-                </div>
+            {!activeIncidents.length && (
+              <p className="subtitle">
+                No hay incidentes activos.
+              </p>
+            )}
+          </div>
 
-                <h3>{incident.title}</h3>
-                <p>{incident.description}</p>
+          <div className="panel__header">
+            <div>
+              <h2>Resueltos</h2>
+              <span>
+                {resolvedIncidents.length} finalizados
+              </span>
+            </div>
+          </div>
 
-                <small>
-                  Servicio: {serviceName(incident.service_id)}
-                </small>
+          <div className="incident-list">
+            {resolvedIncidents.map(renderIncident)}
 
-                <div className="table-actions">
-                  <button onClick={() => startEditing(incident)}>
-                    Editar
-                  </button>
-
-                  <button
-                    className="danger-button"
-                    onClick={() => removeIncident(incident.id)}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </article>
-            ))}
+            {!resolvedIncidents.length && (
+              <p className="subtitle">
+                No hay incidentes resueltos.
+              </p>
+            )}
           </div>
         </section>
       </section>
