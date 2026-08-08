@@ -15,9 +15,11 @@ spec:
       labels:
         app: frontend
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: frontend
-          image: cloud-operations-frontend:0.2.10
+          image: ghcr.io/dvdch1258/cloud-operations-frontend:sha-782cc0b
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

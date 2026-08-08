@@ -16,9 +16,11 @@ spec:
         component: migrations
     spec:
       restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: migrations
-          image: cloud-operations-backend:0.2.3
+          image: ghcr.io/dvdch1258/cloud-operations-backend:sha-782cc0b
           imagePullPolicy: IfNotPresent
           command:
             - alembic
