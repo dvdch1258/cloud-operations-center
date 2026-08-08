@@ -29,6 +29,8 @@ data:
         static_configs:
           - targets:
               - backend.cloud-ops.svc.cluster.local:8000
+            labels:
+              namespace: cloud-ops
 
       - job_name: kube-state-metrics
         static_configs:

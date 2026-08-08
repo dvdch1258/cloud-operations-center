@@ -74,7 +74,7 @@ export default function Layout() {
 
           <a
             className="navigation__item"
-            href={`${window.location.protocol}//${window.location.hostname}:3002`}
+            href={`${window.location.protocol}//${window.location.hostname}:3001`}
             target="_blank"
             rel="noreferrer"
             onClick={() => setMenuOpen(false)}

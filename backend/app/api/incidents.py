@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -117,8 +118,19 @@ def update_incident(
     incident.title = incident_update.title
     incident.description = incident_update.description
     incident.severity = incident_update.severity
+    previous_status = incident.status
+
     incident.status = incident_update.status
     incident.service_id = incident_update.service_id
+
+    if (
+        incident.status in {"resolved", "closed"}
+        and previous_status not in {"resolved", "closed"}
+    ):
+        incident.resolved_at = datetime.now(timezone.utc)
+
+    elif incident.status in {"open", "investigating"}:
+        incident.resolved_at = None
 
     db.commit()
     db.refresh(incident)

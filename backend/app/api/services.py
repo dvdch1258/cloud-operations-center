@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.service import Service
+from app.models.incident import Incident
 from app.models.service_check import ServiceCheck
+from app.schemas.incident import IncidentResponse
 from app.schemas.service import (
     ServiceCreate,
     ServiceResponse,
@@ -49,6 +51,41 @@ def run_services_check(db: Session = Depends(get_db)):
     )
 
     return result
+
+
+@router.get(
+    "/{service_id}/incidents",
+    response_model=list[IncidentResponse],
+)
+def get_service_incidents(
+    service_id: int,
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    service = (
+        db.query(Service)
+        .filter(Service.id == service_id)
+        .first()
+    )
+
+    if not service:
+        raise HTTPException(
+            status_code=404,
+            detail="Service not found",
+        )
+
+    logger.info(
+        "service_incidents_requested",
+        extra={"service_id": service_id},
+    )
+
+    return (
+        db.query(Incident)
+        .filter(Incident.service_id == service_id)
+        .order_by(Incident.created_at.desc())
+        .limit(limit)
+        .all()
+    )
 
 
 @router.get(

@@ -127,6 +127,7 @@ def check_all_services(db: Session) -> dict:
 
         elif new_status == "up" and active_incident is not None:
             active_incident.status = "resolved"
+            active_incident.resolved_at = datetime.now(timezone.utc)
             active_incident.description = (
                 f"{active_incident.description}\n\n"
                 f"Recuperado automáticamente: "

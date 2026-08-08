@@ -35,7 +35,15 @@ export default function IncidentsPage() {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [updatingId, setUpdatingId] = useState(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+
+  const [filters, setFilters] = useState({
+    search: "",
+    status: "all",
+    severity: "all",
+    service: "all",
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -172,6 +180,74 @@ export default function IncidentsPage() {
     );
   }
 
+  function formatDateTime(value) {
+    if (!value) {
+      return "—";
+    }
+
+    return new Date(value).toLocaleString();
+  }
+
+  function formatDuration(createdAt, resolvedAt) {
+    if (!createdAt) {
+      return "—";
+    }
+
+    const start = new Date(createdAt);
+    const end = resolvedAt
+      ? new Date(resolvedAt)
+      : new Date();
+
+    const totalSeconds = Math.max(
+      0,
+      Math.floor((end - start) / 1000)
+    );
+
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (days > 0) {
+      return `${days} d ${hours} h`;
+    }
+
+    if (hours > 0) {
+      return `${hours} h ${minutes} min`;
+    }
+
+    if (minutes > 0) {
+      return `${minutes} min ${seconds} s`;
+    }
+
+    return `${seconds} s`;
+  }
+
+  async function changeIncidentStatus(incident, status) {
+    if (updatingId === incident.id) {
+      return;
+    }
+
+    setUpdatingId(incident.id);
+    setError("");
+
+    try {
+      await api.updateIncident(incident.id, {
+        title: incident.title,
+        description: incident.description,
+        severity: incident.severity,
+        service_id: incident.service_id,
+        status,
+      });
+
+      await loadData();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   function renderIncident(incident) {
     return (
       <article
@@ -215,9 +291,90 @@ export default function IncidentsPage() {
           Servicio: {serviceName(incident.service_id)}
         </small>
 
+        <div className="incident-meta">
+          <div className="incident-meta__item">
+            <span>Creado</span>
+            <strong>
+              {formatDateTime(incident.created_at)}
+            </strong>
+          </div>
+
+          <div className="incident-meta__item">
+            <span>
+              {incident.resolved_at
+                ? "Resuelto"
+                : "Resolución"}
+            </span>
+            <strong>
+              {incident.resolved_at
+                ? formatDateTime(incident.resolved_at)
+                : "En curso"}
+            </strong>
+          </div>
+
+          <div className="incident-meta__item">
+            <span>Duración</span>
+            <strong>
+              {formatDuration(
+                incident.created_at,
+                incident.resolved_at
+              )}
+            </strong>
+          </div>
+        </div>
+
         <div className="table-actions">
+          {incident.status === "open" && (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={updatingId === incident.id}
+              onClick={() =>
+                changeIncidentStatus(
+                  incident,
+                  "investigating"
+                )
+              }
+            >
+              Investigar
+            </button>
+          )}
+
+          {activeStatuses.has(incident.status) && (
+            <button
+              type="button"
+              className="primary-button"
+              disabled={updatingId === incident.id}
+              onClick={() =>
+                changeIncidentStatus(
+                  incident,
+                  "resolved"
+                )
+              }
+            >
+              Resolver
+            </button>
+          )}
+
+          {incident.status === "resolved" && (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={updatingId === incident.id}
+              onClick={() =>
+                changeIncidentStatus(
+                  incident,
+                  "closed"
+                )
+              }
+            >
+              Cerrar
+            </button>
+          )}
+
           <button
             type="button"
+            disabled={updatingId === incident.id}
             onClick={() => startEditing(incident)}
           >
             Editar
@@ -226,6 +383,7 @@ export default function IncidentsPage() {
           <button
             type="button"
             className="danger-button"
+            disabled={updatingId === incident.id}
             onClick={() =>
               removeIncident(incident.id)
             }
@@ -237,6 +395,52 @@ export default function IncidentsPage() {
     );
   }
 
+  const filteredIncidents = incidents.filter((incident) => {
+    const search = filters.search.trim().toLowerCase();
+
+    const matchesSearch =
+      !search ||
+      incident.title?.toLowerCase().includes(search) ||
+      incident.description?.toLowerCase().includes(search);
+
+    const matchesStatus =
+      filters.status === "all" ||
+      incident.status === filters.status;
+
+    const matchesSeverity =
+      filters.severity === "all" ||
+      incident.severity === filters.severity;
+
+    const matchesService =
+      filters.service === "all" ||
+      String(incident.service_id) === filters.service;
+
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesSeverity &&
+      matchesService
+    );
+  });
+
+  function updateFilter(event) {
+    const { name, value } = event.target;
+
+    setFilters((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  function clearFilters() {
+    setFilters({
+      search: "",
+      status: "all",
+      severity: "all",
+      service: "all",
+    });
+  }
+
   const activeIncidents = incidents.filter(
     (incident) =>
       activeStatuses.has(incident.status)
@@ -246,6 +450,24 @@ export default function IncidentsPage() {
     (incident) =>
       !activeStatuses.has(incident.status)
   );
+
+  const visibleActiveIncidents = filteredIncidents.filter(
+    (incident) => activeStatuses.has(incident.status)
+  );
+
+  const visibleResolvedIncidents = filteredIncidents.filter(
+    (incident) => !activeStatuses.has(incident.status)
+  );
+
+  const investigatingCount = incidents.filter(
+    (incident) => incident.status === "investigating"
+  ).length;
+
+  const criticalActiveCount = incidents.filter(
+    (incident) =>
+      activeStatuses.has(incident.status) &&
+      incident.severity === "critical"
+  ).length;
 
   return (
     <>
@@ -268,6 +490,121 @@ export default function IncidentsPage() {
           <span>{error}</span>
         </section>
       )}
+
+      <section className="incident-summary">
+        <article className="incident-summary__card">
+          <span>Activos</span>
+          <strong>{activeIncidents.length}</strong>
+          <small>Requieren atención</small>
+        </article>
+
+        <article className="incident-summary__card">
+          <span>Investigando</span>
+          <strong>{investigatingCount}</strong>
+          <small>En análisis</small>
+        </article>
+
+        <article
+          className={
+            `incident-summary__card ${
+              criticalActiveCount
+                ? "incident-summary__card--danger"
+                : ""
+            }`
+          }
+        >
+          <span>Críticos activos</span>
+          <strong>{criticalActiveCount}</strong>
+          <small>Prioridad máxima</small>
+        </article>
+
+        <article className="incident-summary__card">
+          <span>Finalizados</span>
+          <strong>{resolvedIncidents.length}</strong>
+          <small>Resueltos o cerrados</small>
+        </article>
+      </section>
+
+      <section className="incident-filters panel">
+        <div className="incident-filters__header">
+          <div>
+            <h2>Filtrar incidentes</h2>
+            <span>
+              Mostrando {filteredIncidents.length} de {incidents.length}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={clearFilters}
+          >
+            Limpiar filtros
+          </button>
+        </div>
+
+        <div className="incident-filters__grid">
+          <label>
+            Buscar
+            <input
+              name="search"
+              value={filters.search}
+              onChange={updateFilter}
+              placeholder="Título o descripción"
+            />
+          </label>
+
+          <label>
+            Estado
+            <select
+              name="status"
+              value={filters.status}
+              onChange={updateFilter}
+            >
+              <option value="all">Todos</option>
+              <option value="open">Abierto</option>
+              <option value="investigating">Investigando</option>
+              <option value="resolved">Resuelto</option>
+              <option value="closed">Cerrado</option>
+            </select>
+          </label>
+
+          <label>
+            Severidad
+            <select
+              name="severity"
+              value={filters.severity}
+              onChange={updateFilter}
+            >
+              <option value="all">Todas</option>
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+              <option value="critical">Crítica</option>
+            </select>
+          </label>
+
+          <label>
+            Servicio
+            <select
+              name="service"
+              value={filters.service}
+              onChange={updateFilter}
+            >
+              <option value="all">Todos</option>
+
+              {services.map((service) => (
+                <option
+                  key={service.id}
+                  value={String(service.id)}
+                >
+                  {service.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </section>
 
       <section className="management-grid">
         <form
@@ -417,9 +754,9 @@ export default function IncidentsPage() {
           </div>
 
           <div className="incident-list">
-            {activeIncidents.map(renderIncident)}
+            {visibleActiveIncidents.map(renderIncident)}
 
-            {!activeIncidents.length && (
+            {!visibleActiveIncidents.length && (
               <p className="subtitle">
                 No hay incidentes activos.
               </p>
@@ -436,9 +773,9 @@ export default function IncidentsPage() {
           </div>
 
           <div className="incident-list">
-            {resolvedIncidents.map(renderIncident)}
+            {visibleResolvedIncidents.map(renderIncident)}
 
-            {!resolvedIncidents.length && (
+            {!visibleResolvedIncidents.length && (
               <p className="subtitle">
                 No hay incidentes resueltos.
               </p>

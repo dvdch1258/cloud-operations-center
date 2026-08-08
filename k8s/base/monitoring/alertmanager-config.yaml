@@ -1,4 +1,9 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+
 data:
   alertmanager.yml: |
     global:
@@ -6,15 +11,27 @@ data:
 
     route:
       receiver: n8n
+
       group_by:
         - alertname
         - namespace
         - severity
+
       group_wait: 30s
       group_interval: 5m
       repeat_interval: 4h
 
+      routes:
+        # Esta alerta sigue visible en Prometheus/Alertmanager,
+        # pero no genera Telegram.
+        - receiver: silent
+          matchers:
+            - alertname="TooManyOpenIncidents"
+
     inhibit_rules:
+      # Si Kubernetes confirma que el backend no tiene
+      # réplicas disponibles, no necesitamos además
+      # BackendTargetDown por la misma caída.
       - source_matchers:
           - alertname="BackendUnavailable"
         target_matchers:
@@ -27,7 +44,5 @@ data:
         webhook_configs:
           - url: http://172.22.0.1:5678/webhook/cloud-ops-technical-alerts
             send_resolved: true
-kind: ConfigMap
-metadata:
-  name: alertmanager-config
-  namespace: monitoring
+
+      - name: silent

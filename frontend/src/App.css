@@ -1363,3 +1363,231 @@ tbody tr:hover {
     padding-left: 40px;
   }
 }
+
+/* Metadatos temporales de incidentes */
+.incident-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 4px;
+}
+
+.incident-meta__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.incident-meta__item span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.65;
+}
+
+.incident-meta__item strong {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .incident-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Resumen operativo de incidentes */
+.incident-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.incident-summary__card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.incident-summary__card span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  opacity: 0.7;
+}
+
+.incident-summary__card strong {
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+
+.incident-summary__card small {
+  opacity: 0.6;
+}
+
+.incident-summary__card--danger {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(127, 29, 29, 0.12);
+}
+
+@media (max-width: 900px) {
+  .incident-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .incident-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Filtros de incidentes */
+.incident-filters {
+  margin-bottom: 20px;
+}
+
+.incident-filters__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.incident-filters__header h2 {
+  margin: 0;
+}
+
+.incident-filters__header span {
+  font-size: 0.82rem;
+  opacity: 0.65;
+}
+
+.incident-filters__grid {
+  display: grid;
+  grid-template-columns: 2fr repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .incident-filters__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .incident-filters__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .incident-filters__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* Refinado visual de filtros de incidentes */
+.incident-filters__grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #aab6ca;
+}
+
+.incident-filters__grid input,
+.incident-filters__grid select {
+  width: 100%;
+  min-height: 44px;
+
+  padding: 10px 14px;
+
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+
+  background: rgba(9, 16, 29, 0.8);
+  color: #e6edf7;
+
+  font: inherit;
+  font-size: 0.9rem;
+
+  outline: none;
+
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.incident-filters__grid input::placeholder {
+  color: #64748b;
+}
+
+.incident-filters__grid input:hover,
+.incident-filters__grid select:hover {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.incident-filters__grid input:focus,
+.incident-filters__grid select:focus {
+  border-color: rgba(96, 165, 250, 0.65);
+
+  box-shadow:
+    0 0 0 3px rgba(59, 130, 246, 0.10);
+
+  background: rgba(15, 23, 42, 1);
+}
+
+.incident-filters__grid select {
+  cursor: pointer;
+}
+
+.incident-filters__grid select option {
+  background: #0d1626;
+  color: #e6edf7;
+}
+
+/* Cabecera algo más integrada */
+.incident-filters {
+  padding: 22px 26px;
+  border-radius: 16px;
+}
+
+.incident-filters__header {
+  padding-bottom: 4px;
+}
+
+.incident-filters__header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.incident-filters__header h2 {
+  font-size: 1.1rem;
+}
+
+@media (max-width: 600px) {
+  .incident-filters {
+    padding: 18px;
+  }
+
+  .incident-filters__grid input,
+  .incident-filters__grid select {
+    min-height: 46px;
+  }
+}
