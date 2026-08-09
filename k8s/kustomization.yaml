@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Backend
+  - base/backend/configmap.yaml
+  - base/backend/deployment.yaml
+  - base/backend/service.yaml
+  - base/backend/hpa.yaml
+
+  # Frontend
+  - base/frontend/deployment.yaml
+  - base/frontend/service.yaml
+
+  # Ingress de la aplicación
+  - base/ingress/backend-ingress.yaml
+  - base/ingress/frontend-ingress.yaml

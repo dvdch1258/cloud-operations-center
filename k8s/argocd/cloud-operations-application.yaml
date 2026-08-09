@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloud-operations-center
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: git@github.com:dvdch1258/cloud-operations-center.git
+    targetRevision: main
+    path: k8s
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloud-ops
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
