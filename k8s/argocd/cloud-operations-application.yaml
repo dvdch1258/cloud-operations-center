@@ -16,5 +16,9 @@ spec:
     namespace: cloud-ops
 
   syncPolicy:
+    automated:
+      enabled: true
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
