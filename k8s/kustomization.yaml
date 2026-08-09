@@ -7,6 +7,7 @@ resources:
   - base/backend/deployment.yaml
   - base/backend/service.yaml
   - base/backend/hpa.yaml
+  - base/backend/migration-job.yaml
 
   # Frontend
   - base/frontend/deployment.yaml

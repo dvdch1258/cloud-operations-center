@@ -3,6 +3,10 @@ kind: Job
 metadata:
   name: backend-migrations
   namespace: cloud-ops
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "-1"
   labels:
     app: backend
     component: migrations
