@@ -1,21 +1,20 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 resources:
-  - namespace.yaml
-
-  - prometheus-config.yaml
-  - prometheus-rules.yaml
-  - prometheus-deployment.yaml
-  - prometheus-service.yaml
-
-  - grafana/datasource.yaml
-  - grafana/dashboard-provider.yaml
-  - grafana/dashboard.yaml
-  - grafana-deployment.yaml
-  - grafana-service.yaml
-
-  - alertmanager-config.yaml
-  - alertmanager-deployment.yaml
-
-  - tempo/configmap.yaml
+- namespace.yaml
+- prometheus-config.yaml
+- prometheus-rules.yaml
+- prometheus-deployment.yaml
+- prometheus-service.yaml
+- grafana/datasource.yaml
+- grafana/dashboard-provider.yaml
+- grafana/dashboard.yaml
+- grafana-deployment.yaml
+- grafana-service.yaml
+- alertmanager-config.yaml
+- alertmanager-deployment.yaml
+- tempo/configmap.yaml
+- tempo/deployment.yaml
+- tempo/service.yaml
+- ingress/grafana-ingress.yaml
+- ingress/prometheus-ingress.yaml
