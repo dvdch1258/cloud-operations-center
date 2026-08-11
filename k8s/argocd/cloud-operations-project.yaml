@@ -3,12 +3,12 @@ kind: AppProject
 metadata:
   name: cloud-operations
   namespace: argocd
-
 spec:
   description: Cloud Operations Center GitOps project
 
   sourceRepos:
     - git@github.com:dvdch1258/cloud-operations-center.git
+    - https://grafana-community.github.io/helm-charts
 
   destinations:
     - namespace: cloud-ops
@@ -19,6 +19,10 @@ spec:
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
 
   namespaceResourceWhitelist:
     - group: "*"
