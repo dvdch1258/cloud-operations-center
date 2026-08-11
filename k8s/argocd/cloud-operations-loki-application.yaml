@@ -1,25 +1,21 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cloud-operations-loki
+  name: loki
   namespace: argocd
-
 spec:
   project: cloud-operations
-
   sources:
-    - repoURL: https://grafana-community.github.io/helm-charts
-      chart: loki
-      targetRevision: 18.7.1
-      helm:
-        releaseName: loki
-        valueFiles:
-          - $values/k8s/base/monitoring/loki/values.yaml
-
-    - repoURL: git@github.com:dvdch1258/cloud-operations-center.git
-      targetRevision: main
-      ref: values
-
+  - repoURL: https://grafana-community.github.io/helm-charts
+    chart: loki
+    targetRevision: 18.7.1
+    helm:
+      releaseName: loki
+      valueFiles:
+      - $values/k8s/base/monitoring/loki/values.yaml
+  - repoURL: git@github.com:dvdch1258/cloud-operations-center.git
+    targetRevision: main
+    ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
