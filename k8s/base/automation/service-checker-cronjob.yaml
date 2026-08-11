@@ -5,16 +5,20 @@ metadata:
   namespace: cloud-ops
   labels:
     app: service-checker
+
 spec:
   schedule: "*/1 * * * *"
+
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 30
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 3
+
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
 
   jobTemplate:
     spec:
-      backoffLimit: 2
+      activeDeadlineSeconds: 45
+      backoffLimit: 1
 
       template:
         metadata:
@@ -32,7 +36,10 @@ spec:
                 - --fail-with-body
                 - --silent
                 - --show-error
+                - --connect-timeout
+                - "5"
+                - --max-time
+                - "20"
                 - --request
                 - POST
                 - http://backend.cloud-ops.svc.cluster.local:8000/services/check-all
-

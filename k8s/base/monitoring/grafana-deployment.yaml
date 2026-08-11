@@ -8,13 +8,23 @@ spec:
   selector:
     matchLabels:
       app: grafana
+  strategy: {}
   template:
     metadata:
       labels:
         app: grafana
     spec:
       containers:
-        - name: grafana
-          image: grafana/grafana:11.3.0
-          ports:
-            - containerPort: 3000
+      - env:
+        - name: GF_SECURITY_CSRF_TRUSTED_ORIGINS
+          value: 100.92.226.92:3001 100.92.226.92
+        - name: GF_SECURITY_CSRF_ADDITIONAL_HEADERS
+          value: X-Forwarded-Host
+        - name: GF_SERVER_ROOT_URL
+          value: http://100.92.226.92:3001/
+        image: grafana/grafana:11.3.0
+        name: grafana
+        ports:
+        - containerPort: 3000
+        resources: {}
+status: {}
