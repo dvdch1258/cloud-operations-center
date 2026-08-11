@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: argocd-monitoring-prune-test
-  namespace: monitoring
-data:
-  purpose: "Temporary ArgoCD monitoring prune validation"
