@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: argocd-prune-test
-  namespace: cloud-ops
-  labels:
-    app: argocd-prune-test
-data:
-  purpose: "Temporary resource used to validate ArgoCD automated pruning"
