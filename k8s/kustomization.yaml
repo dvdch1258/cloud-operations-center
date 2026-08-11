@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - base/automation/service-checker-cronjob.yaml
+  - base/prune-test-configmap.yaml
   # Backend
   - base/backend/configmap.yaml
   - base/backend/deployment.yaml
