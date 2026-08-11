@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloud-operations-monitoring
+  namespace: argocd
+
+spec:
+  project: cloud-operations
+
+  source:
+    repoURL: git@github.com:dvdch1258/cloud-operations-center.git
+    targetRevision: main
+    path: k8s/base/monitoring
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: false
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true
