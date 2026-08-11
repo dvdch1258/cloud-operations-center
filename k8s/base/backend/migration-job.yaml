@@ -8,7 +8,7 @@ metadata:
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
     argocd.argoproj.io/sync-wave: "-1"
   labels:
-    app: backend
+    app: backend-migrations
     component: migrations
 spec:
   backoffLimit: 3
@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       labels:
-        app: backend
+        app: backend-migrations
         component: migrations
     spec:
       restartPolicy: Never
