@@ -19,3 +19,4 @@ resources:
   - alertmanager-deployment.yaml
 
   - tempo/configmap.yaml
+  - prune-test.yaml
