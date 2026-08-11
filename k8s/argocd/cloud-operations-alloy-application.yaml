@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+
+spec:
+  project: cloud-operations
+
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: alloy
+      targetRevision: 1.11.0
+      helm:
+        releaseName: alloy
+        valueFiles:
+          - $values/k8s/base/monitoring/alloy/values.yaml
+
+    - repoURL: git@github.com:dvdch1258/cloud-operations-center.git
+      targetRevision: main
+      ref: values
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
