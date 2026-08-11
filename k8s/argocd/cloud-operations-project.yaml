@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: cloud-operations
+  namespace: argocd
+
+spec:
+  description: Cloud Operations Center GitOps project
+
+  sourceRepos:
+    - git@github.com:dvdch1258/cloud-operations-center.git
+
+  destinations:
+    - namespace: cloud-ops
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

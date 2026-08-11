@@ -4,7 +4,7 @@ metadata:
   name: cloud-operations-center
   namespace: argocd
 spec:
-  project: default
+  project: cloud-operations
 
   source:
     repoURL: git@github.com:dvdch1258/cloud-operations-center.git
