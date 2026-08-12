@@ -20,6 +20,18 @@ spec:
         webhook:
           hostNetwork: true
           securePort: 10260
+          livenessProbe:
+            failureThreshold: 6
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 6
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
