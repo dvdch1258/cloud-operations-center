@@ -17,3 +17,7 @@ resources:
   # Ingress de la aplicación
   - base/ingress/backend-ingress.yaml
   - base/ingress/frontend-ingress.yaml
+
+  # Backups
+  - base/postgres/backup-pvc.yaml
+  - base/postgres/backup-cronjob.yaml

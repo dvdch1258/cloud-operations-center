@@ -1,0 +1,95 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: cloud-ops
+spec:
+  schedule: "15 3 * * *"
+  timeZone: "Atlantic/Canary"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: OnFailure
+
+          containers:
+            - name: postgres-backup
+              image: postgres:16
+              imagePullPolicy: IfNotPresent
+
+              env:
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_USER
+
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_PASSWORD
+
+                - name: POSTGRES_DB
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_DB
+
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_PASSWORD
+
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+
+                  TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+                  FILE="/backups/cloudops-${TIMESTAMP}.dump"
+
+                  echo "=== PostgreSQL backup ==="
+                  echo "Database: ${POSTGRES_DB}"
+                  echo "Destination: ${FILE}"
+
+                  pg_dump \
+                    -h postgres.cloud-ops.svc.cluster.local \
+                    -U "${POSTGRES_USER}" \
+                    -d "${POSTGRES_DB}" \
+                    -Fc \
+                    -f "${FILE}"
+
+                  echo
+                  echo "=== Verifying archive ==="
+                  pg_restore -l "${FILE}" >/dev/null
+
+                  echo "Backup verified."
+                  ls -lh "${FILE}"
+
+                  echo
+                  echo "=== Retention ==="
+                  find /backups \
+                    -type f \
+                    -name 'cloudops-*.dump' \
+                    -mtime +7 \
+                    -delete
+
+                  echo "Backup completed successfully."
+
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc
