@@ -6,13 +6,27 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: grafana.cloud-ops.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: grafana
-                port:
-                  number: 3000
+  - host: grafana.cloudopscenter.es
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+  - host: grafana.cloud-ops.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+  tls:
+  - hosts:
+    - grafana.cloudopscenter.es
+    secretName: cloudopscenter-monitoring-tls

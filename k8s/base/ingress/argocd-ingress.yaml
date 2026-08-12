@@ -6,13 +6,27 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: argocd.cloud-ops.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: argocd-server
-                port:
-                  number: 80
+  - host: argocd.cloudopscenter.es
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argocd-server
+            port:
+              number: 80
+  - host: argocd.cloud-ops.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argocd-server
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - argocd.cloudopscenter.es
+    secretName: cloudopscenter-argocd-tls

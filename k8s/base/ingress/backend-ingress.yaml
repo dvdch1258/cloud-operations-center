@@ -6,13 +6,27 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: cloud-ops.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: backend
-                port:
-                  number: 8000
+  - host: api.cloudopscenter.es
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8000
+  - host: cloud-ops.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8000
+  tls:
+  - hosts:
+    - api.cloudopscenter.es
+    secretName: cloudopscenter-app-api-tls
