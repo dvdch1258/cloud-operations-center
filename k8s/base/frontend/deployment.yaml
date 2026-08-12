@@ -19,7 +19,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: frontend
-          image: ghcr.io/dvdch1258/cloud-operations-frontend:sha-dd906be
+          image: ghcr.io/dvdch1258/cloud-operations-frontend:sha-030a854
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
