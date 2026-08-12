@@ -74,7 +74,7 @@ export default function Layout() {
 
           <a
             className="navigation__item"
-            href={`${window.location.protocol}//${window.location.hostname}:3001`}
+            href="https://grafana.cloudopscenter.es"
             target="_blank"
             rel="noreferrer"
             onClick={() => setMenuOpen(false)}

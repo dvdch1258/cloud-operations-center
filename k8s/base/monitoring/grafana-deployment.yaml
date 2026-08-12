@@ -17,11 +17,11 @@ spec:
       containers:
       - env:
         - name: GF_SECURITY_CSRF_TRUSTED_ORIGINS
-          value: 100.92.226.92:3001 100.92.226.92
+          value: https://grafana.cloudopscenter.es
         - name: GF_SECURITY_CSRF_ADDITIONAL_HEADERS
           value: X-Forwarded-Host
         - name: GF_SERVER_ROOT_URL
-          value: http://100.92.226.92:3001/
+          value: https://grafana.cloudopscenter.es/
         image: grafana/grafana:11.3.0
         name: grafana
         ports:
