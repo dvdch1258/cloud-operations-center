@@ -17,6 +17,9 @@ spec:
         global:
           leaderElection:
             namespace: cert-manager
+        webhook:
+          hostNetwork: true
+          securePort: 10260
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
