@@ -1,23 +1,26 @@
 # Cloud Operations Center
 
-> A cloud-native operations platform for service monitoring, incident management, observability and infrastructure automation.
+> A cloud-native operations platform for service monitoring, incident management, observability, automation and disaster recovery.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Kubernetes](https://img.shields.io/badge/orchestration-Kubernetes-blue)
 ![GitOps](https://img.shields.io/badge/GitOps-Argo%20CD-orange)
 ![CI/CD](https://github.com/dvdch1258/cloud-operations-center/actions/workflows/ci-cd.yml/badge.svg)
+![Observability](https://img.shields.io/badge/observability-Grafana%20Stack-orange)
 
-**Cloud Operations Center** is a hands-on Cloud / DevOps / SRE project designed to reproduce the core operational workflows used to run modern applications on Kubernetes.
+**Cloud Operations Center** is a hands-on Cloud / DevOps / SRE project designed to reproduce the operational workflows used to run modern applications on Kubernetes.
 
-It combines application development, GitOps, observability, automated health checking, incident management, CI/CD and disaster recovery in a single platform.
+It combines application development, GitOps, CI/CD, infrastructure automation, observability, service monitoring, incident management, notifications and disaster recovery in a single platform.
 
-The goal is not only to deploy an application, but to operate it.
+The goal is not only to deploy an application.
+
+**The goal is to operate it.**
 
 ---
 
 ## Overview
 
-Cloud Operations Center provides a web interface for monitoring services and managing incidents while running on a Kubernetes-based infrastructure with a complete observability stack.
+Cloud Operations Center provides a web interface for monitoring services and managing incidents while running on a Kubernetes-based infrastructure with a complete observability and automation stack.
 
 The platform includes:
 
@@ -30,14 +33,18 @@ The platform includes:
 * Distributed tracing with OpenTelemetry and Tempo
 * Grafana operational dashboards
 * Prometheus / Alertmanager alerting
+* Incident automation with n8n
+* Telegram operational notifications
 * GitOps deployment with Argo CD
 * CI/CD with GitHub Actions
 * Container images stored in GitHub Container Registry
+* Immutable commit-based deployments
 * Horizontal Pod Autoscaling
 * PostgreSQL persistence
+* Alembic database migrations
 * Automated PostgreSQL backups
 * Off-site backup replication to Cloudflare R2
-* Tested database restore / disaster recovery
+* Tested database restoration and disaster recovery
 * Secure remote access through NetBird
 
 ---
@@ -70,13 +77,21 @@ flowchart TB
 
     Backend -->|"metrics"| Prometheus
     Backend -->|"OpenTelemetry traces"| Tempo
-    Backend -->|"stdout logs"| Alloy
+    Backend -->|"application logs"| Alloy
     Alloy --> Loki
 
     Prometheus --> Grafana
     Loki --> Grafana
     Tempo --> Grafana
     Prometheus --> Alertmanager
+
+    subgraph Automation
+        N8N["n8n"]
+        Telegram["Telegram"]
+    end
+
+    Backend -->|"incident state"| N8N
+    N8N -->|"notifications"| Telegram
 
     subgraph GitOps
         GitHub["GitHub Repository"]
@@ -89,10 +104,10 @@ flowchart TB
     Actions -->|"build & push"| GHCR
     Actions -->|"update image SHA"| GitHub
     GitHub --> ArgoCD
-    GHCR --> Kubernetes["Kubernetes"]
-    ArgoCD --> Kubernetes
+    ArgoCD --> Kubernetes["Kubernetes"]
+    GHCR --> Kubernetes
 
-    subgraph Disaster_Recovery["Backup & Disaster Recovery"]
+    subgraph DisasterRecovery["Backup & Disaster Recovery"]
         Backup["PostgreSQL Backup Job"]
         BackupPVC["Backup PVC"]
         R2["Cloudflare R2"]
@@ -105,11 +120,13 @@ flowchart TB
 
 ---
 
-## Core Features
+# Core Features
 
-### Operational dashboard
+## Operational Dashboard
 
-The React frontend provides a centralized view of the platform:
+The React frontend provides a centralized view of the platform.
+
+It displays:
 
 * Total registered services
 * Healthy services
@@ -117,49 +134,143 @@ The React frontend provides a centralized view of the platform:
 * Open incidents
 * Platform operational status
 * Last refresh timestamp
-* Manual refresh controls
+* Environment information
+* Application version
+* Git build revision
 
 The frontend periodically refreshes operational data from the FastAPI backend.
 
+Operators can also manually refresh the current platform state.
+
 ---
 
-### Service monitoring
+## Service Monitoring
 
-Services can be registered and monitored from the platform.
+Services can be registered and monitored directly from the application.
 
-The service checker periodically evaluates registered services and records their availability.
+The platform periodically evaluates registered endpoints and records their availability.
 
 This provides the data required for:
 
 * Current service status
 * Availability history
-* Operational dashboards
+* Service detail views
 * Incident detection
-* Metrics and alerting
+* Operational dashboards
+* Metrics
+* Alerting
+
+The automated service checker runs as a Kubernetes CronJob.
+
+```text
+Kubernetes CronJob
+        ↓
+Service Checker
+        ↓
+Cloud Operations Center API
+        ↓
+Registered Services
+        ↓
+Status + Check History
+```
 
 ---
 
-### Incident management
+## Incident Management
 
-The platform includes an incident lifecycle for operational events.
+Cloud Operations Center includes an incident lifecycle for operational events.
 
-Incidents can move through states such as:
+Incidents can transition through states such as:
 
-* Open
-* Investigating
-* Resolved
+```text
+Open
+  ↓
+Investigating
+  ↓
+Resolved
+```
 
-This allows the project to model workflows commonly found in operations and SRE teams.
+This allows the platform to reproduce workflows commonly found in operations, infrastructure and SRE teams.
+
+Incident information includes operational context such as:
+
+* Incident status
+* Related service
+* Creation time
+* Resolution information
+* Investigation state
 
 ---
 
-## Observability
+# Incident Automation — n8n & Telegram
 
-Observability is built around the three main signals: **metrics, logs and traces**.
+Operational events are also processed through an **n8n automation workflow**.
 
-### Metrics — Prometheus
+n8n periodically retrieves incident information from the Cloud Operations Center API and detects relevant incident state transitions.
 
-The FastAPI backend exposes Prometheus metrics including application and HTTP telemetry.
+Depending on the incident lifecycle, notifications are sent to Telegram.
+
+```text
+Cloud Operations Center API
+          ↓
+         n8n
+          ↓
+ Detect incident changes
+          ↓
+ ┌────────┼──────────────┐
+ Open  Investigating  Resolved
+          ↓
+       Telegram
+          ↓
+      Operator
+```
+
+The workflow keeps track of previously observed incident states so that notifications can be triggered when meaningful changes occur rather than sending the same alert continuously.
+
+Typical notifications include:
+
+* New active incidents
+* Incidents under investigation
+* Resolved incidents
+* Relevant operational state changes
+
+This automation complements the technical monitoring stack.
+
+```text
+Prometheus / Alertmanager
+        ↓
+Technical infrastructure alerts
+
+Cloud Operations Center
+        ↓
+Incident lifecycle
+
+n8n
+        ↓
+Workflow orchestration
+
+Telegram
+        ↓
+Operator notification
+```
+
+This separation helps distinguish between **technical alert detection** and **incident lifecycle automation**.
+
+---
+
+# Observability
+
+The observability platform is built around the three primary telemetry signals:
+
+* Metrics
+* Logs
+* Traces
+
+---
+
+## Metrics — Prometheus
+
+The FastAPI backend exposes Prometheus metrics for application and HTTP telemetry.
 
 Examples include:
 
@@ -167,22 +278,36 @@ Examples include:
 * Request rate
 * HTTP status codes
 * Request latency
-* Process CPU
-* Process memory
+* Application process CPU
+* Application process memory
 * Business-level operational metrics
 
-Prometheus also monitors Kubernetes workloads and alerting rules.
-
----
-
-### Logs — Grafana Alloy + Loki
-
-Application logs are written to stdout and collected from Kubernetes workloads.
+Prometheus also evaluates alerting rules and monitors platform components.
 
 ```text
 FastAPI
    ↓
-structured application logs
+/metrics
+   ↓
+Prometheus
+   ↓
+Grafana
+```
+
+---
+
+## Logs — Grafana Alloy + Loki
+
+Application workloads write logs to stdout.
+
+Grafana Alloy collects logs from Kubernetes and forwards them to Loki.
+
+```text
+FastAPI
+   ↓
+Structured application logs
+   ↓
+Kubernetes stdout
    ↓
 Grafana Alloy
    ↓
@@ -191,86 +316,134 @@ Loki
 Grafana
 ```
 
-Logs can be correlated with application activity and HTTP failures from Grafana.
+Logs can then be explored alongside metrics and traces from Grafana.
 
 ---
 
-### Traces — OpenTelemetry + Tempo
+## Distributed Tracing — OpenTelemetry + Tempo
 
-The FastAPI backend is instrumented with OpenTelemetry.
+The FastAPI backend is instrumented using OpenTelemetry.
+
+```text
+HTTP Request
+    ↓
+FastAPI
+    ↓
+OpenTelemetry
+    ↓
+Tempo
+    ↓
+Grafana
+```
+
+Trace identifiers are also included in application request logs.
+
+This makes it possible to correlate:
 
 ```text
 Request
    ↓
-FastAPI
-   ↓
-OpenTelemetry
-   ↓
-Tempo
-   ↓
-Grafana
+Trace ID
+   ├── Application log
+   └── Tempo trace
 ```
 
-Trace and span identifiers are also included in application request logging, making it possible to correlate requests with distributed traces.
+This provides a practical example of log and trace correlation.
 
 ---
 
-### Grafana
+## Grafana
 
-Grafana provides operational dashboards for both infrastructure and application behavior.
+Grafana provides operational dashboards for both application and infrastructure behavior.
 
 Current dashboards include:
 
-* **Cloud Operations Center**
-* **Cloud Operations Center — Backend Observability**
+### Cloud Operations Center
 
-They expose information such as:
+Focused on platform-level health.
+
+Examples:
 
 * Backend availability
 * PostgreSQL availability
-* HTTP traffic
-* Error rates
-* Request latency
-* Container restarts
-* Kubernetes replicas
+* Pending Kubernetes pods
 * Active alerts
+* Backend replicas
+* Container restarts
+* CPU usage
+* Memory usage
+* Prometheus targets
+* Open incidents
+
+### Cloud Operations Center — Backend Observability
+
+Focused on API behavior.
+
+Examples:
+
+* Backend operational state
+* Total HTTP requests
+* Requests per second
+* Error percentage
+* Average latency
+* p95 latency
+* Traffic per endpoint
+* HTTP response status distribution
 * Backend logs
+* HTTP error logs
 
 ---
 
-## Alerting
+# Alerting
 
-Prometheus evaluates alerting rules and forwards alerts to Alertmanager.
+Prometheus evaluates technical alerting rules and forwards alerts to Alertmanager.
 
-The repository also contains automation workflows designed to process technical alerts and incident state changes.
+The alerting architecture separates monitoring from incident automation.
 
-This separates responsibilities between:
+```text
+Infrastructure / Application
+            ↓
+        Prometheus
+            ↓
+      Alertmanager
+            ↓
+     Technical Alert
+```
 
-* Detection
-* Alert routing
-* Operational automation
-* Incident management
+At the application level:
+
+```text
+Service state / Incident state
+            ↓
+Cloud Operations Center
+            ↓
+           n8n
+            ↓
+        Telegram
+```
+
+This makes it possible to treat infrastructure alerts and operational incident notifications as different responsibilities.
 
 ---
 
-## Kubernetes
+# Kubernetes
 
-The application runs on Kubernetes and is divided into dedicated namespaces.
+The platform runs on Kubernetes and uses multiple namespaces to separate workloads.
 
-### `cloud-ops`
+## `cloud-ops`
 
-Contains the application workloads:
+Contains the primary application workloads:
 
-* Frontend
-* Backend
+* React frontend
+* FastAPI backend
 * PostgreSQL
 * Service checker
-* Database migrations
-* Backup jobs
+* Database migration jobs
+* PostgreSQL backup jobs
 
-### `monitoring`
+## `monitoring`
 
-Contains the observability platform:
+Contains the observability stack:
 
 * Prometheus
 * Grafana
@@ -279,88 +452,27 @@ Contains the observability platform:
 * Grafana Alloy
 * Alertmanager
 
-Additional platform components are managed through Argo CD.
+Additional infrastructure components are deployed and reconciled through Argo CD.
 
 ---
 
-## GitOps with Argo CD
+# Health Checks
 
-Argo CD continuously reconciles the desired state stored in Git with the Kubernetes cluster.
+Kubernetes readiness and liveness probes are configured for application workloads.
 
-The project uses several Argo CD applications to separate responsibilities, including:
-
-* Application workloads
-* Monitoring
-* Loki
-* Grafana Alloy
-* cert-manager
-
-The main applications use automated synchronization and pruning so that Kubernetes converges toward the state defined in the repository.
+The backend exposes:
 
 ```text
-Git
- ↓
-Argo CD
- ↓
-Kubernetes
+/health
 ```
 
-This makes Git the source of truth for infrastructure and application deployment.
+for Kubernetes health checking.
 
----
-
-## CI/CD
-
-GitHub Actions provides the delivery pipeline.
-
-For every relevant change:
-
-1. Backend Python code is validated.
-2. Frontend dependencies are installed.
-3. Frontend linting is executed.
-4. The frontend production build is validated.
-5. Backend and frontend Docker images are built.
-6. Images are pushed to GitHub Container Registry.
-7. Images receive immutable `sha-<commit>` tags.
-8. Kubernetes manifests are automatically updated with the new image SHA.
-9. The GitOps change is committed back to the repository.
-10. Argo CD detects the new desired state and deploys it.
+A more detailed endpoint provides component status and deployment metadata:
 
 ```text
-Developer
-   ↓
-GitHub
-   ↓
-GitHub Actions
-   ↓
-Tests / validation
-   ↓
-Docker build
-   ↓
-GHCR
-   ↓
-GitOps manifest update
-   ↓
-Argo CD
-   ↓
-Kubernetes rollout
+/health/detailed
 ```
-
-Deployments use immutable commit-based image references rather than relying on `latest`.
-
----
-
-## Release metadata
-
-Cloud Operations Center currently identifies itself as:
-
-```text
-Release:     1.0.0
-Environment: production
-Build:       Git commit SHA
-```
-
-The backend exposes release metadata through its detailed health endpoint.
 
 Example:
 
@@ -376,149 +488,295 @@ Example:
 }
 ```
 
-The frontend also displays the application version and short build SHA.
-
-This makes deployed workloads directly traceable to the source revision that produced them.
+This makes a deployed container directly traceable to the Git revision that produced it.
 
 ---
 
-## PostgreSQL & Persistence
+# GitOps with Argo CD
 
-PostgreSQL provides persistent storage for application data.
+Argo CD continuously reconciles the desired state stored in Git with the Kubernetes cluster.
 
-Kubernetes PersistentVolumeClaims are used so database data survives pod replacement and application rollouts.
+The project uses multiple Argo CD Applications to separate infrastructure responsibilities.
 
-Database schema evolution is handled using **Alembic migrations**.
+Examples include:
 
-Migration execution is integrated into the Kubernetes deployment workflow and waits for PostgreSQL to become available before applying schema changes.
+* Cloud Operations Center
+* Monitoring stack
+* Loki
+* Grafana Alloy
+* cert-manager
+
+```text
+Git Repository
+      ↓
+   Argo CD
+      ↓
+ Kubernetes
+```
+
+The primary applications use automated synchronization.
+
+Where appropriate, pruning is enabled so resources removed from Git are also removed from the Kubernetes cluster.
+
+Git therefore acts as the **source of truth** for the platform.
 
 ---
 
-## Backup & Disaster Recovery
+# CI/CD
 
-Database protection is implemented at two levels.
+GitHub Actions provides the continuous integration and delivery pipeline.
 
-### Automated backups
+The pipeline validates application code before building and deploying containers.
+
+## Pipeline
+
+```text
+Developer
+   ↓
+git push
+   ↓
+GitHub
+   ↓
+GitHub Actions
+   │
+   ├── Backend validation
+   ├── Frontend lint
+   └── Frontend production build
+   ↓
+Docker Buildx
+   ↓
+GitHub Container Registry
+   ↓
+GitOps manifest update
+   ↓
+Git commit
+   ↓
+Argo CD
+   ↓
+Kubernetes rollout
+```
+
+For each application change:
+
+1. Backend Python syntax is validated.
+2. Frontend dependencies are installed.
+3. Frontend linting is executed.
+4. The frontend production build is validated.
+5. Backend and frontend Docker images are built.
+6. Images are pushed to GitHub Container Registry.
+7. Images receive immutable commit-based tags.
+8. Kubernetes manifests are updated automatically.
+9. A GitOps deployment commit is created.
+10. Argo CD detects the new desired state.
+11. Kubernetes performs the rollout.
+
+---
+
+## Immutable Image Versioning
+
+Production deployments do not depend on `latest`.
+
+Images are tagged using the Git commit:
+
+```text
+cloud-operations-backend:sha-3ebe19b
+cloud-operations-frontend:sha-3ebe19b
+```
+
+This provides a direct relationship between:
+
+```text
+Git commit
+   ↓
+Container image
+   ↓
+Kubernetes deployment
+```
+
+and makes deployments reproducible and auditable.
+
+---
+
+# Release Metadata
+
+Current release:
+
+```text
+Cloud Operations Center
+
+Version:      1.0.0
+Environment:  production
+Build:        Git commit SHA
+```
+
+Version and build information are injected during the CI/CD build.
+
+The backend exposes this information through its detailed health endpoint.
+
+The frontend also displays the application version and short build revision.
+
+Example:
+
+```text
+Acceso seguro · NetBird · v1.0.0 · 3ebe19b
+```
+
+---
+
+# PostgreSQL & Persistence
+
+PostgreSQL provides persistent application storage.
+
+Kubernetes PersistentVolumeClaims are used so database data survives:
+
+* Pod recreation
+* Kubernetes rollouts
+* Application deployments
+
+The database stores information such as:
+
+* Services
+* Service checks
+* Incidents
+* Incident state
+
+---
+
+# Database Migrations
+
+Database schema evolution is managed using **Alembic**.
+
+Migration execution is integrated with Kubernetes.
+
+The migration workflow waits for PostgreSQL readiness before attempting schema changes.
+
+```text
+Deployment
+    ↓
+PostgreSQL readiness
+    ↓
+Alembic migration job
+    ↓
+Database schema
+```
+
+This prevents migrations from executing before the database is available.
+
+---
+
+# Backup & Disaster Recovery
+
+Database protection is implemented at multiple levels.
+
+## Automated PostgreSQL Backups
 
 A Kubernetes CronJob periodically creates PostgreSQL backups.
 
 ```text
 PostgreSQL
-   ↓
-pg_dump
-   ↓
-Local backup storage
+    ↓
+ pg_dump
+    ↓
+Backup Job
+    ↓
+Persistent backup storage
 ```
 
-### Off-site replication
+---
 
-Backups are also replicated to **Cloudflare R2**.
+## Off-Site Replication — Cloudflare R2
+
+Backups are additionally replicated outside the Kubernetes cluster using **Cloudflare R2**.
 
 ```text
 PostgreSQL
-   ↓
-Backup Job
-   ├── Local persistent storage
-   └── Cloudflare R2
+      ↓
+Backup CronJob
+      ↓
+ ┌────┴──────────────┐
+ │                   │
+Local Backup     Cloudflare R2
+Storage          Off-site copy
 ```
 
-### Restore testing
+This protects database backups from failures affecting only the local Kubernetes environment.
+
+---
+
+## Disaster Recovery Testing
 
 Backup creation alone is not considered sufficient.
 
-The disaster recovery process has been tested by restoring PostgreSQL data into an isolated recovery environment and validating the restored database.
+The project includes a tested recovery process.
 
-This verifies the complete recovery path rather than only verifying that backup files exist.
+A PostgreSQL backup has been restored into an isolated recovery environment and the restored database has been validated.
+
+```text
+Cloudflare R2
+      ↓
+Download backup
+      ↓
+Recovery PostgreSQL
+      ↓
+Restore
+      ↓
+Validate database
+```
+
+This verifies the complete recovery path rather than simply checking that backup files exist.
 
 ---
 
-## Reliability
+# Reliability
 
-The platform includes several mechanisms intended to improve operational reliability:
+The platform includes several mechanisms intended to improve operational reliability.
 
 * Kubernetes readiness probes
 * Kubernetes liveness probes
-* Persistent PostgreSQL storage
+* PostgreSQL persistent storage
 * Horizontal Pod Autoscaling
-* Automated health checking
-* Automated GitOps reconciliation
+* Automated service health checking
+* GitOps reconciliation
 * Immutable container image references
-* Automated backups
+* Automated PostgreSQL backups
 * Off-site backup replication
-* Tested database restoration
-* Monitoring and alerting
+* Tested disaster recovery
+* Metrics monitoring
+* Centralized logging
+* Distributed tracing
+* Alerting
+* Incident automation
 
 ---
 
-## Security
+# Security
 
 Sensitive configuration is intentionally excluded from Git.
 
 The repository ignores:
 
-* Environment files
+* `.env` files
 * Kubernetes Secret manifests containing real credentials
-* Private keys and certificates
-* Local backup files
-* Local development environments
+* Telegram secret configuration
+* Private keys
+* Certificates
+* Local backup archives
+* Python virtual environments
+* Build artifacts
 
-Example Kubernetes Secret templates are used instead of committing real credentials.
+Example Kubernetes Secret templates are committed instead of real credentials.
 
-Remote administrative access to the current environment is performed through a private **NetBird** network.
+Real secrets are injected into Kubernetes independently from the Git repository.
 
----
-
-## Repository Structure
-
-```text
-cloud-operations-center/
-├── backend/                 FastAPI API
-│   ├── alembic/             Database migrations
-│   └── app/
-│
-├── frontend/                React + Vite interface
-│
-├── database/                Database-related resources
-│
-├── docs/                    Architecture and project documentation
-│
-├── infra/                   Host-level infrastructure configuration
-│
-├── k8s/
-│   ├── argocd/              Argo CD Applications
-│   ├── base/
-│   │   ├── automation/
-│   │   ├── backend/
-│   │   ├── frontend/
-│   │   ├── ingress/
-│   │   ├── monitoring/
-│   │   └── postgres/
-│   └── monitoring/
-│
-├── n8n/                     Automation workflows
-│
-├── observability/           Observability configuration
-│
-├── scripts/                 Operational helper scripts
-│
-├── traffic-generator/       Synthetic API traffic generator
-│
-├── docker-compose.yml
-└── README.md
-```
+Remote administrative access to the current environment is performed through a private NetBird network.
 
 ---
 
-## Traffic Generator
+# Traffic Generator
 
-The repository includes a traffic generator that produces synthetic activity against the backend.
+The repository includes a synthetic traffic generator.
 
-Its purpose is to continuously generate realistic telemetry for:
-
-* Prometheus metrics
-* Loki logs
-* Tempo traces
-* Grafana dashboards
+Its purpose is to continuously produce activity against the FastAPI backend.
 
 ```text
 Traffic Generator
@@ -532,13 +790,88 @@ Metrics / Logs / Traces
 Grafana
 ```
 
-This makes it possible to demonstrate the observability platform even without real users.
+This provides realistic telemetry even when the platform does not have real external users.
+
+Generated traffic feeds:
+
+* Prometheus metrics
+* Loki logs
+* Tempo traces
+* Grafana dashboards
+
+This allows the observability platform to remain useful during demonstrations and development.
 
 ---
 
-## Documentation
+# Repository Structure
 
-Additional technical documentation is available under [`docs/`](docs/):
+```text
+cloud-operations-center/
+│
+├── backend/
+│   ├── alembic/
+│   ├── app/
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   ├── Dockerfile
+│   └── nginx.conf
+│
+├── database/
+│
+├── docs/
+│   ├── architecture.md
+│   ├── product-definition.md
+│   ├── api-design.md
+│   ├── data-model.md
+│   ├── alerting-responsibilities.md
+│   └── backlog.md
+│
+├── infra/
+│   └── nginx/
+│
+├── k8s/
+│   ├── argocd/
+│   ├── base/
+│   │   ├── automation/
+│   │   ├── backend/
+│   │   ├── frontend/
+│   │   ├── ingress/
+│   │   ├── monitoring/
+│   │   └── postgres/
+│   │
+│   └── monitoring/
+│
+├── n8n/
+│   └── workflows/
+│
+├── observability/
+│   ├── loki/
+│   ├── prometheus/
+│   └── tempo/
+│
+├── scripts/
+│
+├── traffic-generator/
+│
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml
+│
+├── docker-compose.yml
+└── README.md
+```
+
+---
+
+# Documentation
+
+Additional technical documentation is available under [`docs/`](docs/).
+
+Current documentation includes:
 
 * Architecture
 * Product definition
@@ -549,38 +882,36 @@ Additional technical documentation is available under [`docs/`](docs/):
 
 ---
 
-## What This Project Demonstrates
+# Technology Stack
 
-Cloud Operations Center was built as an end-to-end engineering project rather than as an isolated application.
-
-It demonstrates practical experience with:
-
-**Application**
+## Application
 
 * Python
 * FastAPI
 * React
+* Vite
 * PostgreSQL
 * Alembic
 
-**Containers & orchestration**
+## Containers & Orchestration
 
 * Docker
 * Kubernetes
-* Kubernetes networking
-* Health probes
-* Persistent storage
-* Horizontal Pod Autoscaling
+* Kubernetes Ingress
+* PersistentVolumeClaims
+* Horizontal Pod Autoscaler
+* Kubernetes CronJobs
+* Kubernetes health probes
 
-**DevOps & GitOps**
+## DevOps & GitOps
 
 * Git
+* GitHub
 * GitHub Actions
 * GitHub Container Registry
 * Argo CD
-* Immutable image versioning
 
-**Observability**
+## Observability
 
 * OpenTelemetry
 * Prometheus
@@ -590,29 +921,179 @@ It demonstrates practical experience with:
 * Grafana Alloy
 * Alertmanager
 
-**Operations**
+## Automation
+
+* n8n
+* Telegram
+
+## Backup & Disaster Recovery
+
+* PostgreSQL `pg_dump`
+* Kubernetes backup CronJobs
+* Persistent backup storage
+* Cloudflare R2
+
+## Networking & Access
+
+* Nginx
+* Kubernetes Ingress
+* HTTPS
+* NetBird
+
+---
+
+# What This Project Demonstrates
+
+Cloud Operations Center was designed as an end-to-end engineering project rather than as an isolated web application.
+
+It demonstrates practical experience across several engineering areas.
+
+## Application Engineering
+
+* REST API development
+* React frontend development
+* Relational database design
+* Database migrations
+* Health endpoints
+* Operational user interfaces
+
+## Containers & Kubernetes
+
+* Docker image creation
+* Kubernetes Deployments
+* Kubernetes Services
+* Ingress routing
+* Persistent storage
+* Health probes
+* CronJobs
+* Horizontal Pod Autoscaling
+
+## DevOps
+
+* CI/CD pipelines
+* Container registries
+* Automated deployments
+* Git-based workflows
+* Immutable artifact versioning
+
+## GitOps
+
+* Argo CD
+* Declarative Kubernetes configuration
+* Automated synchronization
+* Automated pruning
+* Git as infrastructure source of truth
+
+## Observability
+
+* Metrics
+* Logs
+* Distributed tracing
+* Operational dashboards
+* Alerting
+* Trace/log correlation
+
+## Operations
 
 * Service monitoring
-* Incident lifecycle management
+* Incident management
 * Health checking
-* Alerting
-* Log/trace correlation
+* Incident lifecycle automation
+* Telegram notifications
+* Technical alerting
 * Backup automation
 * Disaster recovery testing
 
 ---
 
-## Project Status
+# Operational Flow
 
-**Version:** `1.0.0`
+A simplified example of how the different components work together:
 
-The core platform is operational and the current development phase focuses on product polish, documentation and portfolio presentation.
+```text
+User request
+     ↓
+Frontend
+     ↓
+FastAPI
+     ↓
+PostgreSQL
+
+Meanwhile:
+
+FastAPI
+ ├── metrics ──────→ Prometheus
+ ├── traces ───────→ Tempo
+ └── logs ─────────→ Alloy → Loki
+
+Prometheus
+     ↓
+Alertmanager
+
+Operational incident
+     ↓
+Cloud Operations Center
+     ↓
+n8n
+     ↓
+Telegram
+     ↓
+Operator
+
+Code change
+     ↓
+GitHub
+     ↓
+GitHub Actions
+     ↓
+GHCR
+     ↓
+GitOps commit
+     ↓
+Argo CD
+     ↓
+Kubernetes
+```
 
 ---
 
-## Author
+# Project Status
+
+**Version:** `1.0.0`
+
+Core platform functionality is operational.
+
+Current development focuses on:
+
+* Product polish
+* Portfolio presentation
+* User experience improvements
+* Documentation
+* Demonstration material
+* Screenshots and architecture visuals
+
+---
+
+# Planned Portfolio Improvements
+
+The technical foundation of the platform is complete enough to focus on presentation and usability.
+
+Planned improvements include:
+
+* Improved frontend visual polish
+* Dedicated System / About view
+* Architecture screenshots and diagrams
+* Grafana screenshots
+* Argo CD deployment screenshots
+* CI/CD screenshots
+* Release changelog
+* GitHub `v1.0.0` release
+* Demo-ready operational scenarios
+
+---
+
+# Author
 
 **David C.H**
 
 Cloud / DevOps / Systems Administration portfolio project.
-
