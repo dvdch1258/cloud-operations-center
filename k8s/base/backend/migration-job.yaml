@@ -20,6 +20,21 @@ spec:
         component: migrations
     spec:
       restartPolicy: Never
+
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:16
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL..."
+              until pg_isready -h postgres -p 5432 -t 5; do
+                echo "PostgreSQL not ready yet..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready."
       imagePullSecrets:
         - name: ghcr-pull
       containers:
