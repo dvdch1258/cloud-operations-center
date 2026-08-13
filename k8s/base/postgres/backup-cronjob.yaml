@@ -15,6 +15,7 @@ spec:
 
   jobTemplate:
     spec:
+      activeDeadlineSeconds: 180
       backoffLimit: 2
 
       template:
@@ -58,9 +59,15 @@ spec:
                 - |
                   set -euo pipefail
 
+                  export PGCONNECT_TIMEOUT=10
+
                   TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
                   FILE="cloudops-${TIMESTAMP}.dump"
                   PATH_FILE="/backups/${FILE}"
+                  TMP_FILE="/backups/.${FILE}.tmp"
+
+                  rm -f "${TMP_FILE}"
+                  trap 'rm -f "${TMP_FILE}"' EXIT
 
                   echo "=== POSTGRESQL BACKUP ==="
                   echo "Database: ${POSTGRES_DB}"
@@ -71,12 +78,15 @@ spec:
                     -U "${POSTGRES_USER}" \
                     -d "${POSTGRES_DB}" \
                     -Fc \
-                    -f "${PATH_FILE}"
+                    -f "${TMP_FILE}"
 
                   echo
                   echo "=== VERIFY ==="
 
-                  pg_restore -l "${PATH_FILE}" >/dev/null
+                  pg_restore -l "${TMP_FILE}" >/dev/null
+
+                  mv "${TMP_FILE}" "${PATH_FILE}"
+                  trap - EXIT
 
                   echo "Backup verified."
                   ls -lh "${PATH_FILE}"
