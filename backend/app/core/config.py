@@ -1,10 +1,15 @@
+import os
+
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     app_name: str = "Cloud Operations Center"
-    version: str = "0.1.0"
-    environment: str = "development"
+
+    # Release/build metadata.
+    version: str = os.getenv("APP_VERSION", "1.0.0")
+    build_sha: str = os.getenv("BUILD_SHA", "development")
+    environment: str = os.getenv("ENVIRONMENT", "development")
 
     cors_origins: tuple[str, ...] = (
         "http://localhost:5173",

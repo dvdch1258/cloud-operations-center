@@ -36,6 +36,9 @@ spec:
               protocol: TCP
 
           env:
+            - name: ENVIRONMENT
+              value: "production"
+
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:

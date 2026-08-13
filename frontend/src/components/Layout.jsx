@@ -7,6 +7,17 @@ function navigationClass({ isActive }) {
     : "navigation__item";
 }
 
+const APP_VERSION =
+  import.meta.env.VITE_APP_VERSION || "1.0.0";
+
+const BUILD_SHA =
+  import.meta.env.VITE_BUILD_SHA || "development";
+
+const SHORT_BUILD =
+  BUILD_SHA === "development"
+    ? "dev"
+    : BUILD_SHA.replace(/^sha-/, "").slice(0, 7);
+
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
@@ -85,7 +96,7 @@ export default function Layout() {
 
         <div className="sidebar__footer">
           <span className="connection-dot" />
-          Acceso seguro · NetBird
+          Acceso seguro · NetBird · v{APP_VERSION} · {SHORT_BUILD}
         </div>
       </aside>
 

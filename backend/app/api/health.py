@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter
 
+from app.core.config import settings
+
 from app.services.health_service import (
     check_database,
     check_prometheus,
@@ -53,6 +55,8 @@ def detailed_health():
         "database": database_status,
         "prometheus": prometheus_status,
         "tempo": tempo_status,
-        "version": "0.1.0",
+        "version": settings.version,
+        "build_sha": settings.build_sha,
+        "environment": settings.environment,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
