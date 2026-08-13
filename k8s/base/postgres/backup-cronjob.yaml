@@ -3,22 +3,25 @@ kind: CronJob
 metadata:
   name: postgres-backup
   namespace: cloud-ops
+
 spec:
   schedule: "15 3 * * *"
   timeZone: "Atlantic/Canary"
   concurrencyPolicy: Forbid
+
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
 
   jobTemplate:
     spec:
       backoffLimit: 2
+
       template:
         spec:
-          automountServiceAccountToken: false
           restartPolicy: OnFailure
+          automountServiceAccountToken: false
 
-          containers:
+          initContainers:
             - name: postgres-backup
               image: postgres:16
               imagePullPolicy: IfNotPresent
@@ -55,41 +58,102 @@ spec:
                   set -euo pipefail
 
                   TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
-                  FILE="/backups/cloudops-${TIMESTAMP}.dump"
+                  FILE="cloudops-${TIMESTAMP}.dump"
+                  PATH_FILE="/backups/${FILE}"
 
-                  echo "=== PostgreSQL backup ==="
+                  echo "=== POSTGRESQL BACKUP ==="
                   echo "Database: ${POSTGRES_DB}"
-                  echo "Destination: ${FILE}"
+                  echo "File: ${FILE}"
 
                   pg_dump \
                     -h postgres.cloud-ops.svc.cluster.local \
                     -U "${POSTGRES_USER}" \
                     -d "${POSTGRES_DB}" \
                     -Fc \
-                    -f "${FILE}"
+                    -f "${PATH_FILE}"
 
                   echo
-                  echo "=== Verifying archive ==="
-                  pg_restore -l "${FILE}" >/dev/null
+                  echo "=== VERIFY ==="
+
+                  pg_restore -l "${PATH_FILE}" >/dev/null
 
                   echo "Backup verified."
-                  ls -lh "${FILE}"
+                  ls -lh "${PATH_FILE}"
+
+                  echo "${FILE}" > /work/latest-backup
 
                   echo
-                  echo "=== Retention ==="
+                  echo "=== LOCAL RETENTION ==="
+
                   find /backups \
                     -type f \
                     -name 'cloudops-*.dump' \
                     -mtime +7 \
                     -delete
 
-                  echo "Backup completed successfully."
+                  echo "Local backup completed."
 
               volumeMounts:
                 - name: backups
                   mountPath: /backups
 
+                - name: work
+                  mountPath: /work
+
+          containers:
+            - name: r2-upload
+              image: amazon/aws-cli:2.36.10
+              imagePullPolicy: IfNotPresent
+
+              envFrom:
+                - secretRef:
+                    name: r2-backup-credentials
+
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+
+                  FILE="$(cat /work/latest-backup)"
+                  PATH_FILE="/backups/${FILE}"
+
+                  echo "=== R2 UPLOAD ==="
+                  echo "File: ${FILE}"
+
+                  test -f "${PATH_FILE}"
+
+                  aws s3 cp \
+                    "${PATH_FILE}" \
+                    "s3://cloudops-postgres-backups/postgres/${FILE}" \
+                    --endpoint-url "${R2_ENDPOINT}"
+
+                  echo
+                  echo "=== R2 VERIFY ==="
+
+                  aws s3api head-object \
+                    --bucket cloudops-postgres-backups \
+                    --key "postgres/${FILE}" \
+                    --endpoint-url "${R2_ENDPOINT}" \
+                    >/dev/null
+
+                  echo "R2 object verified."
+                  echo
+                  echo "✅ BACKUP LOCAL + R2 COMPLETED"
+
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+                  readOnly: true
+
+                - name: work
+                  mountPath: /work
+                  readOnly: true
+
           volumes:
             - name: backups
               persistentVolumeClaim:
                 claimName: postgres-backup-pvc
+
+            - name: work
+              emptyDir: {}
