@@ -5,6 +5,7 @@ metadata:
   namespace: cloud-ops
 
 spec:
+  suspend: false
   schedule: "15 3 * * *"
   timeZone: "Atlantic/Canary"
   concurrencyPolicy: Forbid
