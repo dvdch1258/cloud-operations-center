@@ -612,7 +612,7 @@ The core platform is operational and the current development phase focuses on pr
 
 ## Author
 
-**David**
+**David C.H**
 
 Cloud / DevOps / Systems Administration portfolio project.
 
