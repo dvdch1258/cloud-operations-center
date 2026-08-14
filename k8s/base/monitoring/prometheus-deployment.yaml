@@ -3,38 +3,33 @@ kind: Deployment
 metadata:
   name: prometheus
   namespace: monitoring
-
 spec:
   replicas: 1
-
   selector:
     matchLabels:
       app: prometheus
-
   template:
     metadata:
       labels:
         app: prometheus
-
     spec:
       containers:
-
-        - name: prometheus
-
-          image: prom/prometheus:v2.54.1
-
-          args:
-            - "--config.file=/etc/prometheus/prometheus.yml"
-            - --web.enable-remote-write-receiver
-
-          ports:
-            - containerPort: 9090
-
-          volumeMounts:
-            - name: config
-              mountPath: /etc/prometheus
-
+      - args:
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --web.enable-remote-write-receiver
+        image: prom/prometheus:v2.54.1
+        name: prometheus
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - mountPath: /prometheus
+          name: prometheus-data
+        - mountPath: /etc/prometheus
+          name: config
       volumes:
-        - name: config
-          configMap:
-            name: prometheus-config
+      - name: prometheus-data
+        persistentVolumeClaim:
+          claimName: prometheus-pvc
+      - configMap:
+          name: prometheus-config
+        name: config

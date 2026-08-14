@@ -27,4 +27,32 @@ spec:
         ports:
         - containerPort: 3000
         resources: {}
+        volumeMounts:
+        - mountPath: /var/lib/grafana
+          name: grafana-storage
+        - mountPath: /etc/grafana/provisioning/datasources/datasources.yaml
+          name: grafana-datasource
+          readOnly: true
+          subPath: datasources.yaml
+        - mountPath: /etc/grafana/provisioning/dashboards
+          name: grafana-dashboard-provider
+          readOnly: true
+        - mountPath: /var/lib/grafana/dashboards/cloud-operations
+          name: grafana-dashboards
+          readOnly: true
+      securityContext:
+        fsGroup: 472
+      volumes:
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-pvc
+      - configMap:
+          name: grafana-datasource
+        name: grafana-datasource
+      - configMap:
+          name: grafana-dashboard-provider
+        name: grafana-dashboard-provider
+      - configMap:
+          name: grafana-dashboard
+        name: grafana-dashboards
 status: {}

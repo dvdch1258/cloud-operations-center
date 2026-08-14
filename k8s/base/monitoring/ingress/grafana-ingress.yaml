@@ -1,6 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
   name: grafana-ingress
   namespace: monitoring
 spec:
@@ -9,24 +11,24 @@ spec:
   - host: grafana.cloudopscenter.es
     http:
       paths:
-      - path: /
-        pathType: Prefix
-        backend:
+      - backend:
           service:
             name: grafana
             port:
               number: 3000
+        path: /
+        pathType: Prefix
   - host: grafana.cloud-ops.local
     http:
       paths:
-      - path: /
-        pathType: Prefix
-        backend:
+      - backend:
           service:
             name: grafana
             port:
               number: 3000
+        path: /
+        pathType: Prefix
   tls:
   - hosts:
     - grafana.cloudopscenter.es
-    secretName: cloudopscenter-monitoring-tls
+    secretName: cloudopscenter-grafana-tls

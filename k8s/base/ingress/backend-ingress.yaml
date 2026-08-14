@@ -29,4 +29,4 @@ spec:
   tls:
   - hosts:
     - api.cloudopscenter.es
-    secretName: cloudopscenter-app-api-tls
+    secretName: cloudopscenter-api-tls
