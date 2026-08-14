@@ -53,6 +53,6 @@ spec:
           name: grafana-dashboard-provider
         name: grafana-dashboard-provider
       - configMap:
-          name: grafana-dashboard
+          name: grafana-cloud-operations-dashboard
         name: grafana-dashboards
 status: {}
