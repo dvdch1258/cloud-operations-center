@@ -71,6 +71,30 @@ def verify_internal_api_key(
         )
 
 
+
+def verify_n8n_api_key(
+    api_key: str | None = Header(
+        default=None,
+        alias="X-N8N-API-Key",
+    ),
+) -> None:
+    expected = settings.n8n_api_key
+
+    if not expected:
+        raise RuntimeError(
+            "N8N_API_KEY no está definida"
+        )
+
+    if api_key is None or not secrets.compare_digest(
+        api_key,
+        expected,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credencial n8n inválida",
+        )
+
+
 def authentication_exception() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

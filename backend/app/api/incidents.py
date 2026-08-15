@@ -5,7 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import (
+    get_current_user,
+    verify_n8n_api_key,
+)
 from app.models.incident import Incident
 from app.schemas.incident import (
     IncidentCreate,
@@ -20,6 +23,25 @@ router = APIRouter(
     tags=["incidents"],
     dependencies=[Depends(get_current_user)],
 )
+
+
+internal_router = APIRouter(
+    prefix="/internal",
+    tags=["internal"],
+)
+
+
+@internal_router.get(
+    "/incidents",
+    response_model=list[IncidentResponse],
+    dependencies=[Depends(verify_n8n_api_key)],
+    include_in_schema=False,
+)
+def get_incidents_for_n8n(
+    db: Session = Depends(get_db),
+):
+    logger.info("n8n_incidents_list_requested")
+    return db.query(Incident).all()
 
 
 @router.get("/", response_model=list[IncidentResponse])

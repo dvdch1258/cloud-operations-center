@@ -22,6 +22,11 @@ class Settings(BaseSettings):
         "",
     )
 
+    n8n_api_key: str = os.getenv(
+        "N8N_API_KEY",
+        "",
+    )
+
     cors_origins: tuple[str, ...] = (
         "http://localhost:5173",
         "http://127.0.0.1:5173",
