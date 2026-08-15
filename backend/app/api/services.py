@@ -34,7 +34,7 @@ router = APIRouter(
 )
 
 internal_router = APIRouter(
-    prefix="/services",
+    prefix="/internal/services",
     tags=["services-internal"],
 )
 
@@ -46,6 +46,7 @@ def get_services(db: Session = Depends(get_db)):
 
 
 # Debe declararse antes de /{service_id}.
+@router.post("/check-all")
 @internal_router.post(
     "/check-all",
     dependencies=[Depends(verify_internal_api_key)],

@@ -51,4 +51,4 @@ spec:
                 - "20"
                 - --request
                 - POST
-                - http://backend.cloud-ops.svc.cluster.local:8000/services/check-all
+                - http://backend.cloud-ops.svc.cluster.local:8000/internal/services/check-all

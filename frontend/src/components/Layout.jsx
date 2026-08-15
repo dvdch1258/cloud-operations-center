@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import {
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
+import { useAuth } from "../auth/AuthContext";
 
 function navigationClass({ isActive }) {
   return isActive
@@ -21,10 +28,17 @@ const SHORT_BUILD =
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
+
+  function handleLogout() {
+    logout();
+    navigate("/login", { replace: true });
+  }
 
   return (
     <div className="app-shell">
@@ -93,6 +107,21 @@ export default function Layout() {
             Observabilidad
           </a>
         </nav>
+
+        <div className="sidebar__account">
+          <div>
+            <span>Sesión iniciada</span>
+            <strong>{user?.username}</strong>
+          </div>
+
+          <button
+            type="button"
+            className="logout-button"
+            onClick={handleLogout}
+          >
+            Cerrar sesión
+          </button>
+        </div>
 
         <div className="sidebar__footer">
           <span className="connection-dot" />
