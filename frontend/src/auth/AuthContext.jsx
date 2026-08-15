@@ -6,12 +6,7 @@ import {
   useState,
 } from "react";
 
-import {
-  api,
-  clearAccessToken,
-  getAccessToken,
-  setAccessToken,
-} from "../api/client";
+import { api } from "../api/client";
 
 
 const AuthContext = createContext(null);
@@ -25,25 +20,21 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let active = true;
 
+    // Elimina el JWT antiguo de la versión
+    // anterior basada en localStorage.
+    localStorage.removeItem(
+      "cloud_ops_access_token"
+    );
+
     async function restoreSession() {
-      const token = getAccessToken();
-
-      if (!token) {
-        if (active) {
-          setLoading(false);
-        }
-        return;
-      }
-
       try {
-        const currentUser = await api.getMe();
+        const currentUser =
+          await api.getMe();
 
         if (active) {
           setUser(currentUser);
         }
       } catch {
-        clearAccessToken();
-
         if (active) {
           setUser(null);
         }
@@ -64,7 +55,6 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     function handleUnauthorized() {
-      clearAccessToken();
       setUser(null);
     }
 
@@ -82,26 +72,28 @@ export function AuthProvider({ children }) {
   }, []);
 
 
-  async function login(username, password) {
-    const result = await api.login(username, password);
+  async function login(
+    username,
+    password,
+  ) {
+    const currentUser =
+      await api.login(
+        username,
+        password,
+      );
 
-    setAccessToken(result.access_token);
+    setUser(currentUser);
 
-    try {
-      const currentUser = await api.getMe();
-      setUser(currentUser);
-      return currentUser;
-    } catch (error) {
-      clearAccessToken();
-      setUser(null);
-      throw error;
-    }
+    return currentUser;
   }
 
 
-  function logout() {
-    clearAccessToken();
-    setUser(null);
+  async function logout() {
+    try {
+      await api.logout();
+    } finally {
+      setUser(null);
+    }
   }
 
 
@@ -126,11 +118,12 @@ export function AuthProvider({ children }) {
 
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context =
+    useContext(AuthContext);
 
   if (!context) {
     throw new Error(
-      "useAuth debe utilizarse dentro de AuthProvider",
+      "useAuth debe utilizarse dentro de AuthProvider"
     );
   }
 

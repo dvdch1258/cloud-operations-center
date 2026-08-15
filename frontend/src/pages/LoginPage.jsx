@@ -21,7 +21,7 @@ export default function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState("david");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -149,7 +149,7 @@ export default function LoginPage() {
 
         <div className="login-security">
           <span className="connection-dot" />
-          Sesión protegida mediante JWT
+          Acceso seguro
         </div>
       </section>
     </main>

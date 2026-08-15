@@ -1,48 +1,34 @@
 const API_URL =
   import.meta.env.VITE_API_URL || "/api";
 
-const TOKEN_KEY = "cloud_ops_access_token";
-
-
-export function getAccessToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-
-export function setAccessToken(token) {
-  localStorage.setItem(TOKEN_KEY, token);
-}
-
-
-export function clearAccessToken() {
-  localStorage.removeItem(TOKEN_KEY);
-}
-
 
 async function request(path, options = {}) {
-  const token = getAccessToken();
+  const response = await fetch(
+    `${API_URL}${path}`,
+    {
+      ...options,
 
-  const headers = {
-    "Content-Type": "application/json",
-    ...options.headers,
-  };
+      credentials: "include",
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    },
+  );
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-  });
-
-  if (response.status === 401 && path !== "/auth/login") {
-    clearAccessToken();
-    window.dispatchEvent(new Event("auth:unauthorized"));
+  if (
+    response.status === 401 &&
+    path !== "/auth/login"
+  ) {
+    window.dispatchEvent(
+      new Event("auth:unauthorized")
+    );
   }
 
   if (!response.ok) {
-    let message = `Error HTTP ${response.status}`;
+    let message =
+      `Error HTTP ${response.status}`;
 
     try {
       const body = await response.json();
@@ -63,7 +49,10 @@ async function request(path, options = {}) {
 
 
 export const api = {
-  login: (username, password) =>
+  login: (
+    username,
+    password,
+  ) =>
     request("/auth/login", {
       method: "POST",
       body: JSON.stringify({
@@ -72,12 +61,22 @@ export const api = {
       }),
     }),
 
-  getMe: () => request("/auth/me"),
+  logout: () =>
+    request("/auth/logout", {
+      method: "POST",
+    }),
 
-  getSummary: () => request("/dashboard/summary"),
+  getMe: () =>
+    request("/auth/me"),
 
-  getServices: () => request("/services/"),
-  getService: (id) => request(`/services/${id}`),
+  getSummary: () =>
+    request("/dashboard/summary"),
+
+  getServices: () =>
+    request("/services/"),
+
+  getService: (id) =>
+    request(`/services/${id}`),
 
   createService: (service) =>
     request("/services/", {
@@ -90,13 +89,26 @@ export const api = {
       method: "POST",
     }),
 
-  getServiceUptime: (id, hours = 1) =>
-    request(`/services/${id}/uptime?hours=${hours}`),
+  getServiceUptime: (
+    id,
+    hours = 1,
+  ) =>
+    request(
+      `/services/${id}/uptime?hours=${hours}`
+    ),
 
-  getServiceChecks: (id, limit = 100) =>
-    request(`/services/${id}/checks?limit=${limit}`),
+  getServiceChecks: (
+    id,
+    limit = 100,
+  ) =>
+    request(
+      `/services/${id}/checks?limit=${limit}`
+    ),
 
-  updateService: (id, service) =>
+  updateService: (
+    id,
+    service,
+  ) =>
     request(`/services/${id}`, {
       method: "PUT",
       body: JSON.stringify(service),
@@ -107,7 +119,8 @@ export const api = {
       method: "DELETE",
     }),
 
-  getIncidents: () => request("/incidents/"),
+  getIncidents: () =>
+    request("/incidents/"),
 
   createIncident: (incident) =>
     request("/incidents/", {
@@ -115,7 +128,10 @@ export const api = {
       body: JSON.stringify(incident),
     }),
 
-  updateIncident: (id, incident) =>
+  updateIncident: (
+    id,
+    incident,
+  ) =>
     request(`/incidents/${id}`, {
       method: "PUT",
       body: JSON.stringify(incident),

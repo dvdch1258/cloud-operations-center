@@ -17,6 +17,12 @@ class Settings(BaseSettings):
         os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
     )
 
+
+    auth_cookie_name: str = os.getenv(
+        "AUTH_COOKIE_NAME",
+        "cloud_ops_session",
+    )
+
     service_checker_api_key: str = os.getenv(
         "SERVICE_CHECKER_API_KEY",
         "",

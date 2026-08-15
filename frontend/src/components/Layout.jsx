@@ -35,8 +35,8 @@ export default function Layout() {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     navigate("/login", { replace: true });
   }
 
