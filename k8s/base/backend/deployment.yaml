@@ -45,6 +45,12 @@ spec:
                   name: postgres-secret
                   key: DATABASE_URL
 
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backend-auth-secret
+                  key: JWT_SECRET_KEY
+
           envFrom:
             - configMapRef:
                 name: backend-config

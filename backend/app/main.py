@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 from opentelemetry import trace
 
+from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
 from app.api.incidents import router as incidents_router
@@ -90,6 +91,7 @@ async def business_metrics_middleware(request, call_next):
 Instrumentator().instrument(app).expose(app)
 
 # Routers
+app.include_router(auth_router)
 app.include_router(health_router)
 app.include_router(services_router)
 app.include_router(incidents_router)

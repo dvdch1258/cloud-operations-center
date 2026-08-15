@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     build_sha: str = os.getenv("BUILD_SHA", "development")
     environment: str = os.getenv("ENVIRONMENT", "development")
 
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "")
+    jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
+    access_token_expire_minutes: int = int(
+        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+    )
+
     cors_origins: tuple[str, ...] = (
         "http://localhost:5173",
         "http://127.0.0.1:5173",
