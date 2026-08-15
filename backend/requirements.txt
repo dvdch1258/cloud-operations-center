@@ -45,3 +45,5 @@ typing_extensions==4.15.0
 urllib3==2.7.0
 uvicorn==0.48.0
 wrapt==2.2.1
+PyJWT==2.13.0
+pwdlib[argon2]==0.3.1
