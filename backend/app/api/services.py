@@ -6,6 +6,10 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import (
+    get_current_user,
+    verify_internal_api_key,
+)
 from app.models.service import Service
 from app.models.incident import Incident
 from app.models.service_check import ServiceCheck
@@ -23,7 +27,16 @@ from app.services.service_checker import check_all_services
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/services", tags=["services"])
+router = APIRouter(
+    prefix="/services",
+    tags=["services"],
+    dependencies=[Depends(get_current_user)],
+)
+
+internal_router = APIRouter(
+    prefix="/services",
+    tags=["services-internal"],
+)
 
 
 @router.get("/", response_model=list[ServiceResponse])
@@ -33,7 +46,10 @@ def get_services(db: Session = Depends(get_db)):
 
 
 # Debe declararse antes de /{service_id}.
-@router.post("/check-all")
+@internal_router.post(
+    "/check-all",
+    dependencies=[Depends(verify_internal_api_key)],
+)
 def run_services_check(db: Session = Depends(get_db)):
     logger.info("services_check_all_requested")
 

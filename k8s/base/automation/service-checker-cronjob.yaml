@@ -32,10 +32,19 @@ spec:
             - name: service-checker
               image: curlimages/curl:8.16.0
 
+              env:
+                - name: SERVICE_CHECKER_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: service-checker-secret
+                      key: SERVICE_CHECKER_API_KEY
+
               args:
                 - --fail-with-body
                 - --silent
                 - --show-error
+                - --header
+                - "X-Internal-API-Key: $(SERVICE_CHECKER_API_KEY)"
                 - --connect-timeout
                 - "5"
                 - --max-time

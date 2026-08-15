@@ -51,6 +51,12 @@ spec:
                   name: backend-auth-secret
                   key: JWT_SECRET_KEY
 
+            - name: SERVICE_CHECKER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: service-checker-secret
+                  key: SERVICE_CHECKER_API_KEY
+
           envFrom:
             - configMapRef:
                 name: backend-config

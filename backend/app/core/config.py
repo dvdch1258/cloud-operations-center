@@ -17,6 +17,11 @@ class Settings(BaseSettings):
         os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
     )
 
+    service_checker_api_key: str = os.getenv(
+        "SERVICE_CHECKER_API_KEY",
+        "",
+    )
+
     cors_origins: tuple[str, ...] = (
         "http://localhost:5173",
         "http://127.0.0.1:5173",
