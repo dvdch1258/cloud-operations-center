@@ -17,6 +17,14 @@ class Settings(BaseSettings):
         os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
     )
 
+    login_max_attempts: int = int(
+        os.getenv("LOGIN_MAX_ATTEMPTS", "5")
+    )
+
+    login_lock_minutes: int = int(
+        os.getenv("LOGIN_LOCK_MINUTES", "15")
+    )
+
 
     auth_cookie_name: str = os.getenv(
         "AUTH_COOKIE_NAME",
