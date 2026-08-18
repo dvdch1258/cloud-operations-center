@@ -166,6 +166,22 @@ data:
               summary: "Latencia elevada en el backend"
               description: "La ruta {{ $labels.handler }} con método {{ $labels.method }} mantiene una latencia p95 superior a 750 ms con tráfico suficiente durante al menos 5 minutos."
 
+          - alert: SecurityAccountLocked
+            expr: |
+              sum(
+                increase(
+                  coc_security_account_lockouts_total{
+                    job="backend"
+                  }[2m]
+                )
+              ) > 0
+            labels:
+              severity: warning
+              category: security
+            annotations:
+              summary: "Cuenta bloqueada por intentos fallidos"
+              description: "Cloud Operations Center ha bloqueado temporalmente una cuenta después de alcanzar el máximo de intentos fallidos de inicio de sesión."
+
           - alert: TooManyOpenIncidents
             expr: |
               coc_incidents_open{job="backend"} >= 5

@@ -1,4 +1,4 @@
-from prometheus_client import Gauge
+from prometheus_client import Counter, Gauge
 
 from app.core.database import SessionLocal
 from app.models.incident import Incident
@@ -23,6 +23,16 @@ incidents_open_gauge = Gauge(
     "coc_incidents_open",
     "Total number of open incidents"
 )
+
+
+security_account_lockouts_counter = Counter(
+    "coc_security_account_lockouts_total",
+    "Total number of account lockouts caused by failed logins",
+)
+
+
+def record_security_account_lockout() -> None:
+    security_account_lockouts_counter.inc()
 
 
 def update_business_metrics():

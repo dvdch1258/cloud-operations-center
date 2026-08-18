@@ -18,6 +18,9 @@ from app.core.security import (
     verify_password,
 )
 from app.models.user import User
+from app.services.metrics_service import (
+    record_security_account_lockout,
+)
 from app.schemas.auth import (
     LoginRequest,
     UserResponse,
@@ -154,6 +157,8 @@ def login(
             )
 
             db.commit()
+
+            record_security_account_lockout()
 
             logger.warning(
                 "security_account_locked "
