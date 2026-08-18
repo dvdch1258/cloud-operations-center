@@ -39,7 +39,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: migrations
-          image: ghcr.io/dvdch1258/cloud-operations-backend:sha-6680257
+          image: ghcr.io/dvdch1258/cloud-operations-backend:sha-dc94757
           imagePullPolicy: IfNotPresent
           command:
             - alembic
