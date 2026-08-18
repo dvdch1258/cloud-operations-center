@@ -1111,6 +1111,40 @@ data:
             "x": 0,
             "y": 37
           }
+        },
+        {
+          "id": 17,
+          "type": "logs",
+          "title": "Eventos de seguridad",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{namespace=\"cloud-ops\",container=\"backend\"} |~ \"security_(login|account)_\"",
+              "queryType": "range",
+              "direction": "backward",
+              "editorMode": "code"
+            }
+          ],
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "showCommonLabels": false,
+            "wrapLogMessage": true,
+            "prettifyLogMessage": false,
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "sortOrder": "Descending"
+          },
+          "gridPos": {
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 49
+          }
         }
       ],
       "refresh": "15s",
