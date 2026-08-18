@@ -24,8 +24,11 @@ spec:
         volumeMounts:
         - mountPath: /prometheus
           name: prometheus-data
-        - mountPath: /etc/prometheus
+        - mountPath: /etc/prometheus/prometheus.yml
           name: config
+          subPath: prometheus.yml
+        - mountPath: /etc/prometheus/rules
+          name: rules
       volumes:
       - name: prometheus-data
         persistentVolumeClaim:
@@ -33,3 +36,6 @@ spec:
       - configMap:
           name: prometheus-config
         name: config
+      - configMap:
+          name: prometheus-rules
+        name: rules
