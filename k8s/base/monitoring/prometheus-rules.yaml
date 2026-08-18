@@ -172,7 +172,7 @@ data:
                 increase(
                   coc_security_account_lockouts_total{
                     job="backend"
-                  }[2m]
+                  }[5m]
                 )
               ) > 0
             labels:
