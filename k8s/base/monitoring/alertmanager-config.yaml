@@ -42,7 +42,7 @@ data:
     receivers:
       - name: n8n
         webhook_configs:
-          - url: http://172.22.0.1:5678/webhook/cloud-ops-technical-alerts
+          - url: http://100.92.118.17:5678/webhook/cloud-ops-technical-alerts
             send_resolved: true
 
       - name: silent
