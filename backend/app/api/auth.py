@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import (
@@ -21,6 +22,9 @@ from app.schemas.auth import (
     LoginRequest,
     UserResponse,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(
@@ -51,12 +55,26 @@ def login(
     # Usuario inexistente: mantenemos mensaje genérico para no revelar
     # qué nombres de usuario existen.
     if user is None:
+        logger.warning(
+            "security_login_failed "
+            "username=%r reason=user_not_found",
+            credentials.username,
+        )
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario o contraseña incorrectos",
         )
 
     if not user.is_active:
+        logger.warning(
+            "security_login_failed "
+            "username=%r user_id=%s "
+            "reason=inactive_user",
+            user.username,
+            user.id,
+        )
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario o contraseña incorrectos",
@@ -78,6 +96,15 @@ def login(
                 int((locked_until - now).total_seconds()),
             )
 
+            logger.warning(
+                "security_login_blocked "
+                "username=%r user_id=%s "
+                "retry_after_seconds=%s",
+                user.username,
+                user.id,
+                retry_after,
+            )
+
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=(
@@ -94,12 +121,28 @@ def login(
         user.locked_until = None
         db.commit()
 
+        logger.info(
+            "security_account_unlocked "
+            "username=%r user_id=%s reason=timeout",
+            user.username,
+            user.id,
+        )
+
     if not verify_password(
         credentials.password,
         user.password_hash,
     ):
         user.failed_login_attempts = (
             (user.failed_login_attempts or 0) + 1
+        )
+
+        logger.warning(
+            "security_login_failed "
+            "username=%r user_id=%s "
+            "reason=bad_password failed_attempts=%s",
+            user.username,
+            user.id,
+            user.failed_login_attempts,
         )
 
         if (
@@ -111,6 +154,16 @@ def login(
             )
 
             db.commit()
+
+            logger.warning(
+                "security_account_locked "
+                "username=%r user_id=%s "
+                "failed_attempts=%s lock_minutes=%s",
+                user.username,
+                user.id,
+                user.failed_login_attempts,
+                settings.login_lock_minutes,
+            )
 
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -160,6 +213,13 @@ def login(
             * 60
         ),
         path="/",
+    )
+
+    logger.info(
+        "security_login_success "
+        "username=%r user_id=%s",
+        user.username,
+        user.id,
     )
 
     return user
