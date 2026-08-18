@@ -37,7 +37,28 @@ async function request(path, options = {}) {
       // La respuesta puede no contener JSON.
     }
 
-    throw new Error(message);
+    const error = new Error(message);
+
+    error.status = response.status;
+
+    const retryAfterHeader =
+      response.headers.get("Retry-After");
+
+    if (retryAfterHeader) {
+      const retryAfter = Number.parseInt(
+        retryAfterHeader,
+        10,
+      );
+
+      if (
+        Number.isFinite(retryAfter) &&
+        retryAfter > 0
+      ) {
+        error.retryAfter = retryAfter;
+      }
+    }
+
+    throw error;
   }
 
   if (response.status === 204) {

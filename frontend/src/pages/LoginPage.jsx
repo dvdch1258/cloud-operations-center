@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useState,
 } from "react";
 
@@ -9,6 +10,23 @@ import {
 } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
+
+
+function formatCountdown(totalSeconds) {
+  const minutes = Math.floor(
+    totalSeconds / 60
+  );
+
+  const seconds = totalSeconds % 60;
+
+  return `${String(minutes).padStart(
+    2,
+    "0",
+  )}:${String(seconds).padStart(
+    2,
+    "0",
+  )}`;
+}
 
 
 export default function LoginPage() {
@@ -25,6 +43,28 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [lockSeconds, setLockSeconds] =
+    useState(0);
+
+
+  useEffect(() => {
+    if (lockSeconds <= 0) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(
+      () => {
+        setLockSeconds((current) =>
+          Math.max(0, current - 1)
+        );
+      },
+      1000,
+    );
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [lockSeconds]);
 
 
   if (loading) {
@@ -45,6 +85,10 @@ export default function LoginPage() {
   async function handleSubmit(event) {
     event.preventDefault();
 
+    if (lockSeconds > 0) {
+      return;
+    }
+
     setError("");
     setSubmitting(true);
 
@@ -61,10 +105,23 @@ export default function LoginPage() {
         replace: true,
       });
     } catch (err) {
-      setError(
-        err.message ||
-          "No se pudo iniciar sesión",
-      );
+      if (err.status === 429) {
+        setLockSeconds(
+          Number.isFinite(err.retryAfter)
+            ? err.retryAfter
+            : 15 * 60
+        );
+
+        setError(
+          err.message ||
+            "Cuenta bloqueada temporalmente."
+        );
+      } else {
+        setError(
+          err.message ||
+            "No se pudo iniciar sesión",
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -98,8 +155,20 @@ export default function LoginPage() {
 
         {error && (
           <div className="alert alert--error">
-            <strong>No se pudo iniciar sesión</strong>
+            <strong>
+              {lockSeconds > 0
+                ? "Acceso temporalmente bloqueado"
+                : "No se pudo iniciar sesión"}
+            </strong>
+
             <span>{error}</span>
+
+            {lockSeconds > 0 && (
+              <span>
+                Puedes volver a intentarlo en{" "}
+                {formatCountdown(lockSeconds)}
+              </span>
+            )}
           </div>
         )}
 
@@ -139,11 +208,17 @@ export default function LoginPage() {
           <button
             type="submit"
             className="primary-button login-button"
-            disabled={submitting}
+            disabled={
+              submitting || lockSeconds > 0
+            }
           >
-            {submitting
-              ? "Iniciando sesión..."
-              : "Entrar"}
+            {lockSeconds > 0
+              ? `Bloqueado · ${formatCountdown(
+                  lockSeconds
+                )}`
+              : submitting
+                ? "Iniciando sesión..."
+                : "Entrar"}
           </button>
         </form>
 
