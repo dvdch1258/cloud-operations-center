@@ -8,6 +8,22 @@ observability, incident management, and disaster recovery.
 
 
 
+## Architecture Diagram
+
+<p align="center">
+  <img
+    src="architecture/cloud-operations-center-architecture.svg"
+    alt="Cloud Operations Center architecture"
+    width="100%"
+  />
+</p>
+
+The editable draw.io source, when available, is stored under:
+
+[`docs/architecture/`](architecture/)
+
+---
+
 ## Production Architecture
 
 ```text
