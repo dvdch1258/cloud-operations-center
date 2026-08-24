@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage";
 import ServiceDetailPage from "./pages/ServiceDetailPage";
 import ServicesPage from "./pages/ServicesPage";
 import SummaryPage from "./pages/SummaryPage";
+import SystemPage from "./pages/SystemPage";
 import "./App.css";
 
 
@@ -42,6 +43,12 @@ export default function App() {
           <Route
             path="incidentes"
             element={<IncidentsPage />}
+          />
+
+
+          <Route
+            path="sistema"
+            element={<SystemPage />}
           />
         </Route>
       </Route>

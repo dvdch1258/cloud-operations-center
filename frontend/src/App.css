@@ -1773,3 +1773,132 @@ tbody tr:hover {
     border-radius: 16px;
   }
 }
+
+
+/* ==========================================================
+   SISTEMA
+   ========================================================== */
+
+.system-meta-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(170px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.system-meta-card {
+  padding: 20px;
+  border: 1px solid #1d2a3d;
+  border-radius: 14px;
+  background: rgba(13, 21, 35, 0.88);
+}
+
+.system-meta-card > span {
+  display: block;
+  margin-bottom: 14px;
+  color: #7e8da3;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.system-meta-card strong {
+  display: block;
+  overflow: hidden;
+  color: #edf3ff;
+  font-size: 1.28rem;
+  text-overflow: ellipsis;
+}
+
+.system-meta-card p {
+  margin: 7px 0 0;
+  color: #6f7f95;
+  font-size: 0.78rem;
+}
+
+.component-status--down {
+  color: #ff7b86;
+}
+
+.system-operations-grid {
+  margin-bottom: 20px;
+}
+
+.system-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.system-links .grafana-link {
+  margin-top: 0;
+}
+
+.system-stack {
+  margin-bottom: 20px;
+}
+
+.system-stack-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 20px;
+  overflow: hidden;
+  border: 1px solid #1b283a;
+  border-radius: 12px;
+  background: #1b283a;
+}
+
+.system-stack-grid > div {
+  min-width: 0;
+  padding: 17px;
+  background: #0d1626;
+}
+
+.system-stack-grid span,
+.system-stack-grid strong {
+  display: block;
+}
+
+.system-stack-grid span {
+  margin-bottom: 6px;
+  color: #70839e;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.system-stack-grid strong {
+  color: #dfe8f7;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+
+@media (max-width: 1050px) {
+  .system-meta-grid,
+  .system-stack-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+@media (max-width: 600px) {
+  .system-meta-grid,
+  .system-stack-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .system-links {
+    display: grid;
+  }
+
+  .system-links .grafana-link {
+    text-align: center;
+  }
+}
