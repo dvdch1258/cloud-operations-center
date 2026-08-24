@@ -1061,7 +1061,7 @@ Kubernetes
 
 **Version:** `1.0.0`
 
-Core platform functionality is operational.
+Cloud Operations Center v1.0.0 is complete and operational.
 
 Current development focuses on:
 
@@ -1087,7 +1087,6 @@ Planned improvements include:
 * Argo CD deployment screenshots
 * CI/CD screenshots
 * Release changelog
-* GitHub `v1.0.0` release
 * Demo-ready operational scenarios
 
 ---
