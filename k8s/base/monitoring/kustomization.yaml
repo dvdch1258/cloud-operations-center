@@ -21,3 +21,4 @@ resources:
 - prometheus-pvc.yaml
 - grafana-pvc.yaml
 - tempo/pvc.yaml
+- kube-state-metrics
