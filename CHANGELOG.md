@@ -2,7 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - 2026-08-24
+## [1.0.1] - 2026-08-24
+
+### Added
+
+- kube-state-metrics integration for Kubernetes workload metrics
+- Automated backend test suite with 12 API, authentication, incident and service-checker tests
+- Backend tests enforced as a CI/CD deployment gate
+
+### Improved
+
+- Prometheus Kubernetes workload visibility
+- GitOps management of monitoring components
+- Alerting reliability and Kubernetes state monitoring
+
+### Validated
+
+- End-to-end PostgreSQL disaster recovery from Cloudflare R2
+- Successful restoration of users, services, incidents, service checks and Alembic metadata
+- Complete GitHub Actions CI/CD pipeline
+- Argo CD applications Synced and Healthy
+
+### Release
+
+Cloud Operations Center v1.0.1 represents the finalized and validated portfolio release of the v1 platform.
+
+## [1.0.0] - 2026-08-13
 
 ### Added
 
@@ -19,15 +44,12 @@ All notable changes to this project will be documented in this file.
 - Centralized logging with Grafana Alloy and Loki
 - Distributed tracing with OpenTelemetry and Tempo
 - Prometheus and Alertmanager alerting
-- kube-state-metrics integration for Kubernetes workload metrics
 - n8n incident automation
 - Telegram incident and technical alert notifications
 - Kubernetes Deployments, Services, Ingress and health probes
 - Horizontal Pod Autoscaling
 - GitOps deployment with Argo CD
 - CI/CD with GitHub Actions
-- Automated backend test suite with 12 API, authentication, incident and service-checker tests
-- Backend tests enforced as a CI/CD deployment gate
 - Container images published to GitHub Container Registry
 - Immutable SHA-based image deployments
 - Application version and build metadata

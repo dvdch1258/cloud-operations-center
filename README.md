@@ -2,7 +2,7 @@
 
 > A cloud-native operations platform for service monitoring, incident management, observability, automation and disaster recovery.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.1-blue)
 ![Kubernetes](https://img.shields.io/badge/orchestration-Kubernetes-blue)
 ![GitOps](https://img.shields.io/badge/GitOps-Argo%20CD-orange)
 ![CI/CD](https://github.com/dvdch1258/cloud-operations-center/actions/workflows/ci-cd.yml/badge.svg)
@@ -482,7 +482,7 @@ Example:
   "database": "up",
   "prometheus": "up",
   "tempo": "up",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "build_sha": "<git-commit-sha>",
   "environment": "production"
 }
@@ -604,7 +604,7 @@ Current release:
 ```text
 Cloud Operations Center
 
-Version:      1.0.0
+Version:      1.0.1
 Environment:  production
 Build:        Git commit SHA
 ```
@@ -618,7 +618,7 @@ The frontend also displays the application version and short build revision.
 Example:
 
 ```text
-Acceso seguro · NetBird · v1.0.0 · 3ebe19b
+Acceso seguro · NetBird · v1.0.1 · 3ebe19b
 ```
 
 ---
@@ -1059,9 +1059,9 @@ Kubernetes
 
 # Project Status
 
-**Version:** `1.0.0`
+**Version:** `1.0.1`
 
-Cloud Operations Center v1.0.0 is complete and operational.
+Cloud Operations Center v1.0.1 is complete and operational.
 
 Current development focuses on:
 

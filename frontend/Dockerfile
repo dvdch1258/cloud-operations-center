@@ -8,7 +8,7 @@ RUN npm ci
 COPY . .
 
 ARG VITE_API_URL=/api
-ARG VITE_APP_VERSION=1.0.0
+ARG VITE_APP_VERSION=1.0.1
 ARG VITE_BUILD_SHA=development
 
 ENV VITE_API_URL=${VITE_API_URL}
@@ -19,7 +19,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
-ARG APP_VERSION=1.0.0
+ARG APP_VERSION=1.0.1
 ARG BUILD_SHA=development
 
 LABEL org.opencontainers.image.title="Cloud Operations Center Frontend"

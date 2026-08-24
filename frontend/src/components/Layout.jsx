@@ -15,7 +15,7 @@ function navigationClass({ isActive }) {
 }
 
 const APP_VERSION =
-  import.meta.env.VITE_APP_VERSION || "1.0.0";
+  import.meta.env.VITE_APP_VERSION || "1.0.1";
 
 const BUILD_SHA =
   import.meta.env.VITE_BUILD_SHA || "development";

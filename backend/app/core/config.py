@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     app_name: str = "Cloud Operations Center"
 
     # Release/build metadata.
-    version: str = os.getenv("APP_VERSION", "1.0.0")
+    version: str = os.getenv("APP_VERSION", "1.0.1")
     build_sha: str = os.getenv("BUILD_SHA", "development")
     environment: str = os.getenv("ENVIRONMENT", "development")
 

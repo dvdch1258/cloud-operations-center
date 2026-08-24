@@ -9,7 +9,7 @@ COPY alembic.ini /app/alembic.ini
 COPY alembic /app/alembic
 COPY app /app/app
 
-ARG APP_VERSION=1.0.0
+ARG APP_VERSION=1.0.1
 ARG BUILD_SHA=development
 
 ENV APP_VERSION=${APP_VERSION}
