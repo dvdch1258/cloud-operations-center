@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 # Estas variables se fijan antes de importar la aplicación.
 # Los tests nunca utilizan PostgreSQL de producción.
 os.environ["DATABASE_URL"] = "sqlite:////tmp/cloud-operations-center-pytest.db"
-os.environ["JWT_SECRET_KEY"] = "pytest-jwt-secret-at-least-32-bytes-long-2026"
+os.environ["JWT_SECRET_KEY"] = "pytest-jwt-secret-at-least-32-bytes-long-2026-at-least-32-bytes-long-2026"
 os.environ["SERVICE_CHECKER_API_KEY"] = "pytest-checker-key"
 os.environ["N8N_API_KEY"] = "pytest-n8n-key"
 os.environ["ENVIRONMENT"] = "test"

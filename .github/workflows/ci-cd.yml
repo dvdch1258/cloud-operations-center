@@ -47,7 +47,7 @@ jobs:
         working-directory: backend
         env:
           DATABASE_URL: sqlite:////tmp/cloud-operations-center-pytest.db
-          JWT_SECRET_KEY: github-actions-test-secret-at-least-32-bytes
+          JWT_SECRET_KEY: github-actions-test-secret-at-least-32-bytes-at-least-32-bytes
           SERVICE_CHECKER_API_KEY: github-actions-checker-key
           N8N_API_KEY: github-actions-n8n-key
           ENVIRONMENT: test
