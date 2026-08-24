@@ -93,6 +93,9 @@ export const api = {
   getSummary: () =>
     request("/dashboard/summary"),
 
+  getDetailedHealth: () =>
+    request("/health/detailed"),
+
   getServices: () =>
     request("/services/"),
 

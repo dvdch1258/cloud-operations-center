@@ -97,6 +97,14 @@ export default function Layout() {
             Incidentes
           </NavLink>
 
+
+          <NavLink
+            to="/sistema"
+            className={navigationClass}
+          >
+            Sistema
+          </NavLink>
+
           <a
             className="navigation__item"
             href="https://grafana.cloudopscenter.es"
