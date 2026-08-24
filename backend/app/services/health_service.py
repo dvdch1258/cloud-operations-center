@@ -21,7 +21,7 @@ def check_database():
 def check_prometheus():
     try:
         response = requests.get(
-            "http://prometheus:9090/-/healthy",
+            "http://prometheus.monitoring.svc.cluster.local:9090/-/healthy",
             timeout=2
         )
 
@@ -34,7 +34,7 @@ def check_prometheus():
 def check_tempo():
     try:
         response = requests.get(
-            "http://tempo:3200/ready",
+            "http://tempo.monitoring.svc.cluster.local:3200/ready",
             timeout=2
         )
 
