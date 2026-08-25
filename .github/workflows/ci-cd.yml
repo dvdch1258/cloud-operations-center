@@ -320,3 +320,123 @@ jobs:
           git commit -m "chore(gitops): deploy ${IMAGE_TAG}"
 
           git push origin HEAD:main
+
+  publish-vulnerability-reports:
+    name: Publish vulnerability reports
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    needs:
+      - security-scan
+      - update-gitops
+
+    if: github.event_name != 'pull_request'
+
+    permissions:
+      contents: read
+
+    env:
+      VULNERABILITY_INGEST_URL: https://api.cloudopscenter.es/internal/security/vulnerabilities/import
+      VULNERABILITY_INGEST_API_KEY: ${{ secrets.VULNERABILITY_INGEST_API_KEY }}
+
+    steps:
+      - name: Download vulnerability reports
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-reports
+          path: trivy-reports
+
+      - name: Validate ingest configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "$VULNERABILITY_INGEST_API_KEY" ]; then
+            echo "::error::VULNERABILITY_INGEST_API_KEY is not configured"
+            exit 1
+          fi
+
+          test -s trivy-reports/trivy-backend.json
+          test -s trivy-reports/trivy-frontend.json
+
+      - name: Publish vulnerability reports
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          publish_report() {
+            local component="$1"
+            local report="$2"
+            local response_file
+            local status
+
+            response_file="$(mktemp)"
+
+            for attempt in $(seq 1 30); do
+              echo
+              echo "Publishing ${component} report (attempt ${attempt}/30)..."
+
+              status="$(
+                curl -sS \
+                  -o "$response_file" \
+                  -w '%{http_code}' \
+                  --connect-timeout 10 \
+                  --max-time 20 \
+                  -X POST \
+                  -H 'Content-Type: application/json' \
+                  -H "X-Vulnerability-Ingest-Key: ${VULNERABILITY_INGEST_API_KEY}" \
+                  --data-binary "@${report}" \
+                  "${VULNERABILITY_INGEST_URL}/${component}" \
+                  || true
+              )"
+
+              case "$status" in
+                200|201)
+                  echo "Published ${component} report successfully."
+                  cat "$response_file"
+                  echo
+                  rm -f "$response_file"
+                  return 0
+                  ;;
+
+                401|403)
+                  echo "::error::Authentication failed while publishing ${component}"
+                  cat "$response_file"
+                  echo
+                  rm -f "$response_file"
+                  return 1
+                  ;;
+
+                422)
+                  echo "::error::Backend rejected ${component} report"
+                  cat "$response_file"
+                  echo
+                  rm -f "$response_file"
+                  return 1
+                  ;;
+
+                *)
+                  echo "Backend not ready yet (HTTP ${status:-000})."
+                  cat "$response_file" || true
+                  echo
+                  ;;
+              esac
+
+              if [ "$attempt" -lt 30 ]; then
+                echo "Retrying in 10 seconds..."
+                sleep 10
+              fi
+            done
+
+            echo "::error::Unable to publish ${component} report after 30 attempts"
+            rm -f "$response_file"
+            return 1
+          }
+
+          publish_report \
+            backend \
+            trivy-reports/trivy-backend.json
+
+          publish_report \
+            frontend \
+            trivy-reports/trivy-frontend.json

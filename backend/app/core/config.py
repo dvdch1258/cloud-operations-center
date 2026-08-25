@@ -41,6 +41,11 @@ class Settings(BaseSettings):
         "",
     )
 
+    vulnerability_ingest_api_key: str = os.getenv(
+        "VULNERABILITY_INGEST_API_KEY",
+        "",
+    )
+
     cors_origins: tuple[str, ...] = (
         "http://localhost:5173",
         "http://127.0.0.1:5173",
