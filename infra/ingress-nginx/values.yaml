@@ -1,0 +1,5 @@
+controller:
+  service:
+    # Preserve the original client source IP.
+    # Required for security audit events to record real client IPs.
+    externalTrafficPolicy: Local
