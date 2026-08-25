@@ -5,6 +5,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Request,
     Response,
     status,
 )
@@ -20,6 +21,9 @@ from app.core.security import (
 from app.models.user import User
 from app.services.metrics_service import (
     record_security_account_lockout,
+)
+from app.services.security_event_service import (
+    add_security_event,
 )
 from app.schemas.auth import (
     LoginRequest,
@@ -42,6 +46,7 @@ router = APIRouter(
 )
 def login(
     response: Response,
+    request: Request,
     credentials: LoginRequest,
     db: Session = Depends(get_db),
 ):
@@ -55,9 +60,30 @@ def login(
 
     now = datetime.now(timezone.utc)
 
+    client_ip = (
+        request.client.host
+        if request.client is not None
+        else None
+    )
+
+
     # Usuario inexistente: mantenemos mensaje genérico para no revelar
     # qué nombres de usuario existen.
     if user is None:
+        add_security_event(
+            db,
+            event_type="login_failed",
+            severity="medium",
+            source="authentication",
+            username=credentials.username,
+            ip_address=client_ip,
+            description=(
+                "Intento de inicio de sesión para "
+                "un usuario inexistente"
+            ),
+        )
+        db.commit()
+
         logger.warning(
             "security_login_failed "
             "username=%r reason=user_not_found",
@@ -70,6 +96,21 @@ def login(
         )
 
     if not user.is_active:
+        add_security_event(
+            db,
+            event_type="login_failed",
+            severity="medium",
+            source="authentication",
+            user_id=user.id,
+            username=user.username,
+            ip_address=client_ip,
+            description=(
+                "Intento de inicio de sesión "
+                "en una cuenta inactiva"
+            ),
+        )
+        db.commit()
+
         logger.warning(
             "security_login_failed "
             "username=%r user_id=%s "
@@ -99,6 +140,21 @@ def login(
                 int((locked_until - now).total_seconds()),
             )
 
+            add_security_event(
+                db,
+                event_type="login_blocked",
+                severity="high",
+                source="authentication",
+                user_id=user.id,
+                username=user.username,
+                ip_address=client_ip,
+                description=(
+                    "Intento de inicio de sesión "
+                    "mientras la cuenta estaba bloqueada"
+                ),
+            )
+            db.commit()
+
             logger.warning(
                 "security_login_blocked "
                 "username=%r user_id=%s "
@@ -122,6 +178,20 @@ def login(
         # El bloqueo ya expiró.
         user.failed_login_attempts = 0
         user.locked_until = None
+
+        add_security_event(
+            db,
+            event_type="account_unlocked",
+            severity="info",
+            source="authentication",
+            user_id=user.id,
+            username=user.username,
+            ip_address=client_ip,
+            description=(
+                "Cuenta desbloqueada automáticamente "
+                "al finalizar el tiempo de bloqueo"
+            ),
+        )
         db.commit()
 
         logger.info(
@@ -139,6 +209,20 @@ def login(
             (user.failed_login_attempts or 0) + 1
         )
 
+        add_security_event(
+            db,
+            event_type="login_failed",
+            severity="medium",
+            source="authentication",
+            user_id=user.id,
+            username=user.username,
+            ip_address=client_ip,
+            description=(
+                "Intento de inicio de sesión "
+                "con contraseña incorrecta"
+            ),
+        )
+
         logger.warning(
             "security_login_failed "
             "username=%r user_id=%s "
@@ -154,6 +238,20 @@ def login(
         ):
             user.locked_until = now + timedelta(
                 minutes=settings.login_lock_minutes
+            )
+
+            add_security_event(
+                db,
+                event_type="account_locked",
+                severity="high",
+                source="authentication",
+                user_id=user.id,
+                username=user.username,
+                ip_address=client_ip,
+                description=(
+                    "Cuenta bloqueada por demasiados "
+                    "intentos de inicio de sesión fallidos"
+                ),
             )
 
             db.commit()
@@ -219,6 +317,18 @@ def login(
         ),
         path="/",
     )
+
+    add_security_event(
+        db,
+        event_type="login_success",
+        severity="info",
+        source="authentication",
+        user_id=user.id,
+        username=user.username,
+        ip_address=client_ip,
+        description="Inicio de sesión correcto",
+    )
+    db.commit()
 
     logger.info(
         "security_login_success "
