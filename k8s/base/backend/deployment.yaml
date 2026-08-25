@@ -39,6 +39,11 @@ spec:
             - name: ENVIRONMENT
               value: "production"
 
+            # Uvicorn acepta X-Forwarded-* únicamente desde
+            # la red interna de pods donde vive ingress-nginx.
+            - name: FORWARDED_ALLOW_IPS
+              value: "10.42.0.0/16"
+
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
