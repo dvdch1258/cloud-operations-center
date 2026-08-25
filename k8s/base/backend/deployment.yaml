@@ -68,6 +68,12 @@ spec:
                   name: n8n-backend-secret
                   key: N8N_API_KEY
 
+            - name: VULNERABILITY_INGEST_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vulnerability-ingest-secret
+                  key: VULNERABILITY_INGEST_API_KEY
+
           envFrom:
             - configMapRef:
                 name: backend-config

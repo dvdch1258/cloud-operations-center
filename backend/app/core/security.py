@@ -177,3 +177,30 @@ def get_current_user(
         raise authentication_exception()
 
     return user
+
+
+def verify_vulnerability_ingest_api_key(
+    api_key: str | None = Header(
+        default=None,
+        alias="X-Vulnerability-Ingest-Key",
+    ),
+) -> None:
+    expected = settings.vulnerability_ingest_api_key
+
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "VULNERABILITY_INGEST_API_KEY "
+                "no está definida"
+            ),
+        )
+
+    if api_key is None or not secrets.compare_digest(
+        api_key,
+        expected,
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="API key de ingestión inválida",
+        )
