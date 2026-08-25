@@ -102,6 +102,31 @@ export const api = {
   getSecurityEvents: (limit = 50) =>
     request(`/security/events?limit=${limit}`),
 
+  getVulnerabilitySummary: () =>
+    request("/security/vulnerabilities/summary"),
+
+  getVulnerabilities: (params = {}) => {
+    const query = new URLSearchParams()
+
+    if (params.component) {
+      query.set("component", params.component)
+    }
+
+    if (params.severity) {
+      query.set("severity", params.severity)
+    }
+
+    if (params.fixAvailable !== undefined) {
+      query.set("fix_available", String(params.fixAvailable))
+    }
+
+    query.set("limit", String(params.limit || 100))
+
+    return request(
+      `/security/vulnerabilities?${query.toString()}`,
+    )
+  },
+
   getServices: () =>
     request("/services/"),
 

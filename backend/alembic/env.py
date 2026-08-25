@@ -27,7 +27,15 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 from app.core.database import Base
-from app.models import Service, Incident, ServiceCheck, User, SecurityEvent
+from app.models import (
+    Incident,
+    SecurityEvent,
+    Service,
+    ServiceCheck,
+    User,
+    VulnerabilityFinding,
+    VulnerabilityScan,
+)
 
 target_metadata = Base.metadata
 
