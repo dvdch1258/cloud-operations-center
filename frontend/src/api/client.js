@@ -96,6 +96,12 @@ export const api = {
   getDetailedHealth: () =>
     request("/health/detailed"),
 
+  getSecuritySummary: () =>
+    request("/security/summary"),
+
+  getSecurityEvents: (limit = 50) =>
+    request(`/security/events?limit=${limit}`),
+
   getServices: () =>
     request("/services/"),
 

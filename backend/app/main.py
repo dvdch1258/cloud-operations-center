@@ -8,6 +8,7 @@ from opentelemetry import trace
 from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
+from app.api.security import router as security_router
 from app.api.incidents import (
     internal_router as incidents_internal_router,
     router as incidents_router,
@@ -103,4 +104,5 @@ app.include_router(services_internal_router)
 app.include_router(incidents_internal_router)
 app.include_router(services_router)
 app.include_router(incidents_router)
+app.include_router(security_router)
 app.include_router(dashboard_router)

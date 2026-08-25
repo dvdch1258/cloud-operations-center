@@ -97,6 +97,9 @@ export default function Layout() {
             Incidentes
           </NavLink>
 
+          <NavLink to="/seguridad" className={navigationClass}>
+            Seguridad
+          </NavLink>
 
           <NavLink
             to="/sistema"
