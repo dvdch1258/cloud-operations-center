@@ -2270,3 +2270,154 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Security Compliance */
+
+.compliance-overview {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) 1.6fr;
+  gap: 1.5rem;
+}
+
+.compliance-score-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.compliance-score {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 0.8rem 0 1rem;
+}
+
+.compliance-score strong {
+  color: #e5edf9;
+  font-size: clamp(2.8rem, 6vw, 4.6rem);
+  line-height: 1;
+}
+
+.compliance-score span {
+  color: #718198;
+  font-size: 0.82rem;
+}
+
+.compliance-progress {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #18263a;
+}
+
+.compliance-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #4d85ff;
+  transition: width 250ms ease;
+}
+
+.compliance-evaluated {
+  margin: 1rem 0 0;
+  color: #718198;
+  font-size: 0.78rem;
+}
+
+.compliance-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.compliance-controls-panel {
+  margin-top: 1.5rem;
+}
+
+.compliance-controls {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.compliance-control {
+  padding: 1.1rem 1.2rem;
+  border: 1px solid #24344b;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.compliance-control--passed {
+  border-left: 3px solid rgba(34, 197, 94, 0.65);
+}
+
+.compliance-control--failed {
+  border-left: 3px solid rgba(239, 68, 68, 0.72);
+}
+
+.compliance-control__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.compliance-control__id {
+  margin-right: 0.65rem;
+  color: #8fb1ff;
+  font-family: Consolas, monospace;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.compliance-control__category {
+  color: #718198;
+  font-size: 0.74rem;
+}
+
+.compliance-control h3 {
+  margin: 0.8rem 0 1rem;
+  color: #e5edf9;
+  font-size: 1rem;
+}
+
+.compliance-status {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.compliance-status--passed {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.compliance-status--failed {
+  color: #ff9fa8;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.compliance-control__detail strong {
+  color: #9eb1ca;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.compliance-control__detail p {
+  margin: 0.35rem 0 0.85rem;
+  color: #718198;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 1000px) {
+  .compliance-overview {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .compliance-metrics {
+    grid-template-columns: 1fr;
+  }
+}

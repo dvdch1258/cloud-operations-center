@@ -127,6 +127,9 @@ export const api = {
     )
   },
 
+  getComplianceSummary: () =>
+    request("/security/compliance/summary"),
+
   getSecurityAlertSummary: () =>
     request("/security/alerts/summary"),
 

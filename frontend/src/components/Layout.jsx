@@ -116,6 +116,13 @@ export default function Layout() {
           </NavLink>
 
           <NavLink
+            to="/seguridad/compliance"
+            className={navigationClass}
+          >
+            Compliance
+          </NavLink>
+
+          <NavLink
             to="/sistema"
             className={navigationClass}
           >
