@@ -26,13 +26,22 @@ const SHORT_BUILD =
     : BUILD_SHA.replace(/^sha-/, "").slice(0, 7);
 
 export default function Layout() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [securityOpen, setSecurityOpen] = useState(
+    () => location.pathname.startsWith("/seguridad"),
+  );
+
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   useEffect(() => {
     setMenuOpen(false);
+
+    if (location.pathname.startsWith("/seguridad")) {
+      setSecurityOpen(true);
+    }
   }, [location.pathname]);
 
   async function handleLogout() {
@@ -97,30 +106,91 @@ export default function Layout() {
             Incidentes
           </NavLink>
 
-          <NavLink to="/seguridad" className={navigationClass}>
-            Seguridad
-          </NavLink>
+          <div className="navigation__group">
+            <button
+              type="button"
+              className={
+                "navigation__item navigation__group-button" +
+                (
+                  location.pathname.startsWith("/seguridad")
+                    ? " navigation__item--active"
+                    : ""
+                )
+              }
+              aria-expanded={securityOpen}
+              onClick={() =>
+                setSecurityOpen((current) => !current)
+              }
+            >
+              <span>Seguridad</span>
 
-          <NavLink
-            to="/seguridad/vulnerabilidades"
-            className={navigationClass}
-          >
-            Vulnerabilidades
-          </NavLink>
+              <span
+                className={
+                  "navigation__chevron" +
+                  (
+                    securityOpen
+                      ? " navigation__chevron--open"
+                      : ""
+                  )
+                }
+              >
+                ▾
+              </span>
+            </button>
 
-          <NavLink
-            to="/seguridad/alertas"
-            className={navigationClass}
-          >
-            Alertas
-          </NavLink>
+            {securityOpen && (
+              <div className="navigation__submenu">
+                <NavLink
+                  to="/seguridad"
+                  end
+                  className={({ isActive }) =>
+                    isActive
+                      ? "navigation__subitem navigation__subitem--active"
+                      : "navigation__subitem"
+                  }
+                >
+                  <strong>Actividad</strong>
 
-          <NavLink
-            to="/seguridad/compliance"
-            className={navigationClass}
-          >
-            Compliance
-          </NavLink>
+                  <span>
+                    Autenticación, bloqueos y eventos de seguridad.
+                  </span>
+                </NavLink>
+
+                <NavLink
+                  to="/seguridad/vulnerabilidades"
+                  className={({ isActive }) =>
+                    isActive
+                      ? "navigation__subitem navigation__subitem--active"
+                      : "navigation__subitem"
+                  }
+                >
+                  Vulnerabilidades
+                </NavLink>
+
+                <NavLink
+                  to="/seguridad/alertas"
+                  className={({ isActive }) =>
+                    isActive
+                      ? "navigation__subitem navigation__subitem--active"
+                      : "navigation__subitem"
+                  }
+                >
+                  Alertas
+                </NavLink>
+
+                <NavLink
+                  to="/seguridad/compliance"
+                  className={({ isActive }) =>
+                    isActive
+                      ? "navigation__subitem navigation__subitem--active"
+                      : "navigation__subitem"
+                  }
+                >
+                  Compliance
+                </NavLink>
+              </div>
+            )}
+          </div>
 
           <NavLink
             to="/sistema"
