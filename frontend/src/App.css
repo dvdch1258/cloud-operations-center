@@ -2421,3 +2421,77 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Security navigation group */
+
+.navigation__group {
+  display: grid;
+  gap: 5px;
+}
+
+.navigation__group-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  font: inherit;
+  cursor: pointer;
+}
+
+.navigation__chevron {
+  color: #718198;
+  font-size: 0.8rem;
+  transition: transform 0.18s ease;
+}
+
+.navigation__chevron--open {
+  transform: rotate(180deg);
+}
+
+.navigation__submenu {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 4px 12px;
+  padding-left: 10px;
+  border-left: 1px solid #24344b;
+}
+
+.navigation__subitem {
+  display: block;
+  padding: 9px 11px;
+  border-radius: 8px;
+  color: #7f8ea4;
+  text-decoration: none;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.navigation__subitem:hover {
+  color: #dce7f7;
+  background: rgba(22, 33, 55, 0.65);
+}
+
+.navigation__subitem--active {
+  color: #fff;
+  background: #162137;
+}
+
+.navigation__subitem strong {
+  display: block;
+  color: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.navigation__subitem span {
+  display: block;
+  margin-top: 5px;
+  color: #67778e;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.navigation__subitem--active span {
+  color: #8fa0b8;
+}
