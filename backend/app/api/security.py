@@ -6,12 +6,15 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.security_event import SecurityEvent
+from app.models.security_alert import SecurityAlert
 from app.models.vulnerability import (
     VulnerabilityFinding,
     VulnerabilityScan,
 )
 from app.models.user import User
 from app.schemas.security import (
+    SecurityAlertResponse,
+    SecurityAlertSummaryResponse,
     SecurityEventResponse,
     SecuritySummaryResponse,
     VulnerabilityFindingResponse,
@@ -323,3 +326,208 @@ def get_vulnerabilities(
         )
 
     return response
+
+
+ALERT_STATUSES = {
+    "open",
+    "acknowledged",
+    "resolved",
+}
+
+
+@router.get(
+    "/alerts/summary",
+    response_model=SecurityAlertSummaryResponse,
+)
+def get_security_alert_summary(
+    db: Session = Depends(get_db),
+):
+    active_statuses = ["open", "acknowledged"]
+
+    total = db.query(SecurityAlert).count()
+
+    open_count = (
+        db.query(SecurityAlert)
+        .filter(SecurityAlert.status == "open")
+        .count()
+    )
+
+    acknowledged = (
+        db.query(SecurityAlert)
+        .filter(SecurityAlert.status == "acknowledged")
+        .count()
+    )
+
+    resolved = (
+        db.query(SecurityAlert)
+        .filter(SecurityAlert.status == "resolved")
+        .count()
+    )
+
+    critical_active = (
+        db.query(SecurityAlert)
+        .filter(
+            SecurityAlert.severity == "CRITICAL",
+            SecurityAlert.status.in_(active_statuses),
+        )
+        .count()
+    )
+
+    high_active = (
+        db.query(SecurityAlert)
+        .filter(
+            SecurityAlert.severity == "HIGH",
+            SecurityAlert.status.in_(active_statuses),
+        )
+        .count()
+    )
+
+    latest = (
+        db.query(SecurityAlert)
+        .order_by(SecurityAlert.last_seen_at.desc())
+        .first()
+    )
+
+    return SecurityAlertSummaryResponse(
+        total=total,
+        open=open_count,
+        acknowledged=acknowledged,
+        resolved=resolved,
+        critical_active=critical_active,
+        high_active=high_active,
+        last_seen_at=(
+            latest.last_seen_at if latest else None
+        ),
+    )
+
+
+@router.get(
+    "/alerts",
+    response_model=list[SecurityAlertResponse],
+)
+def get_security_alerts(
+    status: str | None = Query(default=None),
+    severity: str | None = Query(default=None),
+    component: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    query = db.query(SecurityAlert)
+
+    if status:
+        normalized_status = status.lower()
+
+        if normalized_status not in ALERT_STATUSES:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Estado inválido. Valores permitidos: "
+                    "open, acknowledged, resolved"
+                ),
+            )
+
+        query = query.filter(
+            SecurityAlert.status == normalized_status
+        )
+
+    if severity:
+        normalized_severity = severity.upper()
+
+        if normalized_severity not in VULNERABILITY_SEVERITIES:
+            raise HTTPException(
+                status_code=422,
+                detail="Severidad inválida",
+            )
+
+        query = query.filter(
+            SecurityAlert.severity == normalized_severity
+        )
+
+    if component:
+        query = query.filter(
+            SecurityAlert.component == component
+        )
+
+    severity_order = {
+        "CRITICAL": 1,
+        "HIGH": 2,
+        "MEDIUM": 3,
+        "LOW": 4,
+        "UNKNOWN": 5,
+    }
+
+    alerts = query.all()
+
+    alerts.sort(
+        key=lambda alert: (
+            severity_order.get(alert.severity, 99),
+            -alert.last_seen_at.timestamp(),
+        )
+    )
+
+    return alerts[:limit]
+
+
+@router.patch(
+    "/alerts/{alert_id}/acknowledge",
+    response_model=SecurityAlertResponse,
+)
+def acknowledge_security_alert(
+    alert_id: int,
+    db: Session = Depends(get_db),
+):
+    alert = (
+        db.query(SecurityAlert)
+        .filter(SecurityAlert.id == alert_id)
+        .first()
+    )
+
+    if alert is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Alerta no encontrada",
+        )
+
+    if alert.status == "resolved":
+        raise HTTPException(
+            status_code=409,
+            detail="No se puede reconocer una alerta resuelta",
+        )
+
+    alert.status = "acknowledged"
+    alert.acknowledged_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(alert)
+
+    return alert
+
+
+@router.patch(
+    "/alerts/{alert_id}/resolve",
+    response_model=SecurityAlertResponse,
+)
+def resolve_security_alert(
+    alert_id: int,
+    db: Session = Depends(get_db),
+):
+    alert = (
+        db.query(SecurityAlert)
+        .filter(SecurityAlert.id == alert_id)
+        .first()
+    )
+
+    if alert is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Alerta no encontrada",
+        )
+
+    if alert.status != "resolved":
+        alert.status = "resolved"
+        alert.resolved_at = datetime.now(timezone.utc)
+
+        db.commit()
+        db.refresh(alert)
+
+    return alert

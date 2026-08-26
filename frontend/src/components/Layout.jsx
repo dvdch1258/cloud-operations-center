@@ -109,6 +109,13 @@ export default function Layout() {
           </NavLink>
 
           <NavLink
+            to="/seguridad/alertas"
+            className={navigationClass}
+          >
+            Alertas
+          </NavLink>
+
+          <NavLink
             to="/sistema"
             className={navigationClass}
           >

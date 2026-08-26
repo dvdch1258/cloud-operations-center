@@ -53,3 +53,69 @@ class VulnerabilityFindingResponse(BaseModel):
     primary_url: str | None
     published_at: datetime | None
     last_modified_at: datetime | None
+
+
+class SecurityAlertSummaryResponse(BaseModel):
+    total: int
+    open: int
+    acknowledged: int
+    resolved: int
+    critical_active: int
+    high_active: int
+    last_seen_at: datetime | None
+
+
+class SecurityAlertResponse(BaseModel):
+    id: int
+    alert_key: str
+    source: str
+    category: str
+    severity: str
+    status: str
+    title: str
+    description: str
+    component: str | None
+    vulnerability_id: str | None
+    package_name: str | None
+    finding_id: int | None
+    first_seen_at: datetime
+    last_seen_at: datetime
+    acknowledged_at: datetime | None
+    resolved_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SecurityAlertSummaryResponse(BaseModel):
+    total: int
+    open: int
+    acknowledged: int
+    resolved: int
+    critical_active: int
+    high_active: int
+    last_seen_at: datetime | None
+
+
+class SecurityAlertResponse(BaseModel):
+    id: int
+    alert_key: str
+    source: str
+    category: str
+    severity: str
+    status: str
+    title: str
+    description: str
+    component: str | None
+    vulnerability_id: str | None
+    package_name: str | None
+    finding_id: int | None
+    first_seen_at: datetime
+    last_seen_at: datetime
+    acknowledged_at: datetime | None
+    resolved_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

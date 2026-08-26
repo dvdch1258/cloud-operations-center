@@ -2178,3 +2178,95 @@ tbody tr:hover {
     width: 100%;
   }
 }
+
+
+/* Security Alerts */
+
+.alert-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.alerts-panel {
+  margin-top: 1.5rem;
+}
+
+.alert-table {
+  min-width: 1150px;
+}
+
+.security-alert-status {
+  display: inline-flex;
+  padding: 5px 9px;
+  border: 1px solid #33445e;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.security-alert-status--open {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #ff9fa8;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.security-alert-status--acknowledged {
+  border-color: rgba(234, 179, 8, 0.4);
+  color: #ffc76f;
+  background: rgba(234, 179, 8, 0.1);
+}
+
+.security-alert-status--resolved {
+  border-color: rgba(34, 197, 94, 0.35);
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.security-alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.security-alert-action {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #33445e;
+  border-radius: 8px;
+  background: #101a2b;
+  color: #b9c5d6;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.security-alert-action:hover:not(:disabled) {
+  border-color: #4d85ff;
+  color: #e5edf9;
+}
+
+.security-alert-action--resolve:hover:not(:disabled) {
+  border-color: rgba(34, 197, 94, 0.55);
+  color: #86efac;
+}
+
+.security-alert-action:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+
+.security-alert-no-action {
+  color: #718198;
+  font-size: 0.74rem;
+}
+
+@media (max-width: 1000px) {
+  .alert-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .alert-metrics {
+    grid-template-columns: 1fr;
+  }
+}
