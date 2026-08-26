@@ -7,3 +7,4 @@ from app.models.vulnerability import (
     VulnerabilityFinding,
     VulnerabilityScan,
 )
+from app.models.security_alert import SecurityAlert

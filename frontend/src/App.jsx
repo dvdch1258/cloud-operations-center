@@ -12,6 +12,7 @@ import ServiceDetailPage from "./pages/ServiceDetailPage";
 import ServicesPage from "./pages/ServicesPage";
 import SecurityPage from "./pages/SecurityPage";
 import VulnerabilitiesPage from "./pages/VulnerabilitiesPage";
+import AlertsPage from "./pages/AlertsPage";
 import SummaryPage from "./pages/SummaryPage";
 import SystemPage from "./pages/SystemPage";
 import "./App.css";
@@ -55,6 +56,11 @@ export default function App() {
           <Route
             path="seguridad/vulnerabilidades"
             element={<VulnerabilitiesPage />}
+          />
+
+          <Route
+            path="seguridad/alertas"
+            element={<AlertsPage />}
           />
 
           <Route

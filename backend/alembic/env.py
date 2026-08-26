@@ -30,6 +30,7 @@ from app.core.database import Base
 from app.models import (
     Incident,
     SecurityEvent,
+    SecurityAlert,
     Service,
     ServiceCheck,
     User,

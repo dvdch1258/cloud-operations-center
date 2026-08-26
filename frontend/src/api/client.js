@@ -127,6 +127,41 @@ export const api = {
     )
   },
 
+  getSecurityAlertSummary: () =>
+    request("/security/alerts/summary"),
+
+  getSecurityAlerts: (params = {}) => {
+    const query = new URLSearchParams()
+
+    if (params.status) {
+      query.set("status", params.status)
+    }
+
+    if (params.severity) {
+      query.set("severity", params.severity)
+    }
+
+    if (params.component) {
+      query.set("component", params.component)
+    }
+
+    query.set("limit", String(params.limit || 100))
+
+    return request(
+      `/security/alerts?${query.toString()}`,
+    )
+  },
+
+  acknowledgeSecurityAlert: (id) =>
+    request(`/security/alerts/${id}/acknowledge`, {
+      method: "PATCH",
+    }),
+
+  resolveSecurityAlert: (id) =>
+    request(`/security/alerts/${id}/resolve`, {
+      method: "PATCH",
+    }),
+
   getServices: () =>
     request("/services/"),
 
