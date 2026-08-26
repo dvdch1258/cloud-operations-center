@@ -12,7 +12,9 @@ from app.models.vulnerability import (
     VulnerabilityScan,
 )
 from app.models.user import User
+from app.services.compliance_service import evaluate_compliance
 from app.schemas.security import (
+    ComplianceSummaryResponse,
     SecurityAlertResponse,
     SecurityAlertSummaryResponse,
     SecurityEventResponse,
@@ -531,3 +533,13 @@ def resolve_security_alert(
         db.refresh(alert)
 
     return alert
+
+
+@router.get(
+    "/compliance/summary",
+    response_model=ComplianceSummaryResponse,
+)
+def get_compliance_summary(
+    db: Session = Depends(get_db),
+):
+    return evaluate_compliance(db)

@@ -119,3 +119,22 @@ class SecurityAlertResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ComplianceControlResponse(BaseModel):
+    control_id: str
+    category: str
+    title: str
+    status: str
+    severity: str
+    evidence: str
+    recommendation: str
+
+
+class ComplianceSummaryResponse(BaseModel):
+    score: int
+    passed: int
+    failed: int
+    total: int
+    evaluated_at: datetime
+    controls: list[ComplianceControlResponse]
