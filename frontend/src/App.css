@@ -2602,3 +2602,174 @@ tbody tr:hover {
     min-width: 0;
   }
 }
+
+
+/* Observability Overview */
+
+.observability-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.observability-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.observability-grafana-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #2b3b53;
+  border-radius: 9px;
+  color: #a9bbd2;
+  background: #111c2e;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.observability-grafana-link:hover {
+  color: #fff;
+  border-color: #3b82f6;
+  background: #162137;
+}
+
+.observability-health {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.4rem 1.5rem;
+}
+
+.observability-health--healthy {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.observability-health--degraded {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.observability-health__status {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 0.4rem;
+}
+
+.observability-health__status strong {
+  color: #edf4ff;
+  font-size: 1.45rem;
+}
+
+.observability-health__dot {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.observability-health__dot--healthy {
+  background: #22c55e;
+  box-shadow: 0 0 18px rgba(34, 197, 94, 0.75);
+}
+
+.observability-health__dot--degraded {
+  background: #ef4444;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.65);
+}
+
+.observability-health p:not(.eyebrow) {
+  margin: 0.65rem 0 0;
+  color: #718198;
+  font-size: 0.8rem;
+}
+
+.observability-source {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid #26364d;
+  border-radius: 999px;
+  color: #8fa2ba;
+  background: #101a2a;
+  font-size: 0.72rem;
+}
+
+.observability-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.observability-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.observability-preview {
+  min-height: 280px;
+}
+
+.observability-chart-placeholder {
+  display: flex;
+  min-height: 190px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 1rem;
+  border: 1px dashed #2a3b54;
+  border-radius: 11px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(20, 31, 49, 0.5),
+      rgba(10, 17, 29, 0.35)
+    );
+}
+
+.observability-chart-placeholder span {
+  color: #607089;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.observability-chart-placeholder strong {
+  color: #91a4bd;
+  font-size: 0.83rem;
+  font-weight: 500;
+}
+
+@media (max-width: 1050px) {
+  .observability-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .observability-preview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .observability-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .observability-grafana-link {
+    justify-content: center;
+  }
+
+  .observability-health {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .observability-metrics {
+    grid-template-columns: 1fr;
+  }
+}
