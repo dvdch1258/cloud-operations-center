@@ -139,6 +139,9 @@ export const api = {
   getObservabilityTimeseries: () =>
     request("/observability/timeseries"),
 
+  getObservabilityServices: () =>
+    request("/observability/services?hours=24"),
+
   getSecurityAlertSummary: () =>
     request("/security/alerts/summary"),
 

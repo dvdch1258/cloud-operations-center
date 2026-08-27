@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
 
+from app.core.database import get_db
 from app.core.security import get_current_user
 from app.schemas.observability import (
+    ObservabilityServicesSummaryResponse,
     ObservabilitySummaryResponse,
     ObservabilityTimeseriesResponse,
 )
+from app.services.observability_service import get_observability_services
 from app.services.prometheus_service import (
     PrometheusQueryError,
     get_observability_summary,
@@ -46,3 +50,22 @@ def get_timeseries():
             status_code=503,
             detail="Prometheus no disponible",
         ) from exc
+
+
+
+@router.get(
+    "/services",
+    response_model=ObservabilityServicesSummaryResponse,
+)
+def get_services_observability(
+    hours: int = Query(
+        default=24,
+        ge=1,
+        le=720,
+    ),
+    db: Session = Depends(get_db),
+):
+    return get_observability_services(
+        db,
+        hours,
+    )

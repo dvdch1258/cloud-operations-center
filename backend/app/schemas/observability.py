@@ -27,3 +27,26 @@ class ObservabilityTimeseriesResponse(BaseModel):
     latency_p95_ms: list[
         ObservabilityPointResponse
     ]
+
+
+class ObservabilityServiceResponse(BaseModel):
+    id: int
+    name: str
+    type: str
+    status: str
+    uptime_percent: float | None
+    average_response_time_ms: float | None
+    last_response_time_ms: float | None
+    last_status_code: int | None
+    last_error: str | None
+    last_checked_at: datetime | None
+    checks_total: int
+
+
+class ObservabilityServicesSummaryResponse(BaseModel):
+    period_hours: int
+    total: int
+    up: int
+    down: int
+    unknown: int
+    services: list[ObservabilityServiceResponse]
