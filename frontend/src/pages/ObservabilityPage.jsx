@@ -29,8 +29,104 @@ function formatUptime(seconds) {
 }
 
 
+function TimeseriesChart({
+  points,
+  suffix,
+}) {
+  if (!points?.length) {
+    return (
+      <div className="observability-chart-empty">
+        Sin datos para este periodo.
+      </div>
+    );
+  }
+
+  const width = 640;
+  const height = 190;
+  const padding = 18;
+
+  const values = points.map(
+    (point) => Number(point.value)
+  );
+
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+
+  if (min === max) {
+    min -= 1;
+    max += 1;
+  }
+
+  const usableWidth = width - padding * 2;
+  const usableHeight = height - padding * 2;
+
+  const coordinates = points.map(
+    (point, index) => {
+      const x =
+        padding +
+        (
+          index /
+          Math.max(points.length - 1, 1)
+        ) *
+          usableWidth;
+
+      const y =
+        padding +
+        (
+          1 -
+          (Number(point.value) - min) /
+            (max - min)
+        ) *
+          usableHeight;
+
+      return `${x},${y}`;
+    }
+  );
+
+  const latest = values[values.length - 1];
+
+  return (
+    <div className="observability-chart">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="Serie temporal de la última hora"
+        preserveAspectRatio="none"
+      >
+        <line
+          className="observability-chart__grid"
+          x1={padding}
+          y1={height / 2}
+          x2={width - padding}
+          y2={height / 2}
+        />
+
+        <polyline
+          className="observability-chart__line"
+          points={coordinates.join(" ")}
+        />
+      </svg>
+
+      <div className="observability-chart__footer">
+        <span>Hace 1 h</span>
+
+        <strong>
+          {latest.toFixed(
+            suffix === "ms" ? 1 : 2
+          )}{" "}
+          {suffix}
+        </strong>
+
+        <span>Ahora</span>
+      </div>
+    </div>
+  );
+}
+
+
 export default function ObservabilityPage() {
   const [summary, setSummary] = useState(null);
+  const [timeseries, setTimeseries] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -40,10 +136,16 @@ export default function ObservabilityPage() {
     setError("");
 
     try {
-      const response =
-        await api.getObservabilitySummary();
+      const [
+        summaryResponse,
+        timeseriesResponse,
+      ] = await Promise.all([
+        api.getObservabilitySummary(),
+        api.getObservabilityTimeseries(),
+      ]);
 
-      setSummary(response);
+      setSummary(summaryResponse);
+      setTimeseries(timeseriesResponse);
     } catch (requestError) {
       setError(
         requestError.message ||
@@ -231,12 +333,10 @@ export default function ObservabilityPage() {
             <span>5 min</span>
           </div>
 
-          <div className="observability-chart-placeholder">
-            <span>Gráfica Prometheus</span>
-            <strong>
-              Próximo paso: serie temporal
-            </strong>
-          </div>
+          <TimeseriesChart
+            points={timeseries?.requests_per_second}
+            suffix="req/s"
+          />
         </article>
 
         <article className="panel observability-preview">
@@ -252,12 +352,10 @@ export default function ObservabilityPage() {
             <span>p95</span>
           </div>
 
-          <div className="observability-chart-placeholder">
-            <span>Gráfica Prometheus</span>
-            <strong>
-              Próximo paso: serie temporal
-            </strong>
-          </div>
+          <TimeseriesChart
+            points={timeseries?.latency_p95_ms}
+            suffix="ms"
+          />
         </article>
       </section>
     </section>
