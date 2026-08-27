@@ -133,6 +133,9 @@ export const api = {
   getSecurityPolicies: () =>
     request("/security/policies"),
 
+  getObservabilitySummary: () =>
+    request("/observability/summary"),
+
   getSecurityAlertSummary: () =>
     request("/security/alerts/summary"),
 

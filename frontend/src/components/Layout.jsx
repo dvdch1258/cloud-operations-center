@@ -210,15 +210,12 @@ export default function Layout() {
             Sistema
           </NavLink>
 
-          <a
-            className="navigation__item"
-            href="https://grafana.cloudopscenter.es"
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => setMenuOpen(false)}
+          <NavLink
+            to="/observabilidad"
+            className={navigationClass}
           >
             Observabilidad
-          </a>
+          </NavLink>
         </nav>
 
         <div className="sidebar__account">

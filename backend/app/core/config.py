@@ -46,6 +46,11 @@ class Settings(BaseSettings):
         "",
     )
 
+    prometheus_url: str = os.getenv(
+        "PROMETHEUS_URL",
+        "http://prometheus.monitoring.svc.cluster.local:9090",
+    )
+
     cors_origins: tuple[str, ...] = (
         "http://localhost:5173",
         "http://127.0.0.1:5173",

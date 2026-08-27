@@ -15,6 +15,7 @@ import VulnerabilitiesPage from "./pages/VulnerabilitiesPage";
 import AlertsPage from "./pages/AlertsPage";
 import CompliancePage from "./pages/CompliancePage";
 import PoliciesPage from "./pages/PoliciesPage";
+import ObservabilityPage from "./pages/ObservabilityPage";
 import SummaryPage from "./pages/SummaryPage";
 import SystemPage from "./pages/SystemPage";
 import "./App.css";
@@ -73,6 +74,11 @@ export default function App() {
           <Route
             path="seguridad/policies"
             element={<PoliciesPage />}
+          />
+
+          <Route
+            path="observabilidad"
+            element={<ObservabilityPage />}
           />
 
           <Route
