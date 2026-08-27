@@ -188,6 +188,17 @@ export default function Layout() {
                 >
                   Compliance
                 </NavLink>
+
+                <NavLink
+                  to="/seguridad/policies"
+                  className={({ isActive }) =>
+                    isActive
+                      ? "navigation__subitem navigation__subitem--active"
+                      : "navigation__subitem"
+                  }
+                >
+                  Policies
+                </NavLink>
               </div>
             )}
           </div>

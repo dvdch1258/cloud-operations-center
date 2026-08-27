@@ -138,3 +138,22 @@ class ComplianceSummaryResponse(BaseModel):
     total: int
     evaluated_at: datetime
     controls: list[ComplianceControlResponse]
+
+
+class SecurityPolicyResponse(BaseModel):
+    policy_id: str
+    category: str
+    name: str
+    description: str
+    enabled: bool
+    enforcement: str
+    value: bool | int | str
+    unit: str | None
+    source: str
+
+
+class SecurityPolicySummaryResponse(BaseModel):
+    total: int
+    enabled: int
+    enforced: int
+    policies: list[SecurityPolicyResponse]

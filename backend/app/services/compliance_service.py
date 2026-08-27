@@ -3,6 +3,10 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
+from app.core.policies import (
+    VULNERABILITY_SCAN_MAX_AGE_HOURS,
+)
+
 from app.models.security_alert import SecurityAlert
 from app.models.user import User
 from app.models.vulnerability import VulnerabilityScan
@@ -13,7 +17,9 @@ ACTIVE_ALERT_STATUSES = {
     "acknowledged",
 }
 
-SCAN_MAX_AGE = timedelta(hours=24)
+SCAN_MAX_AGE = timedelta(
+    hours=VULNERABILITY_SCAN_MAX_AGE_HOURS
+)
 
 
 def _control(
