@@ -127,6 +127,7 @@ function TimeseriesChart({
 export default function ObservabilityPage() {
   const [summary, setSummary] = useState(null);
   const [timeseries, setTimeseries] = useState(null);
+  const [services, setServices] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -139,13 +140,16 @@ export default function ObservabilityPage() {
       const [
         summaryResponse,
         timeseriesResponse,
+        servicesResponse,
       ] = await Promise.all([
         api.getObservabilitySummary(),
         api.getObservabilityTimeseries(),
+        api.getObservabilityServices(),
       ]);
 
       setSummary(summaryResponse);
       setTimeseries(timeseriesResponse);
+      setServices(servicesResponse);
     } catch (requestError) {
       setError(
         requestError.message ||
@@ -358,6 +362,123 @@ export default function ObservabilityPage() {
           />
         </article>
       </section>
+
+      <section className="panel observability-services-panel">
+        <div className="security-panel-header">
+          <div>
+            <p className="eyebrow">
+              SERVICE HEALTH
+            </p>
+
+            <h2>Servicios</h2>
+
+            <p>
+              Estado, disponibilidad y latencia
+              durante las últimas 24 horas.
+            </p>
+          </div>
+
+          <div className="observability-services-summary">
+            <span>
+              <strong>{services?.up ?? 0}</strong>
+              {" "}up
+            </span>
+
+            <span>
+              <strong>{services?.down ?? 0}</strong>
+              {" "}down
+            </span>
+
+            <span>
+              <strong>{services?.total ?? 0}</strong>
+              {" "}total
+            </span>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="security-empty">
+            Cargando servicios...
+          </div>
+        ) : !services?.services?.length ? (
+          <div className="security-empty">
+            No hay servicios monitorizados.
+          </div>
+        ) : (
+          <div className="observability-services-table">
+            <div className="observability-service-row observability-service-row--header">
+              <span>Servicio</span>
+              <span>Estado</span>
+              <span>Uptime 24h</span>
+              <span>Latencia</span>
+              <span>HTTP</span>
+            </div>
+
+            {services.services.map((service) => {
+              const isUp = service.status === "up";
+
+              return (
+                <div
+                  key={service.id}
+                  className="observability-service-row"
+                >
+                  <div className="observability-service-name">
+                    <span
+                      className={
+                        "observability-service-dot " +
+                        (
+                          isUp
+                            ? "observability-service-dot--up"
+                            : "observability-service-dot--down"
+                        )
+                      }
+                    />
+
+                    <div>
+                      <strong>{service.name}</strong>
+                      <span>{service.type}</span>
+                    </div>
+                  </div>
+
+                  <span
+                    className={
+                      "observability-service-status " +
+                      (
+                        isUp
+                          ? "observability-service-status--up"
+                          : "observability-service-status--down"
+                      )
+                    }
+                  >
+                    {isUp ? "Healthy" : "Down"}
+                  </span>
+
+                  <strong>
+                    {service.uptime_percent == null
+                      ? "—"
+                      : `${Number(
+                          service.uptime_percent
+                        ).toFixed(2)}%`}
+                  </strong>
+
+                  <span>
+                    {service.last_response_time_ms == null
+                      ? "—"
+                      : `${Number(
+                          service.last_response_time_ms
+                        ).toFixed(1)} ms`}
+                  </span>
+
+                  <span>
+                    {service.last_status_code ?? "—"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
     </section>
   );
 }

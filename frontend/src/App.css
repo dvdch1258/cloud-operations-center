@@ -2843,3 +2843,139 @@ tbody tr:hover {
   background: rgba(10, 17, 29, 0.3);
   font-size: 0.8rem;
 }
+
+
+/* Observability Services */
+
+.observability-services-panel {
+  margin-top: 0;
+}
+
+.observability-services-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.observability-services-summary span {
+  padding: 6px 9px;
+  border: 1px solid #26364d;
+  border-radius: 8px;
+  color: #718198;
+  background: #101a2a;
+  font-size: 0.7rem;
+}
+
+.observability-services-summary strong {
+  color: #dce7f7;
+}
+
+.observability-services-table {
+  margin-top: 1.2rem;
+  overflow: hidden;
+  border: 1px solid #24344b;
+  border-radius: 11px;
+}
+
+.observability-service-row {
+  display: grid;
+  grid-template-columns:
+    minmax(190px, 2fr)
+    minmax(90px, 0.8fr)
+    minmax(100px, 0.8fr)
+    minmax(100px, 0.8fr)
+    minmax(70px, 0.5fr);
+  align-items: center;
+  gap: 1rem;
+  min-height: 64px;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #1f2d42;
+  color: #9badc4;
+  font-size: 0.78rem;
+}
+
+.observability-service-row:last-child {
+  border-bottom: 0;
+}
+
+.observability-service-row--header {
+  min-height: 42px;
+  color: #607089;
+  background: #101a2a;
+  font-size: 0.67rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.observability-service-name {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.observability-service-name > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.observability-service-name strong {
+  color: #e4edf9;
+  font-size: 0.82rem;
+}
+
+.observability-service-name span {
+  color: #607089;
+  font-size: 0.68rem;
+}
+
+.observability-service-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.observability-service-dot--up {
+  background: #22c55e;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.55);
+}
+
+.observability-service-dot--down {
+  background: #ef4444;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.55);
+}
+
+.observability-service-status {
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.observability-service-status--up {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.observability-service-status--down {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+@media (max-width: 850px) {
+  .observability-services-table {
+    overflow-x: auto;
+  }
+
+  .observability-service-row {
+    min-width: 720px;
+  }
+
+  .observability-services-summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
