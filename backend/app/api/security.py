@@ -13,7 +13,9 @@ from app.models.vulnerability import (
 )
 from app.models.user import User
 from app.services.compliance_service import evaluate_compliance
+from app.services.security_policy_service import get_security_policies
 from app.schemas.security import (
+    SecurityPolicySummaryResponse,
     ComplianceSummaryResponse,
     SecurityAlertResponse,
     SecurityAlertSummaryResponse,
@@ -543,3 +545,11 @@ def get_compliance_summary(
     db: Session = Depends(get_db),
 ):
     return evaluate_compliance(db)
+
+
+@router.get(
+    "/policies",
+    response_model=SecurityPolicySummaryResponse,
+)
+def get_policies():
+    return get_security_policies()

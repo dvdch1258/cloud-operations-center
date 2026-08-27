@@ -130,6 +130,9 @@ export const api = {
   getComplianceSummary: () =>
     request("/security/compliance/summary"),
 
+  getSecurityPolicies: () =>
+    request("/security/policies"),
+
   getSecurityAlertSummary: () =>
     request("/security/alerts/summary"),
 

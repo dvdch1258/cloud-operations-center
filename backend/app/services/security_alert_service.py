@@ -2,17 +2,15 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.core.policies import (
+    AUTO_RESOLVE_VULNERABILITY_ALERTS,
+    VULNERABILITY_ALERT_SEVERITIES,
+)
 from app.models.security_alert import SecurityAlert
 from app.models.vulnerability import (
     VulnerabilityFinding,
     VulnerabilityScan,
 )
-
-
-ALERT_SEVERITIES = {
-    "CRITICAL",
-    "HIGH",
-}
 
 
 def build_vulnerability_alert_key(
@@ -39,7 +37,7 @@ def sync_vulnerability_alerts(
     active_keys: set[str] = set()
 
     for finding in findings:
-        if finding.severity not in ALERT_SEVERITIES:
+        if finding.severity not in VULNERABILITY_ALERT_SEVERITIES:
             continue
 
         alert_key = build_vulnerability_alert_key(
@@ -107,6 +105,9 @@ def sync_vulnerability_alerts(
             alert.status = "open"
             alert.resolved_at = None
             alert.acknowledged_at = None
+
+    if not AUTO_RESOLVE_VULNERABILITY_ALERTS:
+        return
 
     active_alerts = (
         db.query(SecurityAlert)
