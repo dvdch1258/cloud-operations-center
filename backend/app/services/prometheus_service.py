@@ -145,3 +145,122 @@ def get_observability_summary() -> dict:
             timezone.utc
         ),
     }
+
+
+OBSERVABILITY_RANGE_SECONDS = 3600
+OBSERVABILITY_STEP_SECONDS = 60
+
+
+def _query_range(
+    query: str,
+    start: int,
+    end: int,
+    step: int,
+) -> list[dict]:
+    base = settings.prometheus_url.rstrip("/")
+
+    url = (
+        f"{base}/api/v1/query_range?"
+        + urllib.parse.urlencode(
+            {
+                "query": query,
+                "start": start,
+                "end": end,
+                "step": step,
+            }
+        )
+    )
+
+    try:
+        with urllib.request.urlopen(
+            url,
+            timeout=5,
+        ) as response:
+            payload = json.load(response)
+    except Exception as exc:
+        raise PrometheusQueryError(
+            f"No se pudo consultar Prometheus: {exc}"
+        ) from exc
+
+    if payload.get("status") != "success":
+        raise PrometheusQueryError(
+            "Prometheus devolvió una respuesta no válida"
+        )
+
+    results = payload.get("data", {}).get("result", [])
+
+    if not results:
+        return []
+
+    points = []
+
+    for timestamp, raw_value in results[0].get(
+        "values",
+        [],
+    ):
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            continue
+
+        if not math.isfinite(value):
+            continue
+
+        points.append(
+            {
+                "timestamp": int(timestamp),
+                "value": value,
+            }
+        )
+
+    return points
+
+
+def get_observability_timeseries() -> dict:
+    end = int(
+        datetime.now(timezone.utc).timestamp()
+    )
+    start = end - OBSERVABILITY_RANGE_SECONDS
+
+    requests = _query_range(
+        REQUESTS_PER_SECOND_QUERY,
+        start,
+        end,
+        OBSERVABILITY_STEP_SECONDS,
+    )
+
+    latency = _query_range(
+        LATENCY_P95_SECONDS_QUERY,
+        start,
+        end,
+        OBSERVABILITY_STEP_SECONDS,
+    )
+
+    requests_per_second = [
+        {
+            "timestamp": point["timestamp"],
+            "value": round(
+                point["value"],
+                3,
+            ),
+        }
+        for point in requests
+    ]
+
+    latency_p95_ms = [
+        {
+            "timestamp": point["timestamp"],
+            "value": round(
+                point["value"] * 1000,
+                1,
+            ),
+        }
+        for point in latency
+    ]
+
+    return {
+        "range_seconds": OBSERVABILITY_RANGE_SECONDS,
+        "step_seconds": OBSERVABILITY_STEP_SECONDS,
+        "requests_per_second": requests_per_second,
+        "latency_p95_ms": latency_p95_ms,
+    }
