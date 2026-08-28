@@ -4,11 +4,16 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.schemas.observability import (
+    ObservabilityLogsResponse,
     ObservabilityServicesSummaryResponse,
     ObservabilitySummaryResponse,
     ObservabilityTimeseriesResponse,
 )
 from app.services.observability_service import get_observability_services
+from app.services.loki_service import (
+    LokiQueryError,
+    get_observability_logs,
+)
 from app.services.prometheus_service import (
     PrometheusQueryError,
     get_observability_summary,
@@ -69,3 +74,49 @@ def get_services_observability(
         db,
         hours,
     )
+
+@router.get(
+    "/logs",
+    response_model=ObservabilityLogsResponse,
+)
+def get_logs(
+    hours: int = Query(
+        default=1,
+        ge=1,
+        le=168,
+    ),
+    service: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=100,
+    ),
+    level: str | None = Query(
+        default=None,
+        pattern=(
+            "^(debug|info|warning|error|critical)$"
+        ),
+    ),
+    search: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=200,
+    ),
+    limit: int = Query(
+        default=100,
+        ge=1,
+        le=500,
+    ),
+):
+    try:
+        return get_observability_logs(
+            hours=hours,
+            service=service,
+            level=level,
+            search=search,
+            limit=limit,
+        )
+    except LokiQueryError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Loki no disponible",
+        ) from exc

@@ -50,3 +50,25 @@ class ObservabilityServicesSummaryResponse(BaseModel):
     down: int
     unknown: int
     services: list[ObservabilityServiceResponse]
+
+
+class ObservabilityLogResponse(BaseModel):
+    timestamp: datetime
+    service: str
+    namespace: str | None
+    pod: str | None
+    container: str | None
+    level: str
+    message: str
+    trace_id: str | None
+    span_id: str | None
+
+
+class ObservabilityLogsResponse(BaseModel):
+    period_hours: int
+    service: str | None
+    level: str | None
+    search: str | None
+    limit: int
+    total: int
+    logs: list[ObservabilityLogResponse]

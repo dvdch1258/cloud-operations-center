@@ -142,6 +142,37 @@ export const api = {
   getObservabilityServices: () =>
     request("/observability/services?hours=24"),
 
+  getObservabilityLogs: (params = {}) => {
+    const query = new URLSearchParams()
+
+    query.set(
+      "hours",
+      String(params.hours || 1),
+    )
+
+    if (params.service) {
+      query.set("service", params.service)
+    }
+
+    if (params.level) {
+      query.set("level", params.level)
+    }
+
+    if (params.search) {
+      query.set("search", params.search)
+    }
+
+    query.set(
+      "limit",
+      String(params.limit || 100),
+    )
+
+    return request(
+      `/observability/logs?${query.toString()}`,
+    )
+  },
+
+
   getSecurityAlertSummary: () =>
     request("/security/alerts/summary"),
 
