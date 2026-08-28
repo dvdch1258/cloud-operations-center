@@ -29,6 +29,29 @@ function formatUptime(seconds) {
 }
 
 
+function formatLogTime(value) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleTimeString(
+    "es-ES",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    },
+  );
+}
+
+
+
 function TimeseriesChart({
   points,
   suffix,
@@ -131,6 +154,17 @@ export default function ObservabilityPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [logs, setLogs] = useState(null);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState("");
+
+  const [logFilters, setLogFilters] = useState({
+    service: "",
+    level: "",
+    hours: "1",
+    search: "",
+  });
+
 
   const loadSummary = useCallback(async () => {
     setLoading(true);
@@ -161,9 +195,67 @@ export default function ObservabilityPage() {
   }, []);
 
 
+  const loadLogs = useCallback(
+    async (filters) => {
+      setLogsLoading(true);
+      setLogsError("");
+
+      try {
+        const response =
+          await api.getObservabilityLogs({
+            hours: Number(filters.hours),
+            service:
+              filters.service || undefined,
+            level:
+              filters.level || undefined,
+            search:
+              filters.search.trim() || undefined,
+            limit: 100,
+          });
+
+        setLogs(response);
+      } catch (requestError) {
+        setLogsError(
+          requestError.message ||
+            "No se pudieron cargar los logs.",
+        );
+      } finally {
+        setLogsLoading(false);
+      }
+    },
+    [],
+  );
+
+
   useEffect(() => {
     loadSummary();
-  }, [loadSummary]);
+
+    loadLogs({
+      service: "",
+      level: "",
+      hours: "1",
+      search: "",
+    });
+  }, [loadSummary, loadLogs]);
+
+
+  const handleLogFilterChange = (event) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setLogFilters((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+
+  const handleLogSubmit = (event) => {
+    event.preventDefault();
+    loadLogs(logFilters);
+  };
 
 
   const healthy =
@@ -477,6 +569,244 @@ export default function ObservabilityPage() {
             })}
           </div>
         )}
+
+      <section className="panel observability-logs-panel">
+        <div className="security-panel-header">
+          <div>
+            <p className="eyebrow">
+              LIVE LOGS
+            </p>
+
+            <h2>Logs</h2>
+
+            <p>
+              Eventos recientes recopilados desde
+              Kubernetes mediante Loki.
+            </p>
+          </div>
+
+          <div className="observability-logs-count">
+            <strong>{logs?.total ?? 0}</strong>
+            {" "}logs
+          </div>
+        </div>
+
+        <form
+          className="observability-log-filters"
+          onSubmit={handleLogSubmit}
+        >
+          <label>
+            <span>Servicio</span>
+
+            <select
+              name="service"
+              value={logFilters.service}
+              onChange={handleLogFilterChange}
+            >
+              <option value="">
+                Todos
+              </option>
+
+              <option value="backend">
+                Backend
+              </option>
+
+              <option value="frontend">
+                Frontend
+              </option>
+
+              <option value="service-checker">
+                Service checker
+              </option>
+
+              <option value="postgres">
+                PostgreSQL
+              </option>
+
+              <option value="postgres-backup">
+                PostgreSQL backup
+              </option>
+
+              <option value="r2-upload">
+                R2 upload
+              </option>
+            </select>
+          </label>
+
+          <label>
+            <span>Nivel</span>
+
+            <select
+              name="level"
+              value={logFilters.level}
+              onChange={handleLogFilterChange}
+            >
+              <option value="">
+                Todos
+              </option>
+
+              <option value="debug">
+                Debug
+              </option>
+
+              <option value="info">
+                Info
+              </option>
+
+              <option value="warning">
+                Warning
+              </option>
+
+              <option value="error">
+                Error
+              </option>
+
+              <option value="critical">
+                Critical
+              </option>
+            </select>
+          </label>
+
+          <label>
+            <span>Periodo</span>
+
+            <select
+              name="hours"
+              value={logFilters.hours}
+              onChange={handleLogFilterChange}
+            >
+              <option value="1">
+                Última hora
+              </option>
+
+              <option value="6">
+                Últimas 6 horas
+              </option>
+
+              <option value="24">
+                Últimas 24 horas
+              </option>
+
+              <option value="72">
+                Últimos 3 días
+              </option>
+
+              <option value="168">
+                Últimos 7 días
+              </option>
+            </select>
+          </label>
+
+          <label className="observability-log-search">
+            <span>Buscar</span>
+
+            <input
+              type="search"
+              name="search"
+              value={logFilters.search}
+              onChange={handleLogFilterChange}
+              placeholder="timeout, /health, database..."
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="refresh-button"
+            disabled={logsLoading}
+          >
+            {logsLoading
+              ? "Buscando..."
+              : "Aplicar"}
+          </button>
+        </form>
+
+        {logsError && (
+          <div className="alert alert--error">
+            <strong>
+              Loki no disponible
+            </strong>
+
+            <span>{logsError}</span>
+          </div>
+        )}
+
+        {logsLoading ? (
+          <div className="security-empty">
+            Consultando Loki...
+          </div>
+        ) : !logs?.logs?.length ? (
+          <div className="security-empty">
+            No se encontraron logs para estos
+            filtros.
+          </div>
+        ) : (
+          <div className="observability-log-list">
+            {logs.logs.map((log, index) => (
+              <article
+                key={`${log.timestamp}-${index}`}
+                className="observability-log-entry"
+              >
+                <div className="observability-log-meta">
+                  <time>
+                    {formatLogTime(log.timestamp)}
+                  </time>
+
+                  <span
+                    className={
+                      "observability-log-level " +
+                      `observability-log-level--${
+                        log.level || "unknown"
+                      }`
+                    }
+                  >
+                    {log.level || "unknown"}
+                  </span>
+
+                  <strong>
+                    {log.service}
+                  </strong>
+
+                  {log.pod && (
+                    <span
+                      className="observability-log-pod"
+                      title={log.pod}
+                    >
+                      {log.pod}
+                    </span>
+                  )}
+                </div>
+
+                <pre className="observability-log-message">
+                  {log.message}
+                </pre>
+
+                {(log.trace_id || log.span_id) && (
+                  <div className="observability-log-trace">
+                    {log.trace_id && (
+                      <span>
+                        trace
+                        <code>
+                          {log.trace_id}
+                        </code>
+                      </span>
+                    )}
+
+                    {log.span_id && (
+                      <span>
+                        span
+                        <code>
+                          {log.span_id}
+                        </code>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
       </section>
 
     </section>

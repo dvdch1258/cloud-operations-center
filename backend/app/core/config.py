@@ -51,6 +51,11 @@ class Settings(BaseSettings):
         "http://prometheus.monitoring.svc.cluster.local:9090",
     )
 
+    loki_url: str = os.getenv(
+        "LOKI_URL",
+        "http://loki.monitoring.svc.cluster.local:3100",
+    )
+
     cors_origins: tuple[str, ...] = (
         "http://localhost:5173",
         "http://127.0.0.1:5173",
