@@ -52,6 +52,70 @@ function formatLogTime(value) {
 
 
 
+
+function getSpanTimelineStyle(
+  span,
+  trace,
+) {
+  const traceStart =
+    new Date(trace?.started_at).getTime();
+
+  const spanStart =
+    new Date(span?.started_at).getTime();
+
+  const traceDuration =
+    Number(trace?.duration_ms ?? 0);
+
+  const spanDuration =
+    Number(span?.duration_ms ?? 0);
+
+  if (
+    !Number.isFinite(traceStart) ||
+    !Number.isFinite(spanStart) ||
+    !Number.isFinite(traceDuration) ||
+    traceDuration <= 0
+  ) {
+    return {
+      left: "0%",
+      width: "3%",
+    };
+  }
+
+  const offsetMs =
+    Math.max(
+      0,
+      spanStart - traceStart,
+    );
+
+  const left =
+    Math.min(
+      96,
+      (offsetMs / traceDuration) * 100,
+    );
+
+  const remaining =
+    Math.max(
+      2,
+      100 - left,
+    );
+
+  const width =
+    Math.max(
+      2,
+      Math.min(
+        remaining,
+        (spanDuration / traceDuration) * 100,
+      ),
+    );
+
+  return {
+    left: `${left}%`,
+    width: `${width}%`,
+  };
+}
+
+
+
 function TimeseriesChart({
   points,
   suffix,
@@ -256,7 +320,7 @@ export default function ObservabilityPage() {
         const response =
           await api.getObservabilityTraces({
             hours: 1,
-            limit: 20,
+            limit: 12,
           });
 
         setTraces(response);
@@ -713,6 +777,14 @@ export default function ObservabilityPage() {
 
         <div className="observability-traces-layout">
           <div className="observability-trace-list">
+            <div className="observability-trace-list__header">
+              <span>Operación</span>
+              <span>Servicio</span>
+              <span>Hora</span>
+              <span>Duración</span>
+              <span>Trace ID</span>
+            </div>
+
             {tracesLoading && !traces ? (
               <div className="security-empty">
                 Cargando trazas...
@@ -726,6 +798,10 @@ export default function ObservabilityPage() {
                 <button
                   key={trace.trace_id}
                   type="button"
+                  aria-pressed={
+                    selectedTrace?.trace_id ===
+                    trace.trace_id
+                  }
                   className={
                     "observability-trace-row " +
                     (
@@ -741,31 +817,27 @@ export default function ObservabilityPage() {
                     )
                   }
                 >
-                  <div className="observability-trace-row__main">
-                    <strong>
-                      {trace.operation}
-                    </strong>
+                  <strong className="observability-trace-row__operation">
+                    {trace.operation}
+                  </strong>
 
-                    <span>
-                      {trace.service}
-                    </span>
-                  </div>
+                  <span className="observability-trace-row__service">
+                    {trace.service}
+                  </span>
 
-                  <div className="observability-trace-row__meta">
-                    <time>
-                      {formatLogTime(
-                        trace.started_at,
-                      )}
-                    </time>
+                  <time>
+                    {formatLogTime(
+                      trace.started_at,
+                    )}
+                  </time>
 
-                    <span>
-                      {Number(
-                        trace.duration_ms ?? 0,
-                      ).toFixed(3)} ms
-                    </span>
-                  </div>
+                  <span className="observability-trace-row__duration">
+                    {Number(
+                      trace.duration_ms ?? 0,
+                    ).toFixed(3)} ms
+                  </span>
 
-                  <code>
+                  <code className="observability-trace-row__id">
                     {trace.trace_id}
                   </code>
                 </button>
@@ -935,6 +1007,21 @@ export default function ObservabilityPage() {
                               {span.parent_span_id}
                             </code>
                           )}
+                        </div>
+
+                        <div className="observability-span-timeline">
+                          <span
+                            className={
+                              "observability-span-timeline__bar " +
+                              `observability-span-timeline__bar--${span.status}`
+                            }
+                            style={
+                              getSpanTimelineStyle(
+                                span,
+                                selectedTrace,
+                              )
+                            }
+                          />
                         </div>
                       </article>
                     ),
