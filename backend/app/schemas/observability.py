@@ -72,3 +72,46 @@ class ObservabilityLogsResponse(BaseModel):
     limit: int
     total: int
     logs: list[ObservabilityLogResponse]
+
+
+class ObservabilityTraceSummaryResponse(BaseModel):
+    trace_id: str
+    service: str
+    operation: str
+    started_at: datetime | None
+    duration_ms: float
+
+
+class ObservabilityTracesResponse(BaseModel):
+    period_hours: int
+    total: int
+    traces: list[
+        ObservabilityTraceSummaryResponse
+    ]
+
+
+class ObservabilitySpanResponse(BaseModel):
+    span_id: str | None
+    parent_span_id: str | None
+    service: str
+    name: str
+    kind: str
+    started_at: datetime | None
+    duration_ms: float
+    status: str
+    http_method: str | None
+    http_target: str | None
+    http_status_code: int | str | None
+
+
+class ObservabilityTraceDetailResponse(BaseModel):
+    trace_id: str
+    service: str
+    operation: str
+    started_at: datetime
+    duration_ms: float
+    status: str
+    spans_total: int
+    spans: list[
+        ObservabilitySpanResponse
+    ]

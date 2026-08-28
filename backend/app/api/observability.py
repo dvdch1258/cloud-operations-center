@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -8,6 +8,8 @@ from app.schemas.observability import (
     ObservabilityServicesSummaryResponse,
     ObservabilitySummaryResponse,
     ObservabilityTimeseriesResponse,
+    ObservabilityTraceDetailResponse,
+    ObservabilityTracesResponse,
 )
 from app.services.observability_service import get_observability_services
 from app.services.loki_service import (
@@ -18,6 +20,12 @@ from app.services.prometheus_service import (
     PrometheusQueryError,
     get_observability_summary,
     get_observability_timeseries,
+)
+from app.services.tempo_service import (
+    TempoQueryError,
+    TempoTraceNotFound,
+    get_observability_trace,
+    get_observability_traces,
 )
 
 
@@ -119,4 +127,60 @@ def get_logs(
         raise HTTPException(
             status_code=503,
             detail="Loki no disponible",
+        ) from exc
+
+
+@router.get(
+    "/traces",
+    response_model=ObservabilityTracesResponse,
+)
+def get_traces(
+    hours: int = Query(
+        default=1,
+        ge=1,
+        le=168,
+    ),
+    limit: int = Query(
+        default=50,
+        ge=1,
+        le=100,
+    ),
+):
+    try:
+        return get_observability_traces(
+            hours=hours,
+            limit=limit,
+        )
+    except TempoQueryError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Tempo no disponible",
+        ) from exc
+
+
+@router.get(
+    "/traces/{trace_id}",
+    response_model=ObservabilityTraceDetailResponse,
+)
+def get_trace(
+    trace_id: str = Path(
+        ...,
+        min_length=32,
+        max_length=32,
+        pattern=r"^[0-9a-fA-F]{32}$",
+    ),
+):
+    try:
+        return get_observability_trace(
+            trace_id
+        )
+    except TempoTraceNotFound as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Traza no encontrada",
+        ) from exc
+    except TempoQueryError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Tempo no disponible",
         ) from exc

@@ -172,6 +172,29 @@ export const api = {
     )
   },
 
+  getObservabilityTraces: (params = {}) => {
+    const query = new URLSearchParams()
+
+    query.set(
+      "hours",
+      String(params.hours || 1),
+    )
+
+    query.set(
+      "limit",
+      String(params.limit || 50),
+    )
+
+    return request(
+      `/observability/traces?${query.toString()}`,
+    )
+  },
+
+  getObservabilityTrace: (traceId) =>
+    request(
+      `/observability/traces/${traceId}`,
+    ),
+
 
   getSecurityAlertSummary: () =>
     request("/security/alerts/summary"),

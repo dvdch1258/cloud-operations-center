@@ -166,6 +166,26 @@ export default function ObservabilityPage() {
   });
 
 
+  const [traces, setTraces] = useState(null);
+  const [tracesLoading, setTracesLoading] = useState(false);
+  const [tracesError, setTracesError] = useState("");
+
+  const [
+    selectedTrace,
+    setSelectedTrace,
+  ] = useState(null);
+
+  const [
+    traceDetailLoading,
+    setTraceDetailLoading,
+  ] = useState(false);
+
+  const [
+    traceDetailError,
+    setTraceDetailError,
+  ] = useState("");
+
+
   const loadSummary = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -227,6 +247,59 @@ export default function ObservabilityPage() {
   );
 
 
+  const loadTraces = useCallback(
+    async () => {
+      setTracesLoading(true);
+      setTracesError("");
+
+      try {
+        const response =
+          await api.getObservabilityTraces({
+            hours: 1,
+            limit: 20,
+          });
+
+        setTraces(response);
+      } catch (requestError) {
+        setTracesError(
+          requestError.message ||
+            "No se pudieron cargar las trazas.",
+        );
+      } finally {
+        setTracesLoading(false);
+      }
+    },
+    [],
+  );
+
+
+  const loadTraceDetail = useCallback(
+    async (traceId) => {
+      setTraceDetailLoading(true);
+      setTraceDetailError("");
+
+      try {
+        const response =
+          await api.getObservabilityTrace(
+            traceId,
+          );
+
+        setSelectedTrace(response);
+      } catch (requestError) {
+        setSelectedTrace(null);
+
+        setTraceDetailError(
+          requestError.message ||
+            "No se pudo cargar la traza.",
+        );
+      } finally {
+        setTraceDetailLoading(false);
+      }
+    },
+    [],
+  );
+
+
   useEffect(() => {
     loadSummary();
 
@@ -236,7 +309,13 @@ export default function ObservabilityPage() {
       hours: "1",
       search: "",
     });
-  }, [loadSummary, loadLogs]);
+
+    loadTraces();
+  }, [
+    loadSummary,
+    loadLogs,
+    loadTraces,
+  ]);
 
 
   const handleLogFilterChange = (event) => {
@@ -255,6 +334,22 @@ export default function ObservabilityPage() {
   const handleLogSubmit = (event) => {
     event.preventDefault();
     loadLogs(logFilters);
+  };
+
+
+  const handleOpenTrace = async (
+    traceId,
+  ) => {
+    await loadTraceDetail(traceId);
+
+    document
+      .getElementById(
+        "observability-traces",
+      )
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
   };
 
 
@@ -570,6 +665,287 @@ export default function ObservabilityPage() {
           </div>
         )}
 
+      <section
+        id="observability-traces"
+        className="panel observability-traces-panel"
+      >
+        <div className="security-panel-header">
+          <div>
+            <p className="eyebrow">
+              DISTRIBUTED TRACING
+            </p>
+
+            <h2>Traces</h2>
+
+            <p>
+              Trazas recientes y spans recopilados
+              mediante OpenTelemetry y Tempo.
+            </p>
+          </div>
+
+          <div className="observability-traces-actions">
+            <span className="observability-logs-count">
+              <strong>
+                {traces?.total ?? 0}
+              </strong>
+              {" "}traces
+            </span>
+
+            <button
+              type="button"
+              className="refresh-button"
+              disabled={tracesLoading}
+              onClick={loadTraces}
+            >
+              {tracesLoading
+                ? "Actualizando..."
+                : "Actualizar"}
+            </button>
+          </div>
+        </div>
+
+        {tracesError && (
+          <div className="alert alert--error">
+            <strong>Tempo no disponible</strong>
+            <span>{tracesError}</span>
+          </div>
+        )}
+
+        <div className="observability-traces-layout">
+          <div className="observability-trace-list">
+            {tracesLoading && !traces ? (
+              <div className="security-empty">
+                Cargando trazas...
+              </div>
+            ) : !traces?.traces?.length ? (
+              <div className="security-empty">
+                No hay trazas para este periodo.
+              </div>
+            ) : (
+              traces.traces.map((trace) => (
+                <button
+                  key={trace.trace_id}
+                  type="button"
+                  className={
+                    "observability-trace-row " +
+                    (
+                      selectedTrace?.trace_id ===
+                      trace.trace_id
+                        ? "observability-trace-row--active"
+                        : ""
+                    )
+                  }
+                  onClick={() =>
+                    loadTraceDetail(
+                      trace.trace_id,
+                    )
+                  }
+                >
+                  <div className="observability-trace-row__main">
+                    <strong>
+                      {trace.operation}
+                    </strong>
+
+                    <span>
+                      {trace.service}
+                    </span>
+                  </div>
+
+                  <div className="observability-trace-row__meta">
+                    <time>
+                      {formatLogTime(
+                        trace.started_at,
+                      )}
+                    </time>
+
+                    <span>
+                      {Number(
+                        trace.duration_ms ?? 0,
+                      ).toFixed(3)} ms
+                    </span>
+                  </div>
+
+                  <code>
+                    {trace.trace_id}
+                  </code>
+                </button>
+              ))
+            )}
+          </div>
+
+          <div className="observability-trace-detail">
+            {traceDetailLoading ? (
+              <div className="security-empty">
+                Cargando detalle de traza...
+              </div>
+            ) : traceDetailError ? (
+              <div className="alert alert--error">
+                <strong>
+                  Traza no disponible
+                </strong>
+
+                <span>
+                  {traceDetailError}
+                </span>
+              </div>
+            ) : !selectedTrace ? (
+              <div className="security-empty">
+                Selecciona una traza para
+                inspeccionar sus spans.
+              </div>
+            ) : (
+              <>
+                <div className="observability-trace-detail__header">
+                  <div>
+                    <p className="eyebrow">
+                      TRACE DETAIL
+                    </p>
+
+                    <h3>
+                      {selectedTrace.operation}
+                    </h3>
+
+                    <code>
+                      {selectedTrace.trace_id}
+                    </code>
+                  </div>
+
+                  <span
+                    className={
+                      "observability-trace-status " +
+                      `observability-trace-status--${selectedTrace.status}`
+                    }
+                  >
+                    {selectedTrace.status}
+                  </span>
+                </div>
+
+                <div className="observability-trace-summary">
+                  <span>
+                    <small>Servicio</small>
+                    <strong>
+                      {selectedTrace.service}
+                    </strong>
+                  </span>
+
+                  <span>
+                    <small>Duración</small>
+                    <strong>
+                      {Number(
+                        selectedTrace.duration_ms ?? 0,
+                      ).toFixed(3)} ms
+                    </strong>
+                  </span>
+
+                  <span>
+                    <small>Spans</small>
+                    <strong>
+                      {selectedTrace.spans_total}
+                    </strong>
+                  </span>
+
+                  <span>
+                    <small>Inicio</small>
+                    <strong>
+                      {formatLogTime(
+                        selectedTrace.started_at,
+                      )}
+                    </strong>
+                  </span>
+                </div>
+
+                <div className="observability-span-list">
+                  {selectedTrace.spans?.map(
+                    (span, index) => (
+                      <article
+                        key={
+                          span.span_id ||
+                          `${span.name}-${index}`
+                        }
+                        className={
+                          "observability-span-row " +
+                          (
+                            span.parent_span_id
+                              ? "observability-span-row--child"
+                              : "observability-span-row--root"
+                          )
+                        }
+                      >
+                        <div className="observability-span-row__main">
+                          <div>
+                            <span className="observability-span-kind">
+                              {span.kind
+                                ?.replace(
+                                  "SPAN_KIND_",
+                                  "",
+                                )
+                                .toLowerCase()}
+                            </span>
+
+                            <strong>
+                              {span.name}
+                            </strong>
+                          </div>
+
+                          <span
+                            className={
+                              "observability-trace-status " +
+                              `observability-trace-status--${span.status}`
+                            }
+                          >
+                            {span.status}
+                          </span>
+                        </div>
+
+                        <div className="observability-span-meta">
+                          <span>
+                            {Number(
+                              span.duration_ms ?? 0,
+                            ).toFixed(3)} ms
+                          </span>
+
+                          {span.http_method && (
+                            <span>
+                              {span.http_method}
+                            </span>
+                          )}
+
+                          {span.http_target && (
+                            <code>
+                              {span.http_target}
+                            </code>
+                          )}
+
+                          {span.http_status_code != null && (
+                            <span>
+                              HTTP{" "}
+                              {span.http_status_code}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="observability-span-ids">
+                          <code>
+                            span {span.span_id}
+                          </code>
+
+                          {span.parent_span_id && (
+                            <code>
+                              parent{" "}
+                              {span.parent_span_id}
+                            </code>
+                          )}
+                        </div>
+                      </article>
+                    ),
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
       <section className="panel observability-logs-panel">
         <div className="security-panel-header">
           <div>
@@ -788,6 +1164,18 @@ export default function ObservabilityPage() {
                         <code>
                           {log.trace_id}
                         </code>
+
+                        <button
+                          type="button"
+                          className="observability-log-trace-button"
+                          onClick={() =>
+                            handleOpenTrace(
+                              log.trace_id,
+                            )
+                          }
+                        >
+                          Ver traza
+                        </button>
                       </span>
                     )}
 
