@@ -3668,3 +3668,58 @@ tbody tr:hover {
     align-items: flex-start;
   }
 }
+
+
+/* Desktop sidebar viewport layout */
+
+@media (min-width: 981px) {
+  .app-shell {
+    align-items: start;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    align-self: start;
+    overflow: hidden;
+  }
+
+  .navigation {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 3px;
+    scrollbar-width: thin;
+    scrollbar-color:
+      rgba(82, 108, 145, 0.45)
+      transparent;
+  }
+
+  .navigation::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .navigation::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .navigation::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background:
+      rgba(82, 108, 145, 0.45);
+  }
+
+  .sidebar__account {
+    flex: 0 0 auto;
+    margin-top: 16px;
+    margin-bottom: 10px;
+  }
+
+  .sidebar__footer {
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+}

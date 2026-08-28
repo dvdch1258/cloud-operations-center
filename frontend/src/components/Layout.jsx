@@ -235,7 +235,7 @@ export default function Layout() {
 
         <div className="sidebar__footer">
           <span className="connection-dot" />
-          Acceso seguro · NetBird · v{APP_VERSION} · {SHORT_BUILD}
+          Conexión segura · TLS · v{APP_VERSION} · {SHORT_BUILD}
         </div>
       </aside>
 

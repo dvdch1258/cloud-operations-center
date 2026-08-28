@@ -142,7 +142,7 @@ export default function LoginPage() {
 
         <div className="login-card__heading">
           <p className="eyebrow">
-            ACCESO SEGURO
+            CONEXIÓN SEGURA
           </p>
 
           <h1>Iniciar sesión</h1>
@@ -224,7 +224,7 @@ export default function LoginPage() {
 
         <div className="login-security">
           <span className="connection-dot" />
-          Acceso seguro
+          Conexión cifrada · TLS
         </div>
       </section>
     </main>
