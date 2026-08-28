@@ -56,6 +56,11 @@ class Settings(BaseSettings):
         "http://loki.monitoring.svc.cluster.local:3100",
     )
 
+    tempo_url: str = os.getenv(
+        "TEMPO_URL",
+        "http://tempo.monitoring.svc.cluster.local:3200",
+    )
+
     cors_origins: tuple[str, ...] = (
         "http://localhost:5173",
         "http://127.0.0.1:5173",
