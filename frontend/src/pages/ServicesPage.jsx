@@ -77,11 +77,11 @@ export default function ServicesPage() {
     setError("");
 
     try {
-      const result = await api.checkServices();
+      const execution = await api.runServiceHealthCheck();
 
       setLastCheckedAt(
-        result.checked_at
-          ? new Date(result.checked_at)
+        execution.result?.checked_at
+          ? new Date(execution.result.checked_at)
           : new Date()
       );
 
