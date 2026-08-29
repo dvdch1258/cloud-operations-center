@@ -204,6 +204,13 @@ export default function Layout() {
           </div>
 
           <NavLink
+            to="/operaciones"
+            className={navigationClass}
+          >
+            Operaciones
+          </NavLink>
+
+          <NavLink
             to="/sistema"
             className={navigationClass}
           >

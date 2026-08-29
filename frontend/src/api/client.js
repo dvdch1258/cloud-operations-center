@@ -96,6 +96,14 @@ export const api = {
   getDetailedHealth: () =>
     request("/health/detailed"),
 
+  getOperationExecutions: (limit = 50) =>
+    request(`/operations/executions?limit=${limit}`),
+
+  runServiceHealthCheck: () =>
+    request("/operations/service-check", {
+      method: "POST",
+    }),
+
   getSecuritySummary: () =>
     request("/security/summary"),
 
