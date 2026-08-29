@@ -29,6 +29,7 @@ if config.config_file_name is not None:
 from app.core.database import Base
 from app.models import (
     Incident,
+    OperationExecution,
     SecurityEvent,
     SecurityAlert,
     Service,
