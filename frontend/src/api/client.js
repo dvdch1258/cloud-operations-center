@@ -239,6 +239,78 @@ export const api = {
       method: "PATCH",
     }),
 
+  getAutomationRules: (params = {}) => {
+    const query = new URLSearchParams()
+
+    if (params.enabled !== undefined) {
+      query.set(
+        "enabled",
+        String(params.enabled),
+      )
+    }
+
+    query.set(
+      "limit",
+      String(params.limit || 100),
+    )
+
+    return request(
+      `/automations/rules?${query.toString()}`,
+    )
+  },
+
+  createAutomationRule: (payload) =>
+    request("/automations/rules", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  updateAutomationRule: (
+    id,
+    payload,
+  ) =>
+    request(`/automations/rules/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+
+  deleteAutomationRule: (id) =>
+    request(`/automations/rules/${id}`, {
+      method: "DELETE",
+    }),
+
+  getAutomationExecutions: (params = {}) => {
+    const query = new URLSearchParams()
+
+    if (params.ruleId) {
+      query.set(
+        "rule_id",
+        String(params.ruleId),
+      )
+    }
+
+    if (params.status) {
+      query.set(
+        "status",
+        params.status,
+      )
+    }
+
+    query.set(
+      "limit",
+      String(params.limit || 100),
+    )
+
+    return request(
+      `/automations/executions?${query.toString()}`,
+    )
+  },
+
+  getAutomationExecution: (id) =>
+    request(
+      `/automations/executions/${id}`,
+    ),
+
   getServices: () =>
     request("/services/"),
 

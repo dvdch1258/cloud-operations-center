@@ -10,6 +10,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
 from app.api.observability import router as observability_router
 from app.api.operations import router as operations_router
+from app.api.automations import router as automations_router
 from app.api.security import router as security_router
 from app.api.vulnerability_ingest import router as vulnerability_ingest_router
 from app.api.incidents import (
@@ -110,5 +111,6 @@ app.include_router(incidents_router)
 app.include_router(security_router)
 app.include_router(observability_router)
 app.include_router(operations_router)
+app.include_router(automations_router)
 app.include_router(vulnerability_ingest_router)
 app.include_router(dashboard_router)

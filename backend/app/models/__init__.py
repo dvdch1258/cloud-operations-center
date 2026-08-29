@@ -9,3 +9,5 @@ from app.models.vulnerability import (
 )
 from app.models.security_alert import SecurityAlert
 from app.models.operation_execution import OperationExecution
+from app.models.automation_rule import AutomationRule
+from app.models.automation_execution import AutomationExecution

@@ -5,3 +5,4 @@ metadata:
   namespace: cloud-ops
 data:
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo.monitoring.svc.cluster.local:4317"
+  AUTOMATION_WEBHOOK_URL: "http://100.92.118.17:5678/webhook/cloud-ops-automation"
