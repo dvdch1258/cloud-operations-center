@@ -17,7 +17,11 @@ class Incident(Base):
 
     status = Column(String, nullable=False, default="open")
 
-    service_id = Column(Integer, ForeignKey("services.id"), nullable=False)
+    service_id = Column(
+        Integer,
+        ForeignKey("services.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

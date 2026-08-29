@@ -19,6 +19,8 @@ class IncidentUpdate(IncidentBase):
 
 
 class IncidentResponse(IncidentBase):
+    service_id: int | None
+
     id: int
     status: str
     created_at: datetime
