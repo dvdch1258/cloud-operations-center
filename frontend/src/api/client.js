@@ -251,11 +251,6 @@ export const api = {
       body: JSON.stringify(service),
     }),
 
-  checkServices: () =>
-    request("/services/check-all", {
-      method: "POST",
-    }),
-
   getServiceUptime: (
     id,
     hours = 1,
