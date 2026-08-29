@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.incident import Incident
 from app.models.service import Service
 from app.models.service_check import ServiceCheck
+from app.services.automation_service import run_automation_trigger
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,8 @@ def check_all_services(db: Session) -> dict:
     incidents_created = 0
     incidents_resolved = 0
 
+    pending_automation_triggers = []
+
     for service in services:
         previous_status = service.status
         (
@@ -154,6 +157,28 @@ def check_all_services(db: Session) -> dict:
         )
         db.add(service_check)
 
+        if (
+            new_status == "down"
+            and previous_status != "down"
+        ):
+            pending_automation_triggers.append(
+                (
+                    service,
+                    {
+                        "previous_status":
+                            previous_status,
+                        "status":
+                            new_status,
+                        "status_code":
+                            status_code,
+                        "response_time_ms":
+                            response_time_ms,
+                        "error":
+                            error,
+                    },
+                )
+            )
+
         results.append(
             {
                 "service_id": service.id,
@@ -174,6 +199,45 @@ def check_all_services(db: Session) -> dict:
         logger.exception("services_check_commit_failed")
         raise
 
+    automation_executions = 0
+    automation_failures = 0
+    automation_errors = 0
+
+    for (
+        service,
+        trigger_payload,
+    ) in pending_automation_triggers:
+        try:
+            executions = run_automation_trigger(
+                db,
+                trigger_type="service_down",
+                service=service,
+                trigger_payload=trigger_payload,
+            )
+
+            automation_executions += len(
+                executions
+            )
+
+            automation_failures += sum(
+                execution.status == "failed"
+                for execution in executions
+            )
+
+        except Exception:
+            db.rollback()
+            automation_errors += 1
+
+            logger.exception(
+                "automation_trigger_failed",
+                extra={
+                    "trigger_type":
+                        "service_down",
+                    "service_id":
+                        service.id,
+                },
+            )
+
     return {
         "checked_at": datetime.now(timezone.utc).isoformat(),
         "services_checked": len(services),
@@ -185,5 +249,14 @@ def check_all_services(db: Session) -> dict:
         ),
         "incidents_created": incidents_created,
         "incidents_resolved": incidents_resolved,
+        "automation_trigger_events": len(
+            pending_automation_triggers
+        ),
+        "automation_executions":
+            automation_executions,
+        "automation_failures":
+            automation_failures,
+        "automation_errors":
+            automation_errors,
         "results": results,
     }

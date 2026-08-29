@@ -41,6 +41,11 @@ class Settings(BaseSettings):
         "",
     )
 
+    automation_webhook_url: str = os.getenv(
+        "AUTOMATION_WEBHOOK_URL",
+        "",
+    )
+
     vulnerability_ingest_api_key: str = os.getenv(
         "VULNERABILITY_INGEST_API_KEY",
         "",

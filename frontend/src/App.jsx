@@ -17,6 +17,7 @@ import CompliancePage from "./pages/CompliancePage";
 import PoliciesPage from "./pages/PoliciesPage";
 import ObservabilityPage from "./pages/ObservabilityPage";
 import OperationsPage from "./pages/OperationsPage";
+import AutomationsPage from "./pages/AutomationsPage";
 import SummaryPage from "./pages/SummaryPage";
 import SystemPage from "./pages/SystemPage";
 import "./App.css";
@@ -80,6 +81,11 @@ export default function App() {
           <Route
             path="operaciones"
             element={<OperationsPage />}
+          />
+
+          <Route
+            path="automatizaciones"
+            element={<AutomationsPage />}
           />
 
           <Route
