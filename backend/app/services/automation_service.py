@@ -25,6 +25,7 @@ def _execute_notify_webhook(
     rule: AutomationRule,
     service: Service,
     trigger_payload: dict,
+    execution_source: str,
 ) -> dict:
     webhook_url = (
         settings.automation_webhook_url.strip()
@@ -49,6 +50,7 @@ def _execute_notify_webhook(
             "endpoint": service.endpoint,
         },
         "trigger": trigger_payload,
+        "execution_source": execution_source,
         "sent_at": (
             datetime.now(timezone.utc).isoformat()
         ),
@@ -83,6 +85,7 @@ def execute_automation_rule(
     rule: AutomationRule,
     service: Service,
     trigger_payload: dict,
+    execution_source: str = "trigger",
 ) -> AutomationExecution:
     execution = AutomationExecution(
         rule_id=rule.id,
@@ -91,6 +94,7 @@ def execute_automation_rule(
         action_type=rule.action_type,
         service_id=service.id,
         status="running",
+        execution_source=execution_source,
         trigger_payload=trigger_payload,
         started_at=datetime.now(timezone.utc),
     )
@@ -110,6 +114,7 @@ def execute_automation_rule(
             "trigger_type": rule.trigger_type,
             "action_type": rule.action_type,
             "service_id": service.id,
+            "execution_source": execution_source,
         },
     )
 
@@ -119,6 +124,7 @@ def execute_automation_rule(
                 rule,
                 service,
                 trigger_payload,
+                execution_source,
             )
         else:
             raise AutomationActionError(

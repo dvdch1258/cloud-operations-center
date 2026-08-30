@@ -82,6 +82,19 @@ function actionLabel(action) {
 }
 
 
+function executionSourceLabel(source) {
+  if (source === "manual_test") {
+    return "Prueba manual";
+  }
+
+  if (source === "trigger") {
+    return "Automática";
+  }
+
+  return source || "—";
+}
+
+
 function SummaryCard({
   label,
   value,
@@ -118,6 +131,16 @@ export default function AutomationsPage() {
 
   const [busyRuleId, setBusyRuleId] =
     useState(null);
+
+  const [
+    testingRuleId,
+    setTestingRuleId,
+  ] = useState(null);
+
+  const [
+    testServiceByRule,
+    setTestServiceByRule,
+  ] = useState({});
 
   const [statusFilter, setStatusFilter] =
     useState("");
@@ -247,6 +270,64 @@ export default function AutomationsPage() {
     } catch (requestError) {
       setError(requestError.message);
     } finally {
+      setBusyRuleId(null);
+    }
+  }
+
+
+  async function handleTest(rule) {
+    if (busyRuleId !== null) {
+      return;
+    }
+
+    let serviceId = rule.service_id;
+
+    if (serviceId === null) {
+      const selectedServiceId =
+        testServiceByRule[rule.id];
+
+      if (!selectedServiceId) {
+        setError(
+          "Selecciona un servicio para probar " +
+          "esta regla global."
+        );
+        return;
+      }
+
+      serviceId = Number(selectedServiceId);
+    }
+
+    setBusyRuleId(rule.id);
+    setTestingRuleId(rule.id);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const execution =
+        await api.testAutomationRule(
+          rule.id,
+          {
+            service_id: serviceId,
+          },
+        );
+
+      if (execution.status === "success") {
+        setSuccessMessage(
+          `Prueba de "${rule.name}" ` +
+          "completada correctamente."
+        );
+      } else {
+        setError(
+          execution.error ||
+          `La prueba de "${rule.name}" falló.`
+        );
+      }
+
+      await loadData();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setTestingRuleId(null);
       setBusyRuleId(null);
     }
   }
@@ -733,6 +814,59 @@ export default function AutomationsPage() {
 
 
                 <div className="automation-rule__actions">
+                  {rule.service_id === null && (
+                    <select
+                      className="automation-test-service-select"
+                      value={
+                        testServiceByRule[
+                          rule.id
+                        ] || ""
+                      }
+                      disabled={
+                        busyRuleId !== null
+                      }
+                      onChange={(event) =>
+                        setTestServiceByRule(
+                          (current) => ({
+                            ...current,
+                            [rule.id]:
+                              event.target.value,
+                          })
+                        )
+                      }
+                    >
+                      <option value="">
+                        Servicio de prueba
+                      </option>
+
+                      {services.map(
+                        (service) => (
+                          <option
+                            key={service.id}
+                            value={service.id}
+                          >
+                            {service.name}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  )}
+
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={
+                      busyRuleId !== null
+                    }
+                    onClick={() =>
+                      handleTest(rule)
+                    }
+                  >
+                    {testingRuleId === rule.id
+                      ? "Probando..."
+                      : "Probar"}
+                  </button>
+
                   <button
                     type="button"
                     className="secondary-button"
@@ -831,6 +965,7 @@ export default function AutomationsPage() {
             <div className="automation-history-row automation-history-row--header">
               <span>Regla</span>
               <span>Estado</span>
+              <span>Fuente</span>
               <span>Trigger</span>
               <span>Servicio</span>
               <span>Duración</span>
@@ -855,6 +990,21 @@ export default function AutomationsPage() {
                   >
                     {executionStatusLabel(
                       execution.status
+                    )}
+                  </span>
+
+                  <span
+                    className={
+                      "automation-source " +
+                      `automation-source--${
+                        execution.execution_source ||
+                        "trigger"
+                      }`
+                    }
+                  >
+                    {executionSourceLabel(
+                      execution.execution_source ||
+                      "trigger"
                     )}
                   </span>
 

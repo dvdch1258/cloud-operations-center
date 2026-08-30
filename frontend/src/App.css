@@ -4350,6 +4350,33 @@ tbody tr:hover {
   gap: 7px;
 }
 
+
+.automation-test-service-select {
+  width: auto;
+  min-width: 165px;
+  min-height: 34px;
+}
+
+.automation-source {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid rgba(91, 126, 179, 0.2);
+  border-radius: 999px;
+  color: #8fa4bf;
+  background: rgba(34, 52, 79, 0.35);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.automation-source--manual_test {
+  color: #a9bfff;
+  border-color: rgba(93, 131, 255, 0.28);
+  background: rgba(54, 88, 173, 0.18);
+}
+
 .automation-delete-button {
   min-height: 34px;
   padding: 0 11px;
@@ -4395,11 +4422,12 @@ tbody tr:hover {
 .automation-history-row {
   display: grid;
   grid-template-columns:
-    minmax(210px, 1.35fr)
-    115px
-    minmax(130px, 0.8fr)
-    minmax(170px, 1fr)
+    minmax(200px, 1.3fr)
     105px
+    120px
+    minmax(130px, 0.8fr)
+    minmax(160px, 1fr)
+    95px
     minmax(165px, 1fr);
   align-items: center;
   gap: 14px;
@@ -4481,7 +4509,7 @@ tbody tr:hover {
   }
 
   .automation-history-row {
-    min-width: 900px;
+    min-width: 1040px;
   }
 }
 
@@ -4513,6 +4541,11 @@ tbody tr:hover {
   }
 
   .automation-rule__actions button {
+    width: 100%;
+  }
+
+
+  .automation-test-service-select {
     width: 100%;
   }
 

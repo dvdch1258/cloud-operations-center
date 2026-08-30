@@ -13,6 +13,11 @@ AutomationActionType = Literal[
     "notify_webhook",
 ]
 
+AutomationExecutionSource = Literal[
+    "trigger",
+    "manual_test",
+]
+
 
 class AutomationRuleCreate(BaseModel):
     name: str
@@ -30,6 +35,10 @@ class AutomationRuleUpdate(BaseModel):
     description: str | None = None
     enabled: bool | None = None
 
+    service_id: int | None = None
+
+
+class AutomationRuleTestRequest(BaseModel):
     service_id: int | None = None
 
 
@@ -67,6 +76,7 @@ class AutomationExecutionResponse(BaseModel):
     service_id: int | None
 
     status: str
+    execution_source: str
 
     trigger_payload: dict[str, Any] | None
 
