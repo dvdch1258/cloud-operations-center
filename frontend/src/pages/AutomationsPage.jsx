@@ -12,6 +12,7 @@ const initialForm = {
   name: "",
   description: "",
   serviceId: "",
+  triggerType: "service_down",
 };
 
 
@@ -62,6 +63,10 @@ function executionStatusLabel(status) {
 function triggerLabel(trigger) {
   if (trigger === "service_down") {
     return "Servicio caído";
+  }
+
+  if (trigger === "service_recovered") {
+    return "Servicio recuperado";
   }
 
   return trigger || "—";
@@ -193,7 +198,7 @@ export default function AutomationsPage() {
         description:
           form.description.trim() || null,
         enabled: true,
-        trigger_type: "service_down",
+        trigger_type: form.triggerType,
         action_type: "notify_webhook",
         service_id: form.serviceId
           ? Number(form.serviceId)
@@ -500,9 +505,25 @@ export default function AutomationsPage() {
             <div className="automation-fixed-grid">
               <div>
                 <span>Trigger</span>
-                <strong>
-                  Servicio caído
-                </strong>
+
+                <select
+                  value={form.triggerType}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      triggerType:
+                        event.target.value,
+                    }))
+                  }
+                >
+                  <option value="service_down">
+                    Servicio caído
+                  </option>
+
+                  <option value="service_recovered">
+                    Servicio recuperado
+                  </option>
+                </select>
               </div>
 
               <div>

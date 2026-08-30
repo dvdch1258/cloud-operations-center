@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 AutomationTriggerType = Literal[
     "service_down",
+    "service_recovered",
 ]
 
 AutomationActionType = Literal[
