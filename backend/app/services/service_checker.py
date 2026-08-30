@@ -157,12 +157,24 @@ def check_all_services(db: Session) -> dict:
         )
         db.add(service_check)
 
+        trigger_type = None
+
         if (
             new_status == "down"
             and previous_status != "down"
         ):
+            trigger_type = "service_down"
+
+        elif (
+            new_status == "up"
+            and previous_status == "down"
+        ):
+            trigger_type = "service_recovered"
+
+        if trigger_type is not None:
             pending_automation_triggers.append(
                 (
+                    trigger_type,
                     service,
                     {
                         "previous_status":
@@ -204,13 +216,14 @@ def check_all_services(db: Session) -> dict:
     automation_errors = 0
 
     for (
+        trigger_type,
         service,
         trigger_payload,
     ) in pending_automation_triggers:
         try:
             executions = run_automation_trigger(
                 db,
-                trigger_type="service_down",
+                trigger_type=trigger_type,
                 service=service,
                 trigger_payload=trigger_payload,
             )
@@ -232,7 +245,7 @@ def check_all_services(db: Session) -> dict:
                 "automation_trigger_failed",
                 extra={
                     "trigger_type":
-                        "service_down",
+                        trigger_type,
                     "service_id":
                         service.id,
                 },

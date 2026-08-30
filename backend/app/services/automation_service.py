@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 from sqlalchemy import or_
@@ -25,6 +25,7 @@ def _execute_notify_webhook(
     rule: AutomationRule,
     service: Service,
     trigger_payload: dict,
+    execution_source: str,
 ) -> dict:
     webhook_url = (
         settings.automation_webhook_url.strip()
@@ -49,6 +50,7 @@ def _execute_notify_webhook(
             "endpoint": service.endpoint,
         },
         "trigger": trigger_payload,
+        "execution_source": execution_source,
         "sent_at": (
             datetime.now(timezone.utc).isoformat()
         ),
@@ -83,6 +85,7 @@ def execute_automation_rule(
     rule: AutomationRule,
     service: Service,
     trigger_payload: dict,
+    execution_source: str = "trigger",
 ) -> AutomationExecution:
     execution = AutomationExecution(
         rule_id=rule.id,
@@ -91,6 +94,7 @@ def execute_automation_rule(
         action_type=rule.action_type,
         service_id=service.id,
         status="running",
+        execution_source=execution_source,
         trigger_payload=trigger_payload,
         started_at=datetime.now(timezone.utc),
     )
@@ -110,6 +114,7 @@ def execute_automation_rule(
             "trigger_type": rule.trigger_type,
             "action_type": rule.action_type,
             "service_id": service.id,
+            "execution_source": execution_source,
         },
     )
 
@@ -119,6 +124,7 @@ def execute_automation_rule(
                 rule,
                 service,
                 trigger_payload,
+                execution_source,
             )
         else:
             raise AutomationActionError(
@@ -192,6 +198,105 @@ def execute_automation_rule(
     return execution
 
 
+def _get_recent_trigger_execution(
+    db: Session,
+    *,
+    rule: AutomationRule,
+    service: Service,
+) -> AutomationExecution | None:
+    cooldown_seconds = int(
+        rule.cooldown_seconds or 0
+    )
+
+    if cooldown_seconds <= 0:
+        return None
+
+    cutoff = (
+        datetime.now(timezone.utc)
+        - timedelta(seconds=cooldown_seconds)
+    )
+
+    return (
+        db.query(AutomationExecution)
+        .filter(
+            AutomationExecution.rule_id
+            == rule.id,
+            AutomationExecution.service_id
+            == service.id,
+            AutomationExecution.execution_source
+            == "trigger",
+            AutomationExecution.status.in_(
+                (
+                    "running",
+                    "success",
+                    "failed",
+                )
+            ),
+            AutomationExecution.started_at
+            >= cutoff,
+        )
+        .order_by(
+            AutomationExecution.started_at.desc(),
+            AutomationExecution.id.desc(),
+        )
+        .first()
+    )
+
+
+def _record_cooldown_skip(
+    db: Session,
+    *,
+    rule: AutomationRule,
+    service: Service,
+    trigger_payload: dict,
+    recent_execution: AutomationExecution,
+) -> AutomationExecution:
+    now = datetime.now(timezone.utc)
+
+    execution = AutomationExecution(
+        rule_id=rule.id,
+        rule_name=rule.name,
+        trigger_type=rule.trigger_type,
+        action_type=rule.action_type,
+        service_id=service.id,
+        status="skipped",
+        execution_source="trigger",
+        trigger_payload=trigger_payload,
+        started_at=now,
+        finished_at=now,
+        duration_ms=0.0,
+        result={
+            "skipped": True,
+            "reason": "cooldown",
+            "cooldown_seconds":
+                rule.cooldown_seconds,
+            "recent_execution_id":
+                recent_execution.id,
+        },
+        error=None,
+    )
+
+    db.add(execution)
+    db.commit()
+    db.refresh(execution)
+
+    logger.info(
+        "automation_rule_cooldown_skipped",
+        extra={
+            "automation_rule_id": rule.id,
+            "automation_execution_id":
+                execution.id,
+            "recent_execution_id":
+                recent_execution.id,
+            "service_id": service.id,
+            "cooldown_seconds":
+                rule.cooldown_seconds,
+        },
+    )
+
+    return execution
+
+
 def run_automation_trigger(
     db: Session,
     *,
@@ -227,6 +332,27 @@ def run_automation_trigger(
     executions = []
 
     for rule in rules:
+        recent_execution = (
+            _get_recent_trigger_execution(
+                db,
+                rule=rule,
+                service=service,
+            )
+        )
+
+        if recent_execution is not None:
+            executions.append(
+                _record_cooldown_skip(
+                    db,
+                    rule=rule,
+                    service=service,
+                    trigger_payload=trigger_payload,
+                    recent_execution=
+                        recent_execution,
+                )
+            )
+            continue
+
         executions.append(
             execute_automation_rule(
                 db,

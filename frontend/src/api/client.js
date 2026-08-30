@@ -279,6 +279,15 @@ export const api = {
       method: "DELETE",
     }),
 
+  testAutomationRule: (
+    id,
+    payload = {},
+  ) =>
+    request(`/automations/rules/${id}/test`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
   getAutomationExecutions: (params = {}) => {
     const query = new URLSearchParams()
 

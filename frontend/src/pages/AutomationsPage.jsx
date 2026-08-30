@@ -12,6 +12,8 @@ const initialForm = {
   name: "",
   description: "",
   serviceId: "",
+  triggerType: "service_down",
+  cooldownSeconds: "300",
 };
 
 
@@ -53,6 +55,8 @@ function executionStatusLabel(status) {
       return "Fallida";
     case "running":
       return "En ejecución";
+    case "skipped":
+      return "Omitida";
     default:
       return status || "Desconocido";
   }
@@ -62,6 +66,10 @@ function executionStatusLabel(status) {
 function triggerLabel(trigger) {
   if (trigger === "service_down") {
     return "Servicio caído";
+  }
+
+  if (trigger === "service_recovered") {
+    return "Servicio recuperado";
   }
 
   return trigger || "—";
@@ -74,6 +82,50 @@ function actionLabel(action) {
   }
 
   return action || "—";
+}
+
+
+function executionSourceLabel(source) {
+  if (source === "manual_test") {
+    return "Prueba manual";
+  }
+
+  if (source === "trigger") {
+    return "Automática";
+  }
+
+  return source || "—";
+}
+
+
+function cooldownLabel(seconds) {
+  const value = Number(seconds);
+
+  if (!Number.isFinite(value) || value <= 0) {
+    return "Desactivado";
+  }
+
+  if (value < 60) {
+    return `${value} s`;
+  }
+
+  if (value % 3600 === 0) {
+    const hours = value / 3600;
+
+    return hours === 1
+      ? "1 hora"
+      : `${hours} horas`;
+  }
+
+  if (value % 60 === 0) {
+    const minutes = value / 60;
+
+    return minutes === 1
+      ? "1 minuto"
+      : `${minutes} minutos`;
+  }
+
+  return `${value} s`;
 }
 
 
@@ -114,6 +166,16 @@ export default function AutomationsPage() {
   const [busyRuleId, setBusyRuleId] =
     useState(null);
 
+  const [
+    testingRuleId,
+    setTestingRuleId,
+  ] = useState(null);
+
+  const [
+    testServiceByRule,
+    setTestServiceByRule,
+  ] = useState({});
+
   const [statusFilter, setStatusFilter] =
     useState("");
 
@@ -122,6 +184,22 @@ export default function AutomationsPage() {
 
   const [successMessage, setSuccessMessage] =
     useState("");
+
+
+  const [
+    selectedExecution,
+    setSelectedExecution,
+  ] = useState(null);
+
+  const [
+    executionDetailLoading,
+    setExecutionDetailLoading,
+  ] = useState(false);
+
+  const [
+    executionDetailError,
+    setExecutionDetailError,
+  ] = useState("");
 
 
   const loadData =
@@ -159,6 +237,32 @@ export default function AutomationsPage() {
   }, [loadData]);
 
 
+  useEffect(() => {
+    if (!selectedExecution) {
+      return undefined;
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setSelectedExecution(null);
+        setExecutionDetailError("");
+      }
+    }
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+    };
+  }, [selectedExecution]);
+
+
   function serviceName(serviceId) {
     if (serviceId === null) {
       return "Todos los servicios";
@@ -193,11 +297,13 @@ export default function AutomationsPage() {
         description:
           form.description.trim() || null,
         enabled: true,
-        trigger_type: "service_down",
+        trigger_type: form.triggerType,
         action_type: "notify_webhook",
         service_id: form.serviceId
           ? Number(form.serviceId)
           : null,
+        cooldown_seconds:
+          Number(form.cooldownSeconds),
       });
 
       setForm(initialForm);
@@ -244,6 +350,95 @@ export default function AutomationsPage() {
     } finally {
       setBusyRuleId(null);
     }
+  }
+
+
+  async function handleTest(rule) {
+    if (busyRuleId !== null) {
+      return;
+    }
+
+    let serviceId = rule.service_id;
+
+    if (serviceId === null) {
+      const selectedServiceId =
+        testServiceByRule[rule.id];
+
+      if (!selectedServiceId) {
+        setError(
+          "Selecciona un servicio para probar " +
+          "esta regla global."
+        );
+        return;
+      }
+
+      serviceId = Number(selectedServiceId);
+    }
+
+    setBusyRuleId(rule.id);
+    setTestingRuleId(rule.id);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const execution =
+        await api.testAutomationRule(
+          rule.id,
+          {
+            service_id: serviceId,
+          },
+        );
+
+      if (execution.status === "success") {
+        setSuccessMessage(
+          `Prueba de "${rule.name}" ` +
+          "completada correctamente."
+        );
+      } else {
+        setError(
+          execution.error ||
+          `La prueba de "${rule.name}" falló.`
+        );
+      }
+
+      await loadData();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setTestingRuleId(null);
+      setBusyRuleId(null);
+    }
+  }
+
+
+  async function handleOpenExecution(
+    execution,
+  ) {
+    setSelectedExecution(execution);
+    setExecutionDetailLoading(true);
+    setExecutionDetailError("");
+
+    try {
+      const detail =
+        await api.getAutomationExecution(
+          execution.id
+        );
+
+      setSelectedExecution(detail);
+    } catch (requestError) {
+      setExecutionDetailError(
+        requestError.message
+      );
+    } finally {
+      setExecutionDetailLoading(false);
+    }
+  }
+
+
+  function handleCloseExecution() {
+    setSelectedExecution(null);
+    setExecutionDetailError("");
+    setExecutionDetailLoading(false);
   }
 
 
@@ -497,12 +692,69 @@ export default function AutomationsPage() {
             </label>
 
 
+            <label>
+              <span>Cooldown</span>
+
+              <select
+                value={form.cooldownSeconds}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    cooldownSeconds:
+                      event.target.value,
+                  }))
+                }
+              >
+                <option value="0">
+                  Desactivado
+                </option>
+
+                <option value="60">
+                  1 minuto
+                </option>
+
+                <option value="300">
+                  5 minutos
+                </option>
+
+                <option value="900">
+                  15 minutos
+                </option>
+
+                <option value="3600">
+                  1 hora
+                </option>
+              </select>
+
+              <small className="automation-field-hint">
+                Evita ejecuciones automáticas repetidas
+                para el mismo servicio.
+              </small>
+            </label>
+
+
             <div className="automation-fixed-grid">
               <div>
                 <span>Trigger</span>
-                <strong>
-                  Servicio caído
-                </strong>
+
+                <select
+                  value={form.triggerType}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      triggerType:
+                        event.target.value,
+                    }))
+                  }
+                >
+                  <option value="service_down">
+                    Servicio caído
+                  </option>
+
+                  <option value="service_recovered">
+                    Servicio recuperado
+                  </option>
+                </select>
               </div>
 
               <div>
@@ -703,6 +955,15 @@ export default function AutomationsPage() {
                   </div>
 
                   <div>
+                    <span>Cooldown</span>
+                    <strong>
+                      {cooldownLabel(
+                        rule.cooldown_seconds
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
                     <span>Creada por</span>
                     <strong>
                       {rule.created_by_username}
@@ -712,6 +973,59 @@ export default function AutomationsPage() {
 
 
                 <div className="automation-rule__actions">
+                  {rule.service_id === null && (
+                    <select
+                      className="automation-test-service-select"
+                      value={
+                        testServiceByRule[
+                          rule.id
+                        ] || ""
+                      }
+                      disabled={
+                        busyRuleId !== null
+                      }
+                      onChange={(event) =>
+                        setTestServiceByRule(
+                          (current) => ({
+                            ...current,
+                            [rule.id]:
+                              event.target.value,
+                          })
+                        )
+                      }
+                    >
+                      <option value="">
+                        Servicio de prueba
+                      </option>
+
+                      {services.map(
+                        (service) => (
+                          <option
+                            key={service.id}
+                            value={service.id}
+                          >
+                            {service.name}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  )}
+
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={
+                      busyRuleId !== null
+                    }
+                    onClick={() =>
+                      handleTest(rule)
+                    }
+                  >
+                    {testingRuleId === rule.id
+                      ? "Probando..."
+                      : "Probar"}
+                  </button>
+
                   <button
                     type="button"
                     className="secondary-button"
@@ -791,6 +1105,10 @@ export default function AutomationsPage() {
               <option value="running">
                 En ejecución
               </option>
+
+              <option value="skipped">
+                Omitidas
+              </option>
             </select>
           </div>
         </div>
@@ -810,6 +1128,7 @@ export default function AutomationsPage() {
             <div className="automation-history-row automation-history-row--header">
               <span>Regla</span>
               <span>Estado</span>
+              <span>Fuente</span>
               <span>Trigger</span>
               <span>Servicio</span>
               <span>Duración</span>
@@ -818,9 +1137,22 @@ export default function AutomationsPage() {
 
             {visibleExecutions.map(
               (execution) => (
-                <div
+                <button
                   key={execution.id}
-                  className="automation-history-row"
+                  type="button"
+                  className={
+                    "automation-history-row " +
+                    "automation-history-row--button"
+                  }
+                  onClick={() =>
+                    handleOpenExecution(
+                      execution
+                    )
+                  }
+                  aria-label={
+                    "Ver detalle de ejecución " +
+                    `#${execution.id}`
+                  }
                 >
                   <strong>
                     {execution.rule_name}
@@ -834,6 +1166,21 @@ export default function AutomationsPage() {
                   >
                     {executionStatusLabel(
                       execution.status
+                    )}
+                  </span>
+
+                  <span
+                    className={
+                      "automation-source " +
+                      `automation-source--${
+                        execution.execution_source ||
+                        "trigger"
+                      }`
+                    }
+                  >
+                    {executionSourceLabel(
+                      execution.execution_source ||
+                      "trigger"
                     )}
                   </span>
 
@@ -864,12 +1211,301 @@ export default function AutomationsPage() {
                       execution.started_at
                     )}
                   </time>
-                </div>
+                </button>
               )
             )}
           </div>
         )}
       </section>
+
+
+      {selectedExecution && (
+        <div
+          className="automation-execution-backdrop"
+          onClick={handleCloseExecution}
+        >
+          <aside
+            className="automation-execution-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="automation-execution-title"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <header className="automation-execution-drawer__header">
+              <div>
+                <p className="eyebrow">
+                  EJECUCIÓN #{selectedExecution.id}
+                </p>
+
+                <h2 id="automation-execution-title">
+                  Detalle de ejecución
+                </h2>
+
+                <span>
+                  {selectedExecution.rule_name}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="automation-execution-close"
+                onClick={handleCloseExecution}
+                aria-label="Cerrar detalle"
+              >
+                ×
+              </button>
+            </header>
+
+
+            {executionDetailLoading && (
+              <div className="automation-execution-loading">
+                Actualizando detalle...
+              </div>
+            )}
+
+
+            {executionDetailError && (
+              <div className="alert alert--error">
+                <strong>
+                  No se pudo actualizar el detalle
+                </strong>
+
+                <span>
+                  {executionDetailError}
+                </span>
+              </div>
+            )}
+
+
+            <section className="automation-execution-summary">
+              <div>
+                <span>Estado</span>
+
+                <strong
+                  className={
+                    "operation-status " +
+                    `operation-status--${
+                      selectedExecution.status
+                    }`
+                  }
+                >
+                  {executionStatusLabel(
+                    selectedExecution.status
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Fuente</span>
+
+                <strong
+                  className={
+                    "automation-source " +
+                    `automation-source--${
+                      selectedExecution
+                        .execution_source ||
+                      "trigger"
+                    }`
+                  }
+                >
+                  {executionSourceLabel(
+                    selectedExecution
+                      .execution_source ||
+                    "trigger"
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Regla</span>
+                <strong>
+                  {selectedExecution.rule_name}
+                </strong>
+              </div>
+
+              <div>
+                <span>Trigger</span>
+                <strong>
+                  {triggerLabel(
+                    selectedExecution
+                      .trigger_type
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Servicio</span>
+                <strong>
+                  {serviceName(
+                    selectedExecution.service_id
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Duración</span>
+                <strong>
+                  {formatDuration(
+                    selectedExecution.duration_ms
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Inicio</span>
+                <strong>
+                  {formatDate(
+                    selectedExecution.started_at
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>Finalización</span>
+                <strong>
+                  {formatDate(
+                    selectedExecution.finished_at
+                  )}
+                </strong>
+              </div>
+            </section>
+
+
+            {selectedExecution.status ===
+              "skipped" &&
+              selectedExecution.result?.reason ===
+                "cooldown" && (
+                <section className="automation-execution-callout">
+                  <div>
+                    <p className="eyebrow">
+                      PROTECCIÓN ANTI-TORMENTA
+                    </p>
+
+                    <h3>
+                      Omitida por cooldown
+                    </h3>
+                  </div>
+
+                  <dl>
+                    <div>
+                      <dt>Motivo</dt>
+                      <dd>Cooldown activo</dd>
+                    </div>
+
+                    <div>
+                      <dt>Cooldown</dt>
+                      <dd>
+                        {cooldownLabel(
+                          selectedExecution
+                            .result
+                            ?.cooldown_seconds
+                        )}
+                      </dd>
+                    </div>
+
+                    <div>
+                      <dt>
+                        Ejecución anterior
+                      </dt>
+                      <dd>
+                        #
+                        {selectedExecution
+                          .result
+                          ?.recent_execution_id ||
+                          "—"}
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+              )}
+
+
+            {selectedExecution.execution_source ===
+              "manual_test" && (
+                <section className="automation-execution-callout">
+                  <div>
+                    <p className="eyebrow">
+                      PRUEBA MANUAL
+                    </p>
+
+                    <h3>
+                      Ejecución iniciada por usuario
+                    </h3>
+                  </div>
+
+                  <p>
+                    Esta ejecución no fue provocada
+                    por un cambio real de estado del
+                    servicio.
+                  </p>
+
+                  <dl>
+                    <div>
+                      <dt>
+                        Trigger configurado
+                      </dt>
+                      <dd>
+                        {triggerLabel(
+                          selectedExecution
+                            .trigger_payload
+                            ?.configured_trigger_type ||
+                          selectedExecution
+                            .trigger_type
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+              )}
+
+
+            {selectedExecution.error && (
+              <section className="automation-execution-block">
+                <h3>Error</h3>
+
+                <pre className="automation-execution-error">
+                  {selectedExecution.error}
+                </pre>
+              </section>
+            )}
+
+
+            {selectedExecution.result && (
+              <section className="automation-execution-block">
+                <h3>Resultado</h3>
+
+                <pre>
+                  {JSON.stringify(
+                    selectedExecution.result,
+                    null,
+                    2
+                  )}
+                </pre>
+              </section>
+            )}
+
+
+            {selectedExecution.trigger_payload && (
+              <section className="automation-execution-block">
+                <h3>
+                  Payload del trigger
+                </h3>
+
+                <pre>
+                  {JSON.stringify(
+                    selectedExecution
+                      .trigger_payload,
+                    null,
+                    2
+                  )}
+                </pre>
+              </section>
+            )}
+          </aside>
+        </div>
+      )}
     </>
   );
 }

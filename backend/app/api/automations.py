@@ -20,7 +20,11 @@ from app.schemas.automation import (
     AutomationExecutionResponse,
     AutomationRuleCreate,
     AutomationRuleResponse,
+    AutomationRuleTestRequest,
     AutomationRuleUpdate,
+)
+from app.services.automation_service import (
+    execute_automation_rule,
 )
 
 
@@ -132,6 +136,7 @@ def create_automation_rule(
         trigger_type=payload.trigger_type,
         action_type=payload.action_type,
         service_id=payload.service_id,
+        cooldown_seconds=payload.cooldown_seconds,
         created_by_user_id=current_user.id,
         created_by_username=current_user.username,
     )
@@ -153,6 +158,8 @@ def create_automation_rule(
             "trigger_type": rule.trigger_type,
             "action_type": rule.action_type,
             "service_id": rule.service_id,
+            "cooldown_seconds":
+                rule.cooldown_seconds,
             "created_by_user_id":
                 current_user.id,
         },
@@ -228,6 +235,19 @@ def update_automation_rule(
 
         rule.service_id = payload.service_id
 
+    if "cooldown_seconds" in fields:
+        if payload.cooldown_seconds is None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "cooldown_seconds no puede ser null"
+                ),
+            )
+
+        rule.cooldown_seconds = (
+            payload.cooldown_seconds
+        )
+
     db.add(rule)
     db.commit()
     db.refresh(rule)
@@ -238,6 +258,8 @@ def update_automation_rule(
             "automation_rule_id": rule.id,
             "enabled": rule.enabled,
             "service_id": rule.service_id,
+            "cooldown_seconds":
+                rule.cooldown_seconds,
         },
     )
 
@@ -271,6 +293,88 @@ def delete_automation_rule(
     return Response(
         status_code=status.HTTP_204_NO_CONTENT
     )
+
+
+@router.post(
+    "/rules/{rule_id}/test",
+    response_model=AutomationExecutionResponse,
+)
+def test_automation_rule(
+    rule_id: int,
+    payload: AutomationRuleTestRequest,
+    db: Session = Depends(get_db),
+):
+    rule = _get_rule_or_404(
+        db,
+        rule_id,
+    )
+
+    if rule.service_id is not None:
+        if (
+            payload.service_id is not None
+            and payload.service_id != rule.service_id
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "La regla está asociada a otro "
+                    "servicio"
+                ),
+            )
+
+        service_id = rule.service_id
+
+    else:
+        if payload.service_id is None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Selecciona un servicio para probar "
+                    "una regla global"
+                ),
+            )
+
+        service_id = payload.service_id
+
+    service = (
+        db.query(Service)
+        .filter(
+            Service.id == service_id
+        )
+        .first()
+    )
+
+    if service is None:
+        raise HTTPException(
+            status_code=422,
+            detail="El servicio indicado no existe",
+        )
+
+    execution = execute_automation_rule(
+        db,
+        rule=rule,
+        service=service,
+        trigger_payload={
+            "manual_test": True,
+            "configured_trigger_type":
+                rule.trigger_type,
+        },
+        execution_source="manual_test",
+    )
+
+    logger.info(
+        "automation_rule_tested",
+        extra={
+            "automation_rule_id": rule.id,
+            "automation_execution_id":
+                execution.id,
+            "service_id": service.id,
+            "execution_status":
+                execution.status,
+        },
+    )
+
+    return execution
 
 
 @router.get(

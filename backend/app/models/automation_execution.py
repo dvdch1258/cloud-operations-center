@@ -65,6 +65,14 @@ class AutomationExecution(Base):
         index=True,
     )
 
+    execution_source = Column(
+        String(30),
+        nullable=False,
+        default="trigger",
+        server_default="trigger",
+        index=True,
+    )
+
     trigger_payload = Column(
         JSON,
         nullable=True,
