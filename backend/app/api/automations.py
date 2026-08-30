@@ -136,6 +136,7 @@ def create_automation_rule(
         trigger_type=payload.trigger_type,
         action_type=payload.action_type,
         service_id=payload.service_id,
+        cooldown_seconds=payload.cooldown_seconds,
         created_by_user_id=current_user.id,
         created_by_username=current_user.username,
     )
@@ -157,6 +158,8 @@ def create_automation_rule(
             "trigger_type": rule.trigger_type,
             "action_type": rule.action_type,
             "service_id": rule.service_id,
+            "cooldown_seconds":
+                rule.cooldown_seconds,
             "created_by_user_id":
                 current_user.id,
         },
@@ -232,6 +235,19 @@ def update_automation_rule(
 
         rule.service_id = payload.service_id
 
+    if "cooldown_seconds" in fields:
+        if payload.cooldown_seconds is None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "cooldown_seconds no puede ser null"
+                ),
+            )
+
+        rule.cooldown_seconds = (
+            payload.cooldown_seconds
+        )
+
     db.add(rule)
     db.commit()
     db.refresh(rule)
@@ -242,6 +258,8 @@ def update_automation_rule(
             "automation_rule_id": rule.id,
             "enabled": rule.enabled,
             "service_id": rule.service_id,
+            "cooldown_seconds":
+                rule.cooldown_seconds,
         },
     )
 

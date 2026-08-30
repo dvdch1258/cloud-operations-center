@@ -61,6 +61,13 @@ class AutomationRule(Base):
         index=True,
     )
 
+    cooldown_seconds = Column(
+        Integer,
+        nullable=False,
+        default=300,
+        server_default="300",
+    )
+
     created_by_user_id = Column(
         Integer,
         ForeignKey(

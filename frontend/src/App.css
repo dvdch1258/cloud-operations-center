@@ -4566,3 +4566,19 @@ tbody tr:hover {
     margin-left: 0;
   }
 }
+
+/* Automation cooldown */
+
+.automation-field-hint {
+  display: block;
+  margin-top: 6px;
+  color: #6f8199;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.operation-status--skipped {
+  color: #aab7c8;
+  border-color: rgba(137, 154, 177, 0.24);
+  background: rgba(83, 98, 119, 0.16);
+}

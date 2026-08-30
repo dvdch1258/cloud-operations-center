@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 AutomationTriggerType = Literal[
@@ -29,6 +29,12 @@ class AutomationRuleCreate(BaseModel):
 
     service_id: int | None = None
 
+    cooldown_seconds: int = Field(
+        default=300,
+        ge=0,
+        le=86400,
+    )
+
 
 class AutomationRuleUpdate(BaseModel):
     name: str | None = None
@@ -36,6 +42,12 @@ class AutomationRuleUpdate(BaseModel):
     enabled: bool | None = None
 
     service_id: int | None = None
+
+    cooldown_seconds: int | None = Field(
+        default=None,
+        ge=0,
+        le=86400,
+    )
 
 
 class AutomationRuleTestRequest(BaseModel):
@@ -52,6 +64,7 @@ class AutomationRuleResponse(BaseModel):
     action_type: str
 
     service_id: int | None
+    cooldown_seconds: int
 
     created_by_user_id: int | None
     created_by_username: str

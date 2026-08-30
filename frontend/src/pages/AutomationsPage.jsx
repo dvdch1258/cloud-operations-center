@@ -13,6 +13,7 @@ const initialForm = {
   description: "",
   serviceId: "",
   triggerType: "service_down",
+  cooldownSeconds: "300",
 };
 
 
@@ -54,6 +55,8 @@ function executionStatusLabel(status) {
       return "Fallida";
     case "running":
       return "En ejecución";
+    case "skipped":
+      return "Omitida";
     default:
       return status || "Desconocido";
   }
@@ -92,6 +95,37 @@ function executionSourceLabel(source) {
   }
 
   return source || "—";
+}
+
+
+function cooldownLabel(seconds) {
+  const value = Number(seconds);
+
+  if (!Number.isFinite(value) || value <= 0) {
+    return "Desactivado";
+  }
+
+  if (value < 60) {
+    return `${value} s`;
+  }
+
+  if (value % 3600 === 0) {
+    const hours = value / 3600;
+
+    return hours === 1
+      ? "1 hora"
+      : `${hours} horas`;
+  }
+
+  if (value % 60 === 0) {
+    const minutes = value / 60;
+
+    return minutes === 1
+      ? "1 minuto"
+      : `${minutes} minutos`;
+  }
+
+  return `${value} s`;
 }
 
 
@@ -226,6 +260,8 @@ export default function AutomationsPage() {
         service_id: form.serviceId
           ? Number(form.serviceId)
           : null,
+        cooldown_seconds:
+          Number(form.cooldownSeconds),
       });
 
       setForm(initialForm);
@@ -583,6 +619,47 @@ export default function AutomationsPage() {
             </label>
 
 
+            <label>
+              <span>Cooldown</span>
+
+              <select
+                value={form.cooldownSeconds}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    cooldownSeconds:
+                      event.target.value,
+                  }))
+                }
+              >
+                <option value="0">
+                  Desactivado
+                </option>
+
+                <option value="60">
+                  1 minuto
+                </option>
+
+                <option value="300">
+                  5 minutos
+                </option>
+
+                <option value="900">
+                  15 minutos
+                </option>
+
+                <option value="3600">
+                  1 hora
+                </option>
+              </select>
+
+              <small className="automation-field-hint">
+                Evita ejecuciones automáticas repetidas
+                para el mismo servicio.
+              </small>
+            </label>
+
+
             <div className="automation-fixed-grid">
               <div>
                 <span>Trigger</span>
@@ -805,6 +882,15 @@ export default function AutomationsPage() {
                   </div>
 
                   <div>
+                    <span>Cooldown</span>
+                    <strong>
+                      {cooldownLabel(
+                        rule.cooldown_seconds
+                      )}
+                    </strong>
+                  </div>
+
+                  <div>
                     <span>Creada por</span>
                     <strong>
                       {rule.created_by_username}
@@ -945,6 +1031,10 @@ export default function AutomationsPage() {
 
               <option value="running">
                 En ejecución
+              </option>
+
+              <option value="skipped">
+                Omitidas
               </option>
             </select>
           </div>
