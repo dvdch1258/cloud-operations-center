@@ -144,11 +144,35 @@ export const api = {
   getObservabilitySummary: () =>
     request("/observability/summary"),
 
-  getObservabilityTimeseries: () =>
-    request("/observability/timeseries"),
+  getObservabilityTimeseries: (
+    params = {},
+  ) => {
+    const query = new URLSearchParams()
 
-  getObservabilityServices: () =>
-    request("/observability/services?hours=24"),
+    query.set(
+      "hours",
+      String(params.hours || 1),
+    )
+
+    return request(
+      `/observability/timeseries?${query.toString()}`,
+    )
+  },
+
+  getObservabilityServices: (
+    params = {},
+  ) => {
+    const query = new URLSearchParams()
+
+    query.set(
+      "hours",
+      String(params.hours || 24),
+    )
+
+    return request(
+      `/observability/services?${query.toString()}`,
+    )
+  },
 
   getObservabilityLogs: (params = {}) => {
     const query = new URLSearchParams()
@@ -192,6 +216,13 @@ export const api = {
       "limit",
       String(params.limit || 50),
     )
+
+    if (params.service) {
+      query.set(
+        "service",
+        params.service,
+      )
+    }
 
     return request(
       `/observability/traces?${query.toString()}`,

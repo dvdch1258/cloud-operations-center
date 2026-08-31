@@ -25,9 +25,29 @@ ERROR_RATE_PERCENT_QUERY = (
     ')'
 )
 
+LATENCY_P50_SECONDS_QUERY = (
+    'histogram_quantile('
+    '0.50, '
+    'sum(rate('
+    'http_request_duration_highr_seconds_bucket'
+    '{job="backend"}[5m]'
+    ')) by (le)'
+    ')'
+)
+
 LATENCY_P95_SECONDS_QUERY = (
     'histogram_quantile('
     '0.95, '
+    'sum(rate('
+    'http_request_duration_highr_seconds_bucket'
+    '{job="backend"}[5m]'
+    ')) by (le)'
+    ')'
+)
+
+LATENCY_P99_SECONDS_QUERY = (
+    'histogram_quantile('
+    '0.99, '
     'sum(rate('
     'http_request_duration_highr_seconds_bucket'
     '{job="backend"}[5m]'
@@ -102,8 +122,18 @@ def get_observability_summary() -> dict:
         or 0.0
     )
 
-    latency_seconds = (
+    latency_p50_seconds = (
+        _query_scalar(LATENCY_P50_SECONDS_QUERY)
+        or 0.0
+    )
+
+    latency_p95_seconds = (
         _query_scalar(LATENCY_P95_SECONDS_QUERY)
+        or 0.0
+    )
+
+    latency_p99_seconds = (
+        _query_scalar(LATENCY_P99_SECONDS_QUERY)
         or 0.0
     )
 
@@ -112,7 +142,9 @@ def get_observability_summary() -> dict:
         or 0.0
     )
 
-    latency_p95_ms = latency_seconds * 1000
+    latency_p50_ms = latency_p50_seconds * 1000
+    latency_p95_ms = latency_p95_seconds * 1000
+    latency_p99_ms = latency_p99_seconds * 1000
 
     if (
         error_rate_percent >= 5
@@ -133,8 +165,16 @@ def get_observability_summary() -> dict:
             error_rate_percent,
             2,
         ),
+        "latency_p50_ms": round(
+            latency_p50_ms,
+            1,
+        ),
         "latency_p95_ms": round(
             latency_p95_ms,
+            1,
+        ),
+        "latency_p99_ms": round(
+            latency_p99_ms,
             1,
         ),
         "backend_uptime_seconds": round(
@@ -147,8 +187,22 @@ def get_observability_summary() -> dict:
     }
 
 
-OBSERVABILITY_RANGE_SECONDS = 3600
-OBSERVABILITY_STEP_SECONDS = 60
+def _timeseries_step_seconds(
+    hours: int,
+) -> int:
+    if hours <= 2:
+        return 60
+
+    if hours <= 6:
+        return 120
+
+    if hours <= 24:
+        return 300
+
+    if hours <= 72:
+        return 900
+
+    return 1800
 
 
 def _query_range(
@@ -216,24 +270,52 @@ def _query_range(
     return points
 
 
-def get_observability_timeseries() -> dict:
+def get_observability_timeseries(
+    hours: int = 1,
+) -> dict:
+    range_seconds = hours * 3600
+    step_seconds = _timeseries_step_seconds(
+        hours
+    )
+
     end = int(
         datetime.now(timezone.utc).timestamp()
     )
-    start = end - OBSERVABILITY_RANGE_SECONDS
+    start = end - range_seconds
 
     requests = _query_range(
         REQUESTS_PER_SECOND_QUERY,
         start,
         end,
-        OBSERVABILITY_STEP_SECONDS,
+        step_seconds,
     )
 
-    latency = _query_range(
+    error_rate = _query_range(
+        ERROR_RATE_PERCENT_QUERY,
+        start,
+        end,
+        step_seconds,
+    )
+
+    latency_p50 = _query_range(
+        LATENCY_P50_SECONDS_QUERY,
+        start,
+        end,
+        step_seconds,
+    )
+
+    latency_p95 = _query_range(
         LATENCY_P95_SECONDS_QUERY,
         start,
         end,
-        OBSERVABILITY_STEP_SECONDS,
+        step_seconds,
+    )
+
+    latency_p99 = _query_range(
+        LATENCY_P99_SECONDS_QUERY,
+        start,
+        end,
+        step_seconds,
     )
 
     requests_per_second = [
@@ -247,20 +329,40 @@ def get_observability_timeseries() -> dict:
         for point in requests
     ]
 
-    latency_p95_ms = [
+    error_rate_percent = [
         {
             "timestamp": point["timestamp"],
             "value": round(
-                point["value"] * 1000,
-                1,
+                point["value"],
+                2,
             ),
         }
-        for point in latency
+        for point in error_rate
     ]
 
+    def latency_to_ms(points):
+        return [
+            {
+                "timestamp": point["timestamp"],
+                "value": round(
+                    point["value"] * 1000,
+                    1,
+                ),
+            }
+            for point in points
+        ]
+
     return {
-        "range_seconds": OBSERVABILITY_RANGE_SECONDS,
-        "step_seconds": OBSERVABILITY_STEP_SECONDS,
-        "requests_per_second": requests_per_second,
-        "latency_p95_ms": latency_p95_ms,
+        "range_seconds": range_seconds,
+        "step_seconds": step_seconds,
+        "requests_per_second":
+            requests_per_second,
+        "error_rate_percent":
+            error_rate_percent,
+        "latency_p50_ms":
+            latency_to_ms(latency_p50),
+        "latency_p95_ms":
+            latency_to_ms(latency_p95),
+        "latency_p99_ms":
+            latency_to_ms(latency_p99),
     }

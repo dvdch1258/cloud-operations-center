@@ -29,6 +29,60 @@ function formatUptime(seconds) {
 }
 
 
+function formatUpdatedAt(value) {
+  if (!value) {
+    return "Pendiente";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Pendiente";
+  }
+
+  return date.toLocaleTimeString(
+    "es-ES",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    },
+  );
+}
+
+
+function SourceStatusChip({
+  name,
+  status,
+}) {
+  const labels = {
+    connected: "Conectado",
+    checking: "Comprobando",
+    unavailable: "No disponible",
+  };
+
+  return (
+    <div
+      className={
+        "observability-source-chip " +
+        `observability-source-chip--${status}`
+      }
+    >
+      <span
+        className="observability-source-chip__dot"
+        aria-hidden="true"
+      />
+
+      <strong>{name}</strong>
+
+      <span>
+        {labels[status] || status}
+      </span>
+    </div>
+  );
+}
+
+
 function formatLogTime(value) {
   if (!value) {
     return "—";
@@ -116,11 +170,51 @@ function getSpanTimelineStyle(
 
 
 
-function TimeseriesChart({
-  points,
+function formatChartValue(
+  value,
   suffix,
+) {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+
+  if (suffix === "ms") {
+    return `${value.toFixed(1)} ms`;
+  }
+
+  if (suffix === "%") {
+    return `${value.toFixed(2)}%`;
+  }
+
+  return `${value.toFixed(2)} ${suffix}`;
+}
+
+
+function MultiTimeseriesChart({
+  series,
+  rangeHours,
 }) {
-  if (!points?.length) {
+  const width = 720;
+  const height = 210;
+  const padding = 18;
+
+  const visibleSeries = series
+    .map((item) => ({
+      ...item,
+      points: Array.isArray(item.points)
+        ? item.points.filter(
+            (point) =>
+              Number.isFinite(
+                Number(point?.value)
+              )
+          )
+        : [],
+    }))
+    .filter(
+      (item) => item.points.length > 0
+    );
+
+  if (!visibleSeries.length) {
     return (
       <div className="observability-chart-empty">
         Sin datos para este periodo.
@@ -128,81 +222,164 @@ function TimeseriesChart({
     );
   }
 
-  const width = 640;
-  const height = 190;
-  const padding = 18;
+  const scaleGroups = {};
 
-  const values = points.map(
-    (point) => Number(point.value)
-  );
+  visibleSeries.forEach((item) => {
+    const group =
+      item.scaleGroup || "default";
 
-  let min = Math.min(...values);
-  let max = Math.max(...values);
+    const values = item.points.map(
+      (point) => Number(point.value)
+    );
 
-  if (min === max) {
-    min -= 1;
-    max += 1;
-  }
+    if (!scaleGroups[group]) {
+      scaleGroups[group] = [];
+    }
 
-  const usableWidth = width - padding * 2;
-  const usableHeight = height - padding * 2;
+    scaleGroups[group].push(...values);
+  });
 
-  const coordinates = points.map(
-    (point, index) => {
-      const x =
-        padding +
-        (
-          index /
-          Math.max(points.length - 1, 1)
-        ) *
-          usableWidth;
+  const groupMax = {};
 
-      const y =
-        padding +
-        (
-          1 -
-          (Number(point.value) - min) /
-            (max - min)
-        ) *
-          usableHeight;
+  Object.entries(scaleGroups).forEach(
+    ([group, values]) => {
+      const maximum = Math.max(
+        ...values,
+        0,
+      );
 
-      return `${x},${y}`;
+      groupMax[group] =
+        maximum > 0
+          ? maximum * 1.08
+          : 1;
     }
   );
 
-  const latest = values[values.length - 1];
+  const buildCoordinates = (item) => {
+    const group =
+      item.scaleGroup || "default";
+
+    const maximum = groupMax[group] || 1;
+
+    return item.points.map(
+      (point, index) => {
+        const x =
+          item.points.length === 1
+            ? width / 2
+            : padding +
+              (
+                index /
+                (item.points.length - 1)
+              ) *
+                (
+                  width -
+                  padding * 2
+                );
+
+        const value = Math.max(
+          0,
+          Number(point.value),
+        );
+
+        const ratio =
+          Math.min(
+            1,
+            value / maximum,
+          );
+
+        const y =
+          height -
+          padding -
+          ratio *
+            (
+              height -
+              padding * 2
+            );
+
+        return `${x},${y}`;
+      }
+    );
+  };
 
   return (
     <div className="observability-chart">
+      <div className="observability-chart__legend">
+        {visibleSeries.map((item) => {
+          const latest =
+            item.points[
+              item.points.length - 1
+            ];
+
+          return (
+            <div
+              key={item.key}
+              className="observability-chart__legend-item"
+            >
+              <span
+                className={
+                  "observability-chart__legend-dot " +
+                  item.className
+                }
+              />
+
+              <span>{item.label}</span>
+
+              <strong>
+                {formatChartValue(
+                  Number(latest?.value),
+                  item.suffix,
+                )}
+              </strong>
+            </div>
+          );
+        })}
+      </div>
+
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label="Serie temporal de la última hora"
+        aria-label={
+          `Serie temporal de ${
+            rangeLabel(rangeHours)
+          }`
+        }
         preserveAspectRatio="none"
       >
-        <line
-          className="observability-chart__grid"
-          x1={padding}
-          y1={height / 2}
-          x2={width - padding}
-          y2={height / 2}
-        />
+        {[0.25, 0.5, 0.75].map(
+          (position) => (
+            <line
+              key={position}
+              className="observability-chart__grid"
+              x1={padding}
+              x2={width - padding}
+              y1={height * position}
+              y2={height * position}
+            />
+          )
+        )}
 
-        <polyline
-          className="observability-chart__line"
-          points={coordinates.join(" ")}
-        />
+        {visibleSeries.map((item) => (
+          <polyline
+            key={item.key}
+            className={
+              "observability-chart__line " +
+              item.className
+            }
+            points={
+              buildCoordinates(item).join(
+                " "
+              )
+            }
+          />
+        ))}
       </svg>
 
       <div className="observability-chart__footer">
-        <span>Hace 1 h</span>
+        <span>
+          Hace {rangeLabel(rangeHours)}
+        </span>
 
-        <strong>
-          {latest.toFixed(
-            suffix === "ms" ? 1 : 2
-          )}{" "}
-          {suffix}
-        </strong>
+        <span />
 
         <span>Ahora</span>
       </div>
@@ -211,12 +388,156 @@ function TimeseriesChart({
 }
 
 
+const OBSERVABILITY_RANGES = [
+  {
+    hours: 1,
+    label: "1 h",
+  },
+  {
+    hours: 6,
+    label: "6 h",
+  },
+  {
+    hours: 24,
+    label: "24 h",
+  },
+  {
+    hours: 168,
+    label: "7 d",
+  },
+];
+
+
+function rangeLabel(hours) {
+  if (hours === 168) {
+    return "7 días";
+  }
+
+  if (hours === 1) {
+    return "1 hora";
+  }
+
+  return `${hours} horas`;
+}
+
+
+function getLogServiceName(service) {
+  const value = [
+    service?.name,
+    service?.type,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (value.includes("backend")) {
+    return "backend";
+  }
+
+  if (value.includes("frontend")) {
+    return "frontend";
+  }
+
+  if (
+    value.includes("checker") ||
+    value.includes("service checker")
+  ) {
+    return "service-checker";
+  }
+
+  if (
+    value.includes("postgres") &&
+    value.includes("backup")
+  ) {
+    return "postgres-backup";
+  }
+
+  if (value.includes("postgres")) {
+    return "postgres";
+  }
+
+  if (
+    value.includes("r2") &&
+    value.includes("upload")
+  ) {
+    return "r2-upload";
+  }
+
+  return "";
+}
+
+
+function getTraceServiceName(service) {
+  const value = [
+    service?.name,
+    service?.type,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (value.includes("backend")) {
+    return "cloud-operations-backend";
+  }
+
+  return "";
+}
+
+
+
 export default function ObservabilityPage() {
   const [summary, setSummary] = useState(null);
   const [timeseries, setTimeseries] = useState(null);
   const [services, setServices] = useState(null);
+
+  const [
+    selectedHours,
+    setSelectedHours,
+  ] = useState(6);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [
+    lastUpdatedAt,
+    setLastUpdatedAt,
+  ] = useState(null);
+
+  const [
+    selectedService,
+    setSelectedService,
+  ] = useState(null);
+
+  const [
+    selectedServiceUptime,
+    setSelectedServiceUptime,
+  ] = useState(null);
+
+  const [
+    selectedServiceChecks,
+    setSelectedServiceChecks,
+  ] = useState([]);
+
+  const [
+    serviceDetailLoading,
+    setServiceDetailLoading,
+  ] = useState(false);
+
+  const [
+    serviceDetailError,
+    setServiceDetailError,
+  ] = useState("");
+
+  const [
+    serviceCheckRunning,
+    setServiceCheckRunning,
+  ] = useState(false);
+
+  const [
+    serviceCheckMessage,
+    setServiceCheckMessage,
+  ] = useState("");
+
 
   const [logs, setLogs] = useState(null);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -231,6 +552,11 @@ export default function ObservabilityPage() {
 
 
   const [traces, setTraces] = useState(null);
+
+  const [
+    traceServiceFilter,
+    setTraceServiceFilter,
+  ] = useState("");
   const [tracesLoading, setTracesLoading] = useState(false);
   const [tracesError, setTracesError] = useState("");
 
@@ -261,13 +587,18 @@ export default function ObservabilityPage() {
         servicesResponse,
       ] = await Promise.all([
         api.getObservabilitySummary(),
-        api.getObservabilityTimeseries(),
-        api.getObservabilityServices(),
+        api.getObservabilityTimeseries({
+          hours: selectedHours,
+        }),
+        api.getObservabilityServices({
+          hours: selectedHours,
+        }),
       ]);
 
       setSummary(summaryResponse);
       setTimeseries(timeseriesResponse);
       setServices(servicesResponse);
+      setLastUpdatedAt(new Date());
     } catch (requestError) {
       setError(
         requestError.message ||
@@ -276,7 +607,7 @@ export default function ObservabilityPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedHours]);
 
 
   const loadLogs = useCallback(
@@ -312,15 +643,18 @@ export default function ObservabilityPage() {
 
 
   const loadTraces = useCallback(
-    async () => {
+    async (filters = {}) => {
       setTracesLoading(true);
       setTracesError("");
 
       try {
         const response =
           await api.getObservabilityTraces({
-            hours: 1,
+            hours:
+              Number(filters.hours) || 1,
             limit: 12,
+            service:
+              filters.service || undefined,
           });
 
         setTraces(response);
@@ -382,6 +716,283 @@ export default function ObservabilityPage() {
   ]);
 
 
+  useEffect(() => {
+    if (!selectedService) {
+      setSelectedServiceUptime(null);
+      setSelectedServiceChecks([]);
+      setServiceDetailError("");
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadServiceDetail = async () => {
+      setServiceDetailLoading(true);
+      setServiceDetailError("");
+
+      try {
+        const [
+          uptimeResponse,
+          checksResponse,
+        ] = await Promise.all([
+          api.getServiceUptime(
+            selectedService.id,
+            selectedHours,
+          ),
+          api.getServiceChecks(
+            selectedService.id,
+            12,
+          ),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setSelectedServiceUptime(
+          uptimeResponse
+        );
+
+        setSelectedServiceChecks(
+          Array.isArray(checksResponse)
+            ? checksResponse
+            : []
+        );
+      } catch (requestError) {
+        if (cancelled) {
+          return;
+        }
+
+        setServiceDetailError(
+          requestError.message ||
+            "No se pudo cargar el detalle del servicio.",
+        );
+      } finally {
+        if (!cancelled) {
+          setServiceDetailLoading(false);
+        }
+      }
+    };
+
+    loadServiceDetail();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedService,
+    selectedHours,
+  ]);
+
+
+  useEffect(() => {
+    if (!selectedService) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setSelectedService(null);
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+    };
+  }, [selectedService]);
+
+
+  const handleServiceLogs = async () => {
+    if (!selectedService) {
+      return;
+    }
+
+    const telemetryService =
+      getLogServiceName(
+        selectedService
+      );
+
+    if (!telemetryService) {
+      setServiceCheckMessage(
+        "Este servicio no tiene un nombre de logs asociado."
+      );
+      return;
+    }
+
+    const nextFilters = {
+      service: telemetryService,
+      level: "",
+      hours: String(
+        selectedHours === 168
+          ? 72
+          : selectedHours
+      ),
+      search: "",
+    };
+
+    setLogFilters(nextFilters);
+    setSelectedService(null);
+
+    await loadLogs(nextFilters);
+
+    requestAnimationFrame(() => {
+      document
+        .getElementById(
+          "observability-logs"
+        )
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+    });
+  };
+
+
+  const handleServiceTraces = async () => {
+    if (!selectedService) {
+      return;
+    }
+
+    const telemetryService =
+      getTraceServiceName(
+        selectedService
+      );
+
+    if (!telemetryService) {
+      setServiceCheckMessage(
+        "Este servicio no tiene un nombre de telemetría asociado."
+      );
+      return;
+    }
+
+    setTraceServiceFilter(
+      telemetryService
+    );
+
+    setSelectedTrace(null);
+    setSelectedService(null);
+
+    await loadTraces({
+      hours: selectedHours,
+      service: telemetryService,
+    });
+
+    requestAnimationFrame(() => {
+      document
+        .getElementById(
+          "observability-traces"
+        )
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+    });
+  };
+
+
+  const handleServiceCheckNow = async () => {
+    if (
+      !selectedService ||
+      serviceCheckRunning
+    ) {
+      return;
+    }
+
+    const selectedId =
+      selectedService.id;
+
+    setServiceCheckRunning(true);
+    setServiceCheckMessage("");
+
+    try {
+      await api.runServiceHealthCheck();
+
+      const [
+        summaryResponse,
+        servicesResponse,
+        uptimeResponse,
+        checksResponse,
+      ] = await Promise.all([
+        api.getObservabilitySummary(),
+
+        api.getObservabilityServices({
+          hours: selectedHours,
+        }),
+
+        api.getServiceUptime(
+          selectedId,
+          selectedHours,
+        ),
+
+        api.getServiceChecks(
+          selectedId,
+          12,
+        ),
+      ]);
+
+      setSummary(summaryResponse);
+      setServices(servicesResponse);
+      setSelectedServiceUptime(
+        uptimeResponse
+      );
+      setSelectedServiceChecks(
+        Array.isArray(checksResponse)
+          ? checksResponse
+          : []
+      );
+
+      const refreshedService =
+        servicesResponse?.services?.find(
+          (service) =>
+            service.id === selectedId
+        );
+
+      if (refreshedService) {
+        setSelectedService(
+          refreshedService
+        );
+      }
+
+      setLastUpdatedAt(new Date());
+
+      setServiceCheckMessage(
+        "Comprobación completada."
+      );
+    } catch (requestError) {
+      setServiceCheckMessage(
+        requestError.message ||
+          "No se pudo ejecutar la comprobación."
+      );
+    } finally {
+      setServiceCheckRunning(false);
+    }
+  };
+
+
+  const handleRefresh = async () => {
+    await Promise.all([
+      loadSummary(),
+
+      loadLogs(logFilters),
+
+      loadTraces({
+        hours: selectedHours,
+        service:
+          traceServiceFilter ||
+          undefined,
+      }),
+    ]);
+  };
+
+
   const handleLogFilterChange = (event) => {
     const {
       name,
@@ -420,6 +1031,36 @@ export default function ObservabilityPage() {
   const healthy =
     summary?.status === "healthy";
 
+  const refreshLoading =
+    loading ||
+    logsLoading ||
+    tracesLoading;
+
+  const prometheusSourceStatus =
+    loading
+      ? "checking"
+      : summary?.prometheus_status === "up"
+        ? "connected"
+        : "unavailable";
+
+  const lokiSourceStatus =
+    logsLoading
+      ? "checking"
+      : logsError
+        ? "unavailable"
+        : logs
+          ? "connected"
+          : "checking";
+
+  const tempoSourceStatus =
+    tracesLoading
+      ? "checking"
+      : tracesError
+        ? "unavailable"
+        : traces
+          ? "connected"
+          : "checking";
+
   return (
     <section className="observability-page">
       <header className="topbar">
@@ -437,13 +1078,45 @@ export default function ObservabilityPage() {
         </div>
 
         <div className="observability-actions">
+          <div
+            className="observability-range-selector"
+            aria-label="Rango temporal"
+          >
+            {OBSERVABILITY_RANGES.map(
+              (range) => (
+                <button
+                  key={range.hours}
+                  type="button"
+                  className={
+                    "observability-range-button " +
+                    (
+                      selectedHours === range.hours
+                        ? "observability-range-button--active"
+                        : ""
+                    )
+                  }
+                  disabled={loading}
+                  onClick={() =>
+                    setSelectedHours(
+                      range.hours
+                    )
+                  }
+                >
+                  {range.label}
+                </button>
+              )
+            )}
+          </div>
+
           <button
             type="button"
             className="refresh-button"
-            disabled={loading}
-            onClick={loadSummary}
+            disabled={refreshLoading}
+            onClick={handleRefresh}
           >
-            {loading ? "Actualizando..." : "Actualizar"}
+            {refreshLoading
+              ? "Actualizando..."
+              : "Actualizar"}
           </button>
 
           <a
@@ -508,19 +1181,49 @@ export default function ObservabilityPage() {
           </p>
         </div>
 
-        <span className="observability-source">
-          Prometheus ·{" "}
-          {summary?.prometheus_status === "up"
-            ? "Connected"
-            : "Unavailable"}
-        </span>
+        <div className="observability-health__meta">
+          <div className="observability-last-update">
+            <span>Última actualización</span>
+
+            <strong>
+              {formatUpdatedAt(
+                lastUpdatedAt
+              )}
+            </strong>
+          </div>
+
+          <div className="observability-source-list">
+            <SourceStatusChip
+              name="Prometheus"
+              status={
+                prometheusSourceStatus
+              }
+            />
+
+            <SourceStatusChip
+              name="Loki"
+              status={lokiSourceStatus}
+            />
+
+            <SourceStatusChip
+              name="Tempo"
+              status={tempoSourceStatus}
+            />
+          </div>
+        </div>
       </section>
 
       <section className="metrics-grid observability-metrics">
-        <article className="metric-card">
-          <span>Requests / s</span>
+        <article className="metric-card observability-kpi-card">
+          <div className="observability-kpi-card__header">
+            <span>Requests / s</span>
 
-          <strong className="metric-card__value">
+            <span className="observability-kpi-badge">
+              tráfico
+            </span>
+          </div>
+
+          <strong className="metric-card__value observability-kpi-card__value">
             {loading
               ? "—"
               : Number(
@@ -528,13 +1231,38 @@ export default function ObservabilityPage() {
                 ).toFixed(2)}
           </strong>
 
-          <p>Media últimos 5 minutos</p>
+          <div className="observability-kpi-card__footer">
+            <span>
+              Actividad actual del backend
+            </span>
+
+            <small>
+              rate · ventana 5 min
+            </small>
+          </div>
         </article>
 
-        <article className="metric-card">
-          <span>Error rate</span>
+        <article
+          className={
+            "metric-card observability-kpi-card " +
+            (
+              Number(
+                summary?.error_rate_percent ?? 0
+              ) >= 5
+                ? "observability-kpi-card--critical"
+                : "observability-kpi-card--healthy"
+            )
+          }
+        >
+          <div className="observability-kpi-card__header">
+            <span>Error rate</span>
 
-          <strong className="metric-card__value">
+            <span className="observability-kpi-badge">
+              HTTP 5xx
+            </span>
+          </div>
+
+          <strong className="metric-card__value observability-kpi-card__value">
             {loading
               ? "—"
               : `${Number(
@@ -542,27 +1270,97 @@ export default function ObservabilityPage() {
                 ).toFixed(2)}%`}
           </strong>
 
-          <p>Respuestas HTTP 5xx</p>
+          <div className="observability-kpi-status">
+            <span
+              className="observability-kpi-status__dot"
+              aria-hidden="true"
+            />
+
+            <strong>
+              {Number(
+                summary?.error_rate_percent ?? 0
+              ) >= 5
+                ? "Tasa elevada"
+                : "Dentro del umbral"}
+            </strong>
+          </div>
+
+          <div className="observability-kpi-card__footer">
+            <small>
+              Umbral degradado · 5%
+            </small>
+          </div>
         </article>
 
-        <article className="metric-card">
-          <span>Latencia p95</span>
+        <article className="metric-card observability-kpi-card observability-kpi-card--latency">
+          <div className="observability-kpi-card__header">
+            <span>Latencia</span>
 
-          <strong className="metric-card__value">
-            {loading
-              ? "—"
-              : `${Number(
-                  summary?.latency_p95_ms ?? 0
-                ).toFixed(1)} ms`}
-          </strong>
+            <span className="observability-kpi-badge">
+              p95
+            </span>
+          </div>
 
-          <p>95 % de peticiones por debajo</p>
+          <div className="observability-kpi-primary">
+            <strong className="metric-card__value observability-kpi-card__value">
+              {loading
+                ? "—"
+                : `${Number(
+                    summary?.latency_p95_ms ?? 0
+                  ).toFixed(1)} ms`}
+            </strong>
+
+            <span>
+              percentil 95
+            </span>
+          </div>
+
+          <div className="observability-latency-quantiles">
+            <div>
+              <span>p50</span>
+              <strong>
+                {loading
+                  ? "—"
+                  : `${Number(
+                      summary?.latency_p50_ms ?? 0
+                    ).toFixed(1)} ms`}
+              </strong>
+            </div>
+
+            <div>
+              <span>p95</span>
+              <strong>
+                {loading
+                  ? "—"
+                  : `${Number(
+                      summary?.latency_p95_ms ?? 0
+                    ).toFixed(1)} ms`}
+              </strong>
+            </div>
+
+            <div>
+              <span>p99</span>
+              <strong>
+                {loading
+                  ? "—"
+                  : `${Number(
+                      summary?.latency_p99_ms ?? 0
+                    ).toFixed(1)} ms`}
+              </strong>
+            </div>
+          </div>
         </article>
 
-        <article className="metric-card">
-          <span>Backend uptime</span>
+        <article className="metric-card observability-kpi-card observability-kpi-card--uptime">
+          <div className="observability-kpi-card__header">
+            <span>Backend uptime</span>
 
-          <strong className="metric-card__value">
+            <span className="observability-kpi-badge">
+              runtime
+            </span>
+          </div>
+
+          <strong className="metric-card__value observability-kpi-card__value">
             {loading
               ? "—"
               : formatUptime(
@@ -570,7 +1368,26 @@ export default function ObservabilityPage() {
                 )}
           </strong>
 
-          <p>Uptime del proceso actual</p>
+          <div className="observability-kpi-status observability-kpi-status--active">
+            <span
+              className="observability-kpi-status__dot"
+              aria-hidden="true"
+            />
+
+            <strong>Proceso activo</strong>
+          </div>
+
+          <div className="observability-kpi-card__footer">
+            <span>
+              Periodo visible ·{" "}
+              {rangeLabel(selectedHours)}
+            </span>
+
+            <small>
+              Actualizado{" "}
+              {formatUpdatedAt(lastUpdatedAt)}
+            </small>
+          </div>
         </article>
       </section>
 
@@ -579,18 +1396,41 @@ export default function ObservabilityPage() {
           <div className="security-panel-header">
             <div>
               <p className="eyebrow">
-                REQUEST TRAFFIC
+                TRAFFIC & ERRORS
               </p>
 
-              <h2>Peticiones</h2>
+              <h2>Tráfico y errores</h2>
             </div>
 
-            <span>5 min</span>
+            <span>HTTP 5xx</span>
           </div>
 
-          <TimeseriesChart
-            points={timeseries?.requests_per_second}
-            suffix="req/s"
+          <MultiTimeseriesChart
+            rangeHours={selectedHours}
+            series={[
+              {
+                key: "requests",
+                label: "Requests/s",
+                points:
+                  timeseries
+                    ?.requests_per_second,
+                suffix: "req/s",
+                scaleGroup: "requests",
+                className:
+                  "observability-chart__series--requests",
+              },
+              {
+                key: "errors",
+                label: "Error rate",
+                points:
+                  timeseries
+                    ?.error_rate_percent,
+                suffix: "%",
+                scaleGroup: "errors",
+                className:
+                  "observability-chart__series--errors",
+              },
+            ]}
           />
         </article>
 
@@ -604,12 +1444,46 @@ export default function ObservabilityPage() {
               <h2>Latencia</h2>
             </div>
 
-            <span>p95</span>
+            <span>p50 · p95 · p99</span>
           </div>
 
-          <TimeseriesChart
-            points={timeseries?.latency_p95_ms}
-            suffix="ms"
+          <MultiTimeseriesChart
+            rangeHours={selectedHours}
+            series={[
+              {
+                key: "p50",
+                label: "p50",
+                points:
+                  timeseries
+                    ?.latency_p50_ms,
+                suffix: "ms",
+                scaleGroup: "latency",
+                className:
+                  "observability-chart__series--p50",
+              },
+              {
+                key: "p95",
+                label: "p95",
+                points:
+                  timeseries
+                    ?.latency_p95_ms,
+                suffix: "ms",
+                scaleGroup: "latency",
+                className:
+                  "observability-chart__series--p95",
+              },
+              {
+                key: "p99",
+                label: "p99",
+                points:
+                  timeseries
+                    ?.latency_p99_ms,
+                suffix: "ms",
+                scaleGroup: "latency",
+                className:
+                  "observability-chart__series--p99",
+              },
+            ]}
           />
         </article>
       </section>
@@ -625,7 +1499,8 @@ export default function ObservabilityPage() {
 
             <p>
               Estado, disponibilidad y latencia
-              durante las últimas 24 horas.
+              durante las últimas{" "}
+              {rangeLabel(selectedHours)}.
             </p>
           </div>
 
@@ -660,18 +1535,43 @@ export default function ObservabilityPage() {
             <div className="observability-service-row observability-service-row--header">
               <span>Servicio</span>
               <span>Estado</span>
-              <span>Uptime 24h</span>
+              <span>
+                Uptime{" "}
+                {rangeLabel(selectedHours)}
+              </span>
               <span>Latencia</span>
               <span>HTTP</span>
+              <span aria-hidden="true" />
             </div>
 
             {services.services.map((service) => {
-              const isUp = service.status === "up";
+              const isUp =
+                service.status === "up";
 
               return (
                 <div
                   key={service.id}
-                  className="observability-service-row"
+                  className="observability-service-row observability-service-row--interactive"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={
+                    `Abrir detalles de ${service.name}`
+                  }
+                  onClick={() =>
+                    setSelectedService(service)
+                  }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" ||
+                      event.key === " "
+                    ) {
+                      event.preventDefault();
+
+                      setSelectedService(
+                        service
+                      );
+                    }
+                  }}
                 >
                   <div className="observability-service-name">
                     <span
@@ -686,8 +1586,13 @@ export default function ObservabilityPage() {
                     />
 
                     <div>
-                      <strong>{service.name}</strong>
-                      <span>{service.type}</span>
+                      <strong>
+                        {service.name}
+                      </strong>
+
+                      <span>
+                        {service.type}
+                      </span>
                     </div>
                   </div>
 
@@ -701,7 +1606,9 @@ export default function ObservabilityPage() {
                       )
                     }
                   >
-                    {isUp ? "Healthy" : "Down"}
+                    {isUp
+                      ? "Healthy"
+                      : "Down"}
                   </span>
 
                   <strong>
@@ -723,11 +1630,354 @@ export default function ObservabilityPage() {
                   <span>
                     {service.last_status_code ?? "—"}
                   </span>
+
+                  <span
+                    className="observability-service-row__arrow"
+                    aria-hidden="true"
+                  >
+                    →
+                  </span>
                 </div>
               );
             })}
           </div>
         )}
+
+      {selectedService && (
+        <div
+          className="observability-service-drawer-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              setSelectedService(null);
+            }
+          }}
+        >
+          <aside
+            className="observability-service-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="service-detail-title"
+          >
+            <div className="observability-service-drawer__header">
+              <div>
+                <p className="eyebrow">
+                  SERVICE DETAILS
+                </p>
+
+                <h2 id="service-detail-title">
+                  {selectedService.name}
+                </h2>
+
+                <span>
+                  {selectedService.type}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="observability-service-drawer__close"
+                aria-label="Cerrar detalle"
+                onClick={() =>
+                  setSelectedService(null)
+                }
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="observability-service-drawer__status">
+              <span
+                className={
+                  "observability-service-dot " +
+                  (
+                    selectedService.status === "up"
+                      ? "observability-service-dot--up"
+                      : "observability-service-dot--down"
+                  )
+                }
+              />
+
+              <strong>
+                {selectedService.status === "up"
+                  ? "Healthy"
+                  : "Down"}
+              </strong>
+
+              <span>
+                · últimas{" "}
+                {rangeLabel(selectedHours)}
+              </span>
+            </div>
+
+            {serviceDetailError && (
+              <div className="alert alert--error">
+                {serviceDetailError}
+              </div>
+            )}
+
+            {serviceDetailLoading ? (
+              <div className="security-empty">
+                Cargando detalle...
+              </div>
+            ) : (
+              <>
+                <div className="observability-service-detail-grid">
+                  <div>
+                    <span>Uptime</span>
+
+                    <strong>
+                      {selectedServiceUptime
+                        ?.uptime_percent == null
+                        ? "—"
+                        : `${Number(
+                            selectedServiceUptime
+                              .uptime_percent
+                          ).toFixed(2)}%`}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Latencia media</span>
+
+                    <strong>
+                      {selectedServiceUptime
+                        ?.average_response_time_ms == null
+                        ? "—"
+                        : `${Number(
+                            selectedServiceUptime
+                              .average_response_time_ms
+                          ).toFixed(1)} ms`}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Última latencia</span>
+
+                    <strong>
+                      {selectedService
+                        .last_response_time_ms == null
+                        ? "—"
+                        : `${Number(
+                            selectedService
+                              .last_response_time_ms
+                          ).toFixed(1)} ms`}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Checks</span>
+
+                    <strong>
+                      {selectedServiceUptime
+                        ?.checks_total ?? 0}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>HTTP</span>
+
+                    <strong>
+                      {selectedService
+                        .last_status_code ?? "—"}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Checks DOWN</span>
+
+                    <strong>
+                      {selectedServiceUptime
+                        ?.checks_down ?? 0}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="observability-service-detail-error">
+                  <span>Último error</span>
+
+                  <strong>
+                    {selectedService.last_error ||
+                      "Ninguno"}
+                  </strong>
+                </div>
+
+                <section className="observability-service-checks">
+                  <div className="observability-service-checks__header">
+                    <div>
+                      <p className="eyebrow">
+                        RECENT CHECKS
+                      </p>
+
+                      <h3>
+                        Comprobaciones recientes
+                      </h3>
+                    </div>
+
+                    <span>
+                      {selectedServiceChecks.length}
+                    </span>
+                  </div>
+
+                  {!selectedServiceChecks.length ? (
+                    <div className="security-empty">
+                      No hay comprobaciones.
+                    </div>
+                  ) : (
+                    <div className="observability-service-check-list">
+                      {selectedServiceChecks.map(
+                        (check) => {
+                          const checkUp =
+                            check.status === "up";
+
+                          return (
+                            <div
+                              key={check.id}
+                              className="observability-service-check-row"
+                            >
+                              <time>
+                                {formatLogTime(
+                                  check.checked_at
+                                )}
+                              </time>
+
+                              <span
+                                className={
+                                  "observability-service-status " +
+                                  (
+                                    checkUp
+                                      ? "observability-service-status--up"
+                                      : "observability-service-status--down"
+                                  )
+                                }
+                              >
+                                {checkUp
+                                  ? "UP"
+                                  : "DOWN"}
+                              </span>
+
+                              <strong>
+                                {check.response_time_ms == null
+                                  ? "—"
+                                  : `${Number(
+                                      check.response_time_ms
+                                    ).toFixed(1)} ms`}
+                              </strong>
+
+                              <span>
+                                HTTP{" "}
+                                {check.status_code ??
+                                  "—"}
+                              </span>
+                            </div>
+                          );
+                        }
+                      )}
+                    </div>
+                  )}
+                </section>
+
+                <section className="observability-service-correlation">
+                  <div className="observability-service-correlation__header">
+                    <div>
+                      <p className="eyebrow">
+                        CORRELATION
+                      </p>
+
+                      <h3>
+                        Telemetría del servicio
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="observability-service-correlation__sources">
+                    <div>
+                      <span className="observability-service-correlation__source">
+                        Loki
+                      </span>
+
+                      <strong>
+                        {getLogServiceName(
+                          selectedService
+                        ) || "Sin mapeo"}
+                      </strong>
+                    </div>
+
+                    <span
+                      className="observability-service-correlation__arrow"
+                      aria-hidden="true"
+                    >
+                      →
+                    </span>
+
+                    <div>
+                      <span className="observability-service-correlation__source">
+                        Tempo
+                      </span>
+
+                      <strong>
+                        {getTraceServiceName(
+                          selectedService
+                        ) || "Sin mapeo"}
+                      </strong>
+                    </div>
+                  </div>
+                </section>
+
+                {serviceCheckMessage && (
+                  <div className="observability-service-action-message">
+                    {serviceCheckMessage}
+                  </div>
+                )}
+
+                <div className="observability-service-actions">
+                  <button
+                    type="button"
+                    disabled={
+                      !getLogServiceName(
+                        selectedService
+                      )
+                    }
+                    onClick={handleServiceLogs}
+                  >
+                    Ver logs
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      !getTraceServiceName(
+                        selectedService
+                      )
+                    }
+                    onClick={
+                      handleServiceTraces
+                    }
+                  >
+                    Ver trazas
+                  </button>
+
+                  <button
+                    type="button"
+                    className="observability-service-actions__primary"
+                    disabled={serviceCheckRunning}
+                    onClick={
+                      handleServiceCheckNow
+                    }
+                  >
+                    {serviceCheckRunning
+                      ? "Comprobando..."
+                      : "↻ Comprobar ahora"}
+                  </button>
+                </div>
+              </>
+            )}
+          </aside>
+        </div>
+      )}
 
       <section
         id="observability-traces"
@@ -748,6 +1998,28 @@ export default function ObservabilityPage() {
           </div>
 
           <div className="observability-traces-actions">
+            {traceServiceFilter && (
+              <button
+                type="button"
+                className="observability-trace-filter"
+                title="Quitar filtro de servicio"
+                onClick={async () => {
+                  setTraceServiceFilter("");
+                  setSelectedTrace(null);
+
+                  await loadTraces({
+                    hours: selectedHours,
+                  });
+                }}
+              >
+                Servicio ·{" "}
+                {traceServiceFilter}
+                <span aria-hidden="true">
+                  ×
+                </span>
+              </button>
+            )}
+
             <span className="observability-logs-count">
               <strong>
                 {traces?.total ?? 0}
@@ -759,7 +2031,14 @@ export default function ObservabilityPage() {
               type="button"
               className="refresh-button"
               disabled={tracesLoading}
-              onClick={loadTraces}
+              onClick={() =>
+                loadTraces({
+                  hours: selectedHours,
+                  service:
+                    traceServiceFilter ||
+                    undefined,
+                })
+              }
             >
               {tracesLoading
                 ? "Actualizando..."
@@ -1033,7 +2312,10 @@ export default function ObservabilityPage() {
         </div>
       </section>
 
-      <section className="panel observability-logs-panel">
+      <section
+        id="observability-logs"
+        className="panel observability-logs-panel"
+      >
         <div className="security-panel-header">
           <div>
             <p className="eyebrow">
