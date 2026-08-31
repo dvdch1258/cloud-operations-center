@@ -8,7 +8,9 @@ class ObservabilitySummaryResponse(BaseModel):
     prometheus_status: str
     requests_per_second: float
     error_rate_percent: float
+    latency_p50_ms: float
     latency_p95_ms: float
+    latency_p99_ms: float
     backend_uptime_seconds: float
     evaluated_at: datetime
 
@@ -24,7 +26,16 @@ class ObservabilityTimeseriesResponse(BaseModel):
     requests_per_second: list[
         ObservabilityPointResponse
     ]
+    error_rate_percent: list[
+        ObservabilityPointResponse
+    ]
+    latency_p50_ms: list[
+        ObservabilityPointResponse
+    ]
     latency_p95_ms: list[
+        ObservabilityPointResponse
+    ]
+    latency_p99_ms: list[
         ObservabilityPointResponse
     ]
 

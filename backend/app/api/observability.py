@@ -55,9 +55,17 @@ def get_summary():
     "/timeseries",
     response_model=ObservabilityTimeseriesResponse,
 )
-def get_timeseries():
+def get_timeseries(
+    hours: int = Query(
+        default=1,
+        ge=1,
+        le=168,
+    ),
+):
     try:
-        return get_observability_timeseries()
+        return get_observability_timeseries(
+            hours=hours
+        )
     except PrometheusQueryError as exc:
         raise HTTPException(
             status_code=503,
@@ -145,11 +153,18 @@ def get_traces(
         ge=1,
         le=100,
     ),
+    service: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=100,
+        pattern=r"^[A-Za-z0-9._-]+$",
+    ),
 ):
     try:
         return get_observability_traces(
             hours=hours,
             limit=limit,
+            service=service,
         )
     except TempoQueryError as exc:
         raise HTTPException(

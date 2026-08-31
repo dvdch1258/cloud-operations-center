@@ -191,21 +191,29 @@ def _timestamp_from_ns(
 def get_observability_traces(
     hours: int = 1,
     limit: int = 50,
+    service: str | None = None,
 ) -> dict:
     end = datetime.now(timezone.utc)
     start = end - timedelta(hours=hours)
 
+    params = {
+        "start": int(
+            start.timestamp()
+        ),
+        "end": int(
+            end.timestamp()
+        ),
+        "limit": limit,
+    }
+
+    if service:
+        params["tags"] = (
+            f"service.name={service}"
+        )
+
     payload = _request_json(
         "/api/search",
-        {
-            "start": int(
-                start.timestamp()
-            ),
-            "end": int(
-                end.timestamp()
-            ),
-            "limit": limit,
-        },
+        params,
     )
 
     traces = []

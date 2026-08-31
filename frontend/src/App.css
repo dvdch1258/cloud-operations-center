@@ -2804,11 +2804,31 @@ tbody tr:hover {
 
 .observability-chart__line {
   fill: none;
-  stroke: #60a5fa;
-  stroke-width: 2.5;
+  stroke-width: 2.3;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
+  transition: opacity 0.15s ease;
+}
+
+.observability-chart__series--requests {
+  stroke: #60a5fa;
+}
+
+.observability-chart__series--errors {
+  stroke: #fb7185;
+}
+
+.observability-chart__series--p50 {
+  stroke: #34d399;
+}
+
+.observability-chart__series--p95 {
+  stroke: #60a5fa;
+}
+
+.observability-chart__series--p99 {
+  stroke: #c084fc;
 }
 
 .observability-chart__footer {
@@ -4779,5 +4799,866 @@ tbody tr:hover {
 
   .automation-execution-summary {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* Observability v2 range selector */
+
+.observability-range-selector {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border: 1px solid rgba(73, 104, 151, 0.18);
+  border-radius: 10px;
+  background: rgba(12, 23, 39, 0.72);
+}
+
+.observability-range-button {
+  min-width: 46px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  color: #7386a0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 700;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.observability-range-button:hover:not(:disabled) {
+  color: #c7d6e8;
+  background: rgba(43, 66, 100, 0.32);
+}
+
+.observability-range-button--active {
+  color: #e4ecf7;
+  background: rgba(56, 96, 158, 0.46);
+  box-shadow:
+    inset 0 0 0 1px rgba(99, 144, 213, 0.18);
+}
+
+.observability-range-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 760px) {
+  .observability-range-selector {
+    width: 100%;
+  }
+
+  .observability-range-button {
+    flex: 1;
+  }
+}
+
+
+/* Observability v2 chart legends */
+
+.observability-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem 1.2rem;
+  min-height: 28px;
+  margin-bottom: 0.75rem;
+}
+
+.observability-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  color: #75869e;
+  font-size: 0.72rem;
+}
+
+.observability-chart__legend-item strong {
+  margin-left: 0.15rem;
+  color: #c7d3e3;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.observability-chart__legend-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.observability-chart__legend-dot.observability-chart__series--requests {
+  color: #60a5fa;
+}
+
+.observability-chart__legend-dot.observability-chart__series--errors {
+  color: #fb7185;
+}
+
+.observability-chart__legend-dot.observability-chart__series--p50 {
+  color: #34d399;
+}
+
+.observability-chart__legend-dot.observability-chart__series--p95 {
+  color: #60a5fa;
+}
+
+.observability-chart__legend-dot.observability-chart__series--p99 {
+  color: #c084fc;
+}
+
+
+/* Observability v2 telemetry sources */
+
+.observability-health__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.8rem;
+  margin-left: auto;
+}
+
+.observability-last-update {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #687b94;
+  font-size: 0.7rem;
+}
+
+.observability-last-update strong {
+  color: #a8b8cb;
+  font-size: 0.72rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.observability-source-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.observability-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.46rem 0.65rem;
+  border: 1px solid #26384f;
+  border-radius: 999px;
+  background: rgba(10, 19, 32, 0.55);
+  color: #7f91a8;
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.observability-source-chip strong {
+  color: #b8c7d9;
+  font-size: 0.69rem;
+  font-weight: 650;
+}
+
+.observability-source-chip__dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 999px;
+  background: #64748b;
+  box-shadow:
+    0 0 0 3px rgba(100, 116, 139, 0.1);
+}
+
+.observability-source-chip--connected
+.observability-source-chip__dot {
+  background: #34d399;
+  box-shadow:
+    0 0 0 3px rgba(52, 211, 153, 0.1),
+    0 0 10px rgba(52, 211, 153, 0.28);
+}
+
+.observability-source-chip--checking
+.observability-source-chip__dot {
+  background: #60a5fa;
+  box-shadow:
+    0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.observability-source-chip--unavailable {
+  border-color: rgba(248, 113, 113, 0.22);
+}
+
+.observability-source-chip--unavailable
+.observability-source-chip__dot {
+  background: #f87171;
+  box-shadow:
+    0 0 0 3px rgba(248, 113, 113, 0.1),
+    0 0 10px rgba(248, 113, 113, 0.18);
+}
+
+@media (max-width: 900px) {
+  .observability-health__meta {
+    width: 100%;
+    align-items: flex-start;
+    margin-left: 0;
+  }
+
+  .observability-source-list {
+    justify-content: flex-start;
+  }
+}
+
+
+/* Observability v2 KPI cards */
+
+.observability-kpi-card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.observability-kpi-card::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(96, 165, 250, 0.75),
+    rgba(96, 165, 250, 0)
+  );
+  content: "";
+  opacity: 0.65;
+}
+
+.observability-kpi-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.observability-kpi-card__header > span:first-child {
+  color: #8091a8;
+  font-size: 0.73rem;
+  font-weight: 650;
+}
+
+.observability-kpi-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid rgba(71, 99, 138, 0.25);
+  border-radius: 999px;
+  background: rgba(13, 25, 43, 0.55);
+  color: #7689a3;
+  font-size: 0.61rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.observability-kpi-card__value {
+  display: block;
+  margin-top: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+}
+
+.observability-kpi-card__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.65rem;
+  color: #71829a;
+  font-size: 0.68rem;
+}
+
+.observability-kpi-card__footer small {
+  color: #53657d;
+  font-size: 0.63rem;
+}
+
+.observability-kpi-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  margin-top: 0.55rem;
+  color: #7c8da3;
+  font-size: 0.67rem;
+}
+
+.observability-kpi-status strong {
+  color: #9fb0c4;
+  font-size: 0.67rem;
+  font-weight: 650;
+}
+
+.observability-kpi-status__dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 999px;
+  background: #34d399;
+  box-shadow:
+    0 0 0 3px rgba(52, 211, 153, 0.08),
+    0 0 8px rgba(52, 211, 153, 0.2);
+}
+
+.observability-kpi-card--critical::before {
+  background: linear-gradient(
+    90deg,
+    rgba(248, 113, 113, 0.85),
+    rgba(248, 113, 113, 0)
+  );
+}
+
+.observability-kpi-card--critical
+.observability-kpi-status__dot {
+  background: #f87171;
+  box-shadow:
+    0 0 0 3px rgba(248, 113, 113, 0.08),
+    0 0 8px rgba(248, 113, 113, 0.2);
+}
+
+.observability-kpi-card--latency::before {
+  background: linear-gradient(
+    90deg,
+    rgba(192, 132, 252, 0.8),
+    rgba(96, 165, 250, 0.25),
+    rgba(192, 132, 252, 0)
+  );
+}
+
+.observability-kpi-card--uptime::before {
+  background: linear-gradient(
+    90deg,
+    rgba(52, 211, 153, 0.8),
+    rgba(52, 211, 153, 0)
+  );
+}
+
+.observability-kpi-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.observability-kpi-primary > span {
+  color: #5f7189;
+  font-size: 0.63rem;
+}
+
+.observability-latency-quantiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.observability-latency-quantiles > div {
+  min-width: 0;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid rgba(57, 79, 110, 0.22);
+  border-radius: 8px;
+  background: rgba(8, 17, 30, 0.32);
+}
+
+.observability-latency-quantiles span,
+.observability-latency-quantiles strong {
+  display: block;
+}
+
+.observability-latency-quantiles span {
+  margin-bottom: 0.15rem;
+  color: #65778f;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.observability-latency-quantiles strong {
+  overflow: hidden;
+  color: #b9c8da;
+  font-size: 0.69rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .observability-latency-quantiles {
+    gap: 0.25rem;
+  }
+
+  .observability-latency-quantiles > div {
+    padding: 0.4rem;
+  }
+
+  .observability-latency-quantiles strong {
+    font-size: 0.63rem;
+  }
+}
+
+
+/* Observability v2 Service Health */
+
+.observability-service-row {
+  grid-template-columns:
+    minmax(210px, 2fr)
+    minmax(90px, 0.8fr)
+    minmax(105px, 0.9fr)
+    minmax(90px, 0.8fr)
+    minmax(60px, 0.55fr)
+    28px;
+}
+
+.observability-service-row--interactive {
+  cursor: pointer;
+  outline: none;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.observability-service-row--interactive:hover {
+  background: rgba(28, 45, 68, 0.32);
+}
+
+.observability-service-row--interactive:focus-visible {
+  background: rgba(28, 45, 68, 0.38);
+  box-shadow:
+    inset 0 0 0 1px
+    rgba(96, 165, 250, 0.45);
+}
+
+.observability-service-row__arrow {
+  color: #536781;
+  font-size: 1rem;
+  text-align: right;
+  transition:
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.observability-service-row--interactive:hover
+.observability-service-row__arrow {
+  color: #8bbcff;
+  transform: translateX(2px);
+}
+
+
+/* Service Details drawer */
+
+.observability-service-drawer-backdrop {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(2, 8, 18, 0.68);
+  backdrop-filter: blur(3px);
+}
+
+.observability-service-drawer {
+  width: min(520px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  padding: 1.35rem;
+  border-left: 1px solid #263a55;
+  background:
+    linear-gradient(
+      180deg,
+      #101c2d 0%,
+      #0b1523 100%
+    );
+  box-shadow:
+    -24px 0 55px
+    rgba(0, 0, 0, 0.32);
+}
+
+.observability-service-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom:
+    1px solid rgba(55, 77, 108, 0.35);
+}
+
+.observability-service-drawer__header h2 {
+  margin: 0.2rem 0 0.15rem;
+  color: #e1e9f4;
+  font-size: 1.35rem;
+}
+
+.observability-service-drawer__header > div > span {
+  color: #687b94;
+  font-size: 0.72rem;
+}
+
+.observability-service-drawer__close {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #2a3c55;
+  border-radius: 9px;
+  color: #8da0b8;
+  background: rgba(12, 23, 39, 0.65);
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.observability-service-drawer__close:hover {
+  color: #dce7f4;
+  border-color: #405979;
+}
+
+.observability-service-drawer__status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 1rem 0;
+  color: #73869e;
+  font-size: 0.72rem;
+}
+
+.observability-service-drawer__status strong {
+  color: #bdcadd;
+}
+
+.observability-service-detail-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.observability-service-detail-grid > div {
+  min-width: 0;
+  padding: 0.8rem;
+  border: 1px solid rgba(52, 74, 104, 0.38);
+  border-radius: 10px;
+  background: rgba(7, 16, 28, 0.34);
+}
+
+.observability-service-detail-grid span,
+.observability-service-detail-grid strong {
+  display: block;
+}
+
+.observability-service-detail-grid span {
+  margin-bottom: 0.32rem;
+  color: #647891;
+  font-size: 0.62rem;
+}
+
+.observability-service-detail-grid strong {
+  overflow: hidden;
+  color: #c8d5e5;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.observability-service-detail-error {
+  margin-top: 0.8rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(52, 74, 104, 0.34);
+  border-radius: 10px;
+  background: rgba(7, 16, 28, 0.3);
+}
+
+.observability-service-detail-error span,
+.observability-service-detail-error strong {
+  display: block;
+}
+
+.observability-service-detail-error span {
+  margin-bottom: 0.3rem;
+  color: #647891;
+  font-size: 0.62rem;
+}
+
+.observability-service-detail-error strong {
+  color: #aebed2;
+  font-size: 0.75rem;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.observability-service-checks {
+  margin-top: 1.25rem;
+}
+
+.observability-service-checks__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+
+.observability-service-checks__header h3 {
+  margin: 0.15rem 0 0;
+  color: #cbd7e6;
+  font-size: 0.9rem;
+}
+
+.observability-service-checks__header > span {
+  padding: 0.25rem 0.48rem;
+  border: 1px solid #2c405a;
+  border-radius: 999px;
+  color: #8194ad;
+  font-size: 0.65rem;
+}
+
+.observability-service-check-list {
+  overflow: hidden;
+  border: 1px solid rgba(52, 74, 104, 0.36);
+  border-radius: 10px;
+}
+
+.observability-service-check-row {
+  display: grid;
+  grid-template-columns:
+    76px 68px 1fr 78px;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.62rem 0.7rem;
+  border-bottom:
+    1px solid rgba(52, 74, 104, 0.25);
+  color: #71849d;
+  font-size: 0.67rem;
+}
+
+.observability-service-check-row:last-child {
+  border-bottom: 0;
+}
+
+.observability-service-check-row time {
+  color: #667991;
+  font-variant-numeric: tabular-nums;
+}
+
+.observability-service-check-row strong {
+  color: #adbed2;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  .observability-service-row {
+    min-width: 760px;
+  }
+
+  .observability-services-table {
+    overflow-x: auto;
+  }
+
+  .observability-service-detail-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .observability-service-drawer {
+    padding: 1rem;
+  }
+
+  .observability-service-detail-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .observability-service-check-row {
+    grid-template-columns:
+      65px 62px 1fr;
+  }
+
+  .observability-service-check-row > span:last-child {
+    display: none;
+  }
+}
+
+
+/* Observability v2 Service Details actions */
+
+.observability-service-actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 1.25rem -0.2rem -0.2rem;
+  padding: 0.85rem 0.2rem 0.2rem;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(11, 21, 35, 0),
+      #0b1523 28%
+    );
+}
+
+.observability-service-actions button {
+  min-height: 38px;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #2b405b;
+  border-radius: 9px;
+  color: #9eb0c6;
+  background: rgba(15, 29, 48, 0.8);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 650;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.observability-service-actions button:hover:not(:disabled) {
+  border-color: #49698f;
+  color: #d8e4f2;
+  background: rgba(27, 47, 73, 0.86);
+}
+
+.observability-service-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.observability-service-actions__primary {
+  border-color:
+    rgba(52, 211, 153, 0.28) !important;
+  color: #a7e8d0 !important;
+  background:
+    rgba(20, 83, 69, 0.18) !important;
+}
+
+.observability-service-action-message {
+  margin-top: 0.8rem;
+  padding: 0.62rem 0.7rem;
+  border: 1px solid rgba(63, 90, 124, 0.3);
+  border-radius: 8px;
+  color: #8fa3bb;
+  background: rgba(11, 24, 41, 0.45);
+  font-size: 0.67rem;
+}
+
+@media (max-width: 520px) {
+  .observability-service-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Observability v2 trace service filter */
+
+.observability-trace-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-height: 30px;
+  padding: 0.38rem 0.58rem;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 999px;
+  color: #9ec5f8;
+  background: rgba(30, 64, 110, 0.18);
+  cursor: pointer;
+  font-size: 0.65rem;
+  font-weight: 650;
+}
+
+.observability-trace-filter:hover {
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(30, 64, 110, 0.28);
+}
+
+.observability-trace-filter span {
+  color: #7088a6;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+
+/* Observability v2 service correlation */
+
+.observability-service-correlation {
+  margin-top: 1.2rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(52, 74, 104, 0.36);
+  border-radius: 10px;
+  background: rgba(7, 16, 28, 0.3);
+}
+
+.observability-service-correlation__header h3 {
+  margin: 0.15rem 0 0;
+  color: #c6d3e3;
+  font-size: 0.82rem;
+}
+
+.observability-service-correlation__sources {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto
+    minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.observability-service-correlation__sources > div {
+  min-width: 0;
+  padding: 0.62rem 0.7rem;
+  border: 1px solid rgba(58, 82, 115, 0.28);
+  border-radius: 8px;
+  background: rgba(12, 24, 40, 0.48);
+}
+
+.observability-service-correlation__source {
+  display: block;
+  margin-bottom: 0.28rem;
+  color: #657990;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.observability-service-correlation__sources strong {
+  display: block;
+  overflow: hidden;
+  color: #aac1dc;
+  font-size: 0.68rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.observability-service-correlation__arrow {
+  color: #526983;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 420px) {
+  .observability-service-correlation__sources {
+    grid-template-columns: 1fr;
+  }
+
+  .observability-service-correlation__arrow {
+    transform: rotate(90deg);
+    text-align: center;
   }
 }
