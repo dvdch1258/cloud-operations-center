@@ -1,5 +1,6 @@
 from app.models.service import Service
 from app.models.incident import Incident
+from app.models.incident_event import IncidentEvent
 from app.models.service_check import ServiceCheck
 from app.models.user import User
 from app.models.security_event import SecurityEvent

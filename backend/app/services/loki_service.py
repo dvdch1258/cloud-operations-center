@@ -249,9 +249,12 @@ def get_observability_logs(
     level: str | None = None,
     search: str | None = None,
     limit: int = 100,
+    *,
+    start_at: datetime | None = None,
+    end_at: datetime | None = None,
 ) -> dict:
-    end = datetime.now(timezone.utc)
-    start = end - timedelta(hours=hours)
+    end = end_at if end_at is not None else datetime.now(timezone.utc)
+    start = start_at if start_at is not None else end - timedelta(hours=hours)
 
     normalized_level = (
         _normalize_level(level)

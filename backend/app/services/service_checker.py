@@ -9,6 +9,9 @@ from app.models.incident import Incident
 from app.models.service import Service
 from app.models.service_check import ServiceCheck
 from app.services.automation_service import run_automation_trigger
+from app.services.incident_event_service import (
+    incident_snapshot, record_incident_event, record_incident_changes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +103,7 @@ def check_all_services(db: Session) -> dict:
 
         service.status = new_status
         active_incident = _find_active_auto_incident(db, service.id)
+        related_incident = active_incident
 
         if new_status == "down" and active_incident is None:
             incident = Incident(
@@ -116,6 +120,12 @@ def check_all_services(db: Session) -> dict:
             )
 
             db.add(incident)
+            record_incident_event(
+                db, incident, event_type="created", source="checker",
+                summary="Incidente abierto por el comprobador de servicios",
+                changes={"status": {"before": None, "after": "open"}},
+            )
+            related_incident = incident
             incidents_created += 1
 
             logger.warning(
@@ -129,6 +139,7 @@ def check_all_services(db: Session) -> dict:
             )
 
         elif new_status == "up" and active_incident is not None:
+            before = incident_snapshot(active_incident)
             active_incident.status = "resolved"
             active_incident.resolved_at = datetime.now(timezone.utc)
             active_incident.description = (
@@ -137,6 +148,7 @@ def check_all_services(db: Session) -> dict:
                 f"{datetime.now(timezone.utc).isoformat()}"
             )
 
+            record_incident_changes(db, active_incident, before, source="checker")
             incidents_resolved += 1
 
             logger.info(
@@ -176,6 +188,7 @@ def check_all_services(db: Session) -> dict:
                 (
                     trigger_type,
                     service,
+                    related_incident.id if related_incident else None,
                     {
                         "previous_status":
                             previous_status,
@@ -218,6 +231,7 @@ def check_all_services(db: Session) -> dict:
     for (
         trigger_type,
         service,
+        incident_id,
         trigger_payload,
     ) in pending_automation_triggers:
         try:
@@ -226,6 +240,7 @@ def check_all_services(db: Session) -> dict:
                 trigger_type=trigger_type,
                 service=service,
                 trigger_payload=trigger_payload,
+                incident_id=incident_id,
             )
 
             automation_executions += len(

@@ -396,6 +396,22 @@ export const api = {
   getIncidents: () =>
     request("/incidents/"),
 
+  getIncidentDetails: (id) => request(`/incidents/${id}/details`),
+  getIncidentTimeline: (id, offset = 0) => request(`/incidents/${id}/timeline?offset=${offset}`),
+  getIncidentAutomations: (id, offset = 0) => request(`/incidents/${id}/automations?offset=${offset}`),
+  changeIncidentStatus: (id, status) => request(`/incidents/${id}/status`, {
+    method: "PATCH", body: JSON.stringify({ status }),
+  }),
+  addIncidentNote: (id, text) => request(`/incidents/${id}/notes`, {
+    method: "POST", body: JSON.stringify({ text }),
+  }),
+  getIncidentLogs: (id, service = "") => request(
+    `/incidents/${id}/logs?${new URLSearchParams(service ? { service } : {})}`,
+  ),
+  getIncidentTraces: (id, service = "") => request(
+    `/incidents/${id}/traces?${new URLSearchParams(service ? { service } : {})}`,
+  ),
+
   createIncident: (incident) =>
     request("/incidents/", {
       method: "POST",

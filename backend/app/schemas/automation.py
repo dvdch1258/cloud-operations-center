@@ -79,6 +79,7 @@ class AutomationRuleResponse(BaseModel):
 
 class AutomationExecutionResponse(BaseModel):
     id: int
+    incident_id: int | None = None
 
     rule_id: int | None
     rule_name: str

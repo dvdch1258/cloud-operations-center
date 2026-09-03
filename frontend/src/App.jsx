@@ -7,6 +7,7 @@ import {
 import ProtectedRoute from "./auth/ProtectedRoute";
 import Layout from "./components/Layout";
 import IncidentsPage from "./pages/IncidentsPage";
+import IncidentDetailPage from "./pages/IncidentDetailPage";
 import LoginPage from "./pages/LoginPage";
 import ServiceDetailPage from "./pages/ServiceDetailPage";
 import ServicesPage from "./pages/ServicesPage";
@@ -52,6 +53,7 @@ export default function App() {
             path="incidentes"
             element={<IncidentsPage />}
           />
+          <Route path="incidentes/:incidentId" element={<IncidentDetailPage />} />
 
           <Route
             path="seguridad"
