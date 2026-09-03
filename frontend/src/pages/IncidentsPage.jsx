@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
 
 const emptyForm = {
@@ -100,7 +101,7 @@ export default function IncidentsPage() {
       title: incident.title,
       description: incident.description,
       severity: incident.severity,
-      service_id: String(incident.service_id),
+      service_id: incident.service_id == null ? "" : String(incident.service_id),
       status: incident.status,
     });
   }
@@ -119,7 +120,7 @@ export default function IncidentsPage() {
   async function submitIncident(event) {
     event.preventDefault();
 
-    if (!form.service_id) {
+    if (!form.service_id && !editingId) {
       setError("Selecciona un servicio.");
       return;
     }
@@ -131,7 +132,7 @@ export default function IncidentsPage() {
       title: form.title,
       description: form.description,
       severity: form.severity,
-      service_id: Number(form.service_id),
+      service_id: form.service_id ? Number(form.service_id) : null,
     };
 
     try {
@@ -173,6 +174,7 @@ export default function IncidentsPage() {
   }
 
   function serviceName(id) {
+    if (id == null) return "Servicio eliminado o sin asignar";
     return (
       services.find(
         (service) => service.id === id
@@ -232,13 +234,7 @@ export default function IncidentsPage() {
     setError("");
 
     try {
-      await api.updateIncident(incident.id, {
-        title: incident.title,
-        description: incident.description,
-        severity: incident.severity,
-        service_id: incident.service_id,
-        status,
-      });
+      await api.changeIncidentStatus(incident.id, status);
 
       await loadData();
     } catch (requestError) {
@@ -283,7 +279,7 @@ export default function IncidentsPage() {
           </span>
         </div>
 
-        <h3>{incident.title}</h3>
+        <h3><Link to={`/incidentes/${incident.id}`} className="incident-detail-link">{incident.title}</Link></h3>
 
         <p>{incident.description}</p>
 
@@ -324,6 +320,7 @@ export default function IncidentsPage() {
         </div>
 
         <div className="table-actions">
+          <Link to={`/incidentes/${incident.id}`} className="secondary-button incident-detail-link">Ver detalle</Link>
           {incident.status === "open" && (
             <button
               type="button"
@@ -658,8 +655,9 @@ export default function IncidentsPage() {
               name="service_id"
               value={form.service_id}
               onChange={updateField}
-              required
+              required={!editingId}
             >
+              {editingId && <option value="">Sin servicio asignado</option>}
               {services.map((service) => (
                 <option
                   key={service.id}
@@ -702,7 +700,7 @@ export default function IncidentsPage() {
             <button
               className="primary-button"
               disabled={
-                saving || !services.length
+                saving || (!editingId && !services.length)
               }
             >
               {saving

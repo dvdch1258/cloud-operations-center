@@ -10,6 +10,8 @@ from app.core.config import settings
 from app.models.automation_execution import AutomationExecution
 from app.models.automation_rule import AutomationRule
 from app.models.service import Service
+from app.models.incident import Incident
+from app.services.incident_event_service import record_automation_event
 
 
 logger = logging.getLogger(__name__)
@@ -86,8 +88,13 @@ def execute_automation_rule(
     service: Service,
     trigger_payload: dict,
     execution_source: str = "trigger",
+    incident_id: int | None = None,
 ) -> AutomationExecution:
+    if execution_source != "trigger":
+        incident_id = None
+    _validate_incident_link(db, incident_id, service.id)
     execution = AutomationExecution(
+        incident_id=incident_id,
         rule_id=rule.id,
         rule_name=rule.name,
         trigger_type=rule.trigger_type,
@@ -100,6 +107,7 @@ def execute_automation_rule(
     )
 
     db.add(execution)
+    record_automation_event(db, execution)
     db.commit()
     db.refresh(execution)
 
@@ -149,6 +157,7 @@ def execute_automation_rule(
         execution.error = str(exc)[:2000]
 
         db.add(execution)
+        record_automation_event(db, execution)
         db.commit()
         db.refresh(execution)
 
@@ -180,6 +189,7 @@ def execute_automation_rule(
     execution.error = None
 
     db.add(execution)
+    record_automation_event(db, execution)
     db.commit()
     db.refresh(execution)
 
@@ -250,10 +260,12 @@ def _record_cooldown_skip(
     service: Service,
     trigger_payload: dict,
     recent_execution: AutomationExecution,
+    incident_id: int | None = None,
 ) -> AutomationExecution:
     now = datetime.now(timezone.utc)
 
     execution = AutomationExecution(
+        incident_id=incident_id,
         rule_id=rule.id,
         rule_name=rule.name,
         trigger_type=rule.trigger_type,
@@ -277,6 +289,7 @@ def _record_cooldown_skip(
     )
 
     db.add(execution)
+    record_automation_event(db, execution)
     db.commit()
     db.refresh(execution)
 
@@ -297,13 +310,25 @@ def _record_cooldown_skip(
     return execution
 
 
+def _validate_incident_link(db: Session, incident_id: int | None, service_id: int) -> None:
+    if incident_id is None:
+        return
+    incident = db.get(Incident, incident_id)
+    if incident is None or incident.service_id != service_id:
+        raise ValueError("El incidente no pertenece al servicio del disparador")
+
+
 def run_automation_trigger(
     db: Session,
     *,
     trigger_type: str,
     service: Service,
     trigger_payload: dict,
+    incident_id: int | None = None,
 ) -> list[AutomationExecution]:
+    _validate_incident_link(db, incident_id, service.id)
+    if incident_id is not None:
+        trigger_payload = {**trigger_payload, "incident_id": incident_id}
     rules = (
         db.query(AutomationRule)
         .filter(
@@ -349,6 +374,7 @@ def run_automation_trigger(
                     trigger_payload=trigger_payload,
                     recent_execution=
                         recent_execution,
+                    incident_id=incident_id,
                 )
             )
             continue
@@ -359,6 +385,7 @@ def run_automation_trigger(
                 rule=rule,
                 service=service,
                 trigger_payload=trigger_payload,
+                incident_id=incident_id,
             )
         )
 

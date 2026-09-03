@@ -31,6 +31,7 @@ from app.models import (
     AutomationExecution,
     AutomationRule,
     Incident,
+    IncidentEvent,
     OperationExecution,
     SecurityEvent,
     SecurityAlert,

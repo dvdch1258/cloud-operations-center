@@ -16,6 +16,13 @@ from app.core.database import Base
 class AutomationExecution(Base):
     __tablename__ = "automation_executions"
 
+    incident_id = Column(
+        Integer,
+        ForeignKey("incidents.id", ondelete="SET NULL", name="fk_automation_executions_incident_id"),
+        nullable=True,
+        index=True,
+    )
+
     id = Column(
         Integer,
         primary_key=True,

@@ -192,9 +192,12 @@ def get_observability_traces(
     hours: int = 1,
     limit: int = 50,
     service: str | None = None,
+    *,
+    start_at: datetime | None = None,
+    end_at: datetime | None = None,
 ) -> dict:
-    end = datetime.now(timezone.utc)
-    start = end - timedelta(hours=hours)
+    end = end_at if end_at is not None else datetime.now(timezone.utc)
+    start = start_at if start_at is not None else end - timedelta(hours=hours)
 
     params = {
         "start": int(

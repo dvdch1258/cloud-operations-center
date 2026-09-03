@@ -123,11 +123,13 @@ def test_checker_triggers_service_down_on_up_to_down(
         trigger_type,
         service,
         trigger_payload,
+        incident_id=None,
     ):
         captured_triggers.append(
             {
                 "trigger_type": trigger_type,
                 "service_id": service.id,
+                "incident_id": incident_id,
                 "payload": trigger_payload,
             }
         )
@@ -144,6 +146,7 @@ def test_checker_triggers_service_down_on_up_to_down(
         {
             "trigger_type": "service_down",
             "service_id": service.id,
+            "incident_id": db.query(Incident).one().id,
             "payload": {
                 "previous_status": "up",
                 "status": "down",
@@ -181,6 +184,7 @@ def test_checker_triggers_service_recovered_on_down_to_up(
         trigger_type,
         service,
         trigger_payload,
+        incident_id=None,
     ):
         captured_triggers.append(
             {
@@ -236,6 +240,7 @@ def test_checker_does_not_trigger_automation_on_up_to_up(
         trigger_type,
         service,
         trigger_payload,
+        incident_id=None,
     ):
         captured_triggers.append(trigger_type)
         return []
@@ -275,6 +280,7 @@ def test_checker_does_not_trigger_automation_on_down_to_down(
         trigger_type,
         service,
         trigger_payload,
+        incident_id=None,
     ):
         captured_triggers.append(trigger_type)
         return []
