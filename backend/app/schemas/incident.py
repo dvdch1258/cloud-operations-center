@@ -86,3 +86,26 @@ class IncidentDetailResponse(BaseModel):
     automations: list[AutomationExecutionResponse]
     automations_total: int
     window: IncidentWindow
+
+
+class IncidentCorrelationSummary(BaseModel):
+    logs_total: int
+    errors_total: int
+    traces_total: int
+    captured_traces_total: int
+
+
+class IncidentCorrelationSources(BaseModel):
+    loki: Literal["available", "unavailable", "skipped"]
+    tempo: Literal["available", "unavailable", "skipped"]
+
+
+class IncidentCorrelationResponse(BaseModel):
+    incident_id: int
+    service: ServiceResponse | None
+    window: IncidentWindow
+    summary: IncidentCorrelationSummary
+    logs: list[dict[str, Any]]
+    traces: list[dict[str, Any]]
+    captured_traces: list[dict[str, Any]]
+    sources: IncidentCorrelationSources

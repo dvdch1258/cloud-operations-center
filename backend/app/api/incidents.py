@@ -21,6 +21,7 @@ from app.schemas.incident import (
     IncidentResponse,
     IncidentDetailResponse, IncidentTimelineResponse, IncidentStatusUpdate,
     IncidentNoteCreate, IncidentEventResponse,
+    IncidentCorrelationResponse,
 )
 from app.services.incident_event_service import (
     incident_snapshot, record_incident_event, record_incident_changes,
@@ -30,6 +31,7 @@ from app.services.incident_detail_service import (
 )
 from app.services.loki_service import get_observability_logs, LokiQueryError
 from app.services.tempo_service import get_observability_traces, TempoQueryError
+from app.services.incident_correlation_service import get_incident_correlation
 
 logger = logging.getLogger(__name__)
 
@@ -316,3 +318,34 @@ def get_incident_traces(
     except TempoQueryError as exc:
         raise HTTPException(status_code=503, detail="Tempo no disponible") from exc
     return {**result, "window": window, "scope": "service"}
+
+
+@router.get(
+    "/{incident_id}/correlation",
+    response_model=IncidentCorrelationResponse,
+)
+def get_correlation(
+    incident_id: int,
+    log_limit: int = Query(
+        100,
+        ge=1,
+        le=500,
+    ),
+    trace_limit: int = Query(
+        50,
+        ge=1,
+        le=100,
+    ),
+    db: Session = Depends(get_db),
+):
+    incident = _require_incident(
+        db,
+        incident_id,
+    )
+
+    return get_incident_correlation(
+        db,
+        incident,
+        log_limit=log_limit,
+        trace_limit=trace_limit,
+    )

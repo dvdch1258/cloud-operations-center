@@ -397,6 +397,7 @@ export const api = {
     request("/incidents/"),
 
   getIncidentDetails: (id) => request(`/incidents/${id}/details`),
+  getIncidentCorrelation: (id) => request(`/incidents/${id}/correlation`),
   getIncidentTimeline: (id, offset = 0) => request(`/incidents/${id}/timeline?offset=${offset}`),
   getIncidentAutomations: (id, offset = 0) => request(`/incidents/${id}/automations?offset=${offset}`),
   changeIncidentStatus: (id, status) => request(`/incidents/${id}/status`, {

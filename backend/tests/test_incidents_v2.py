@@ -72,7 +72,7 @@ def test_update_and_validation_are_recorded_without_partial_writes(authenticated
     assert client.patch(f"{path}/status", json={"status": "invalid"}).status_code == 422
 
 
-@pytest.mark.parametrize("suffix", ["details", "timeline", "automations", "logs", "traces"])
+@pytest.mark.parametrize("suffix", ["details", "timeline", "automations", "logs", "traces", "correlation"])
 def test_detail_endpoints_require_authentication_and_existing_incident(client, suffix):
     assert client.get(f"/incidents/1/{suffix}").status_code == 401
 
@@ -107,7 +107,7 @@ def test_telemetry_clients_forward_absolute_incident_times(monkeypatch):
 
 def test_missing_incident_and_bounded_pagination(authenticated_client, service, db):
     client = authenticated_client
-    for suffix in ("details", "timeline", "automations", "logs", "traces"):
+    for suffix in ("details", "timeline", "automations", "logs", "traces", "correlation"):
         assert client.get(f"/incidents/999/{suffix}").status_code == 404
     incident_id = create(client, service)
     now = datetime.now(timezone.utc)
@@ -280,3 +280,411 @@ def test_captured_traces_are_exact_deduplicated_and_window_is_bounded(authentica
     start = datetime.fromisoformat(result["window"]["start_at"])
     end = datetime.fromisoformat(result["window"]["end_at"])
     assert end - start == timedelta(days=7)
+
+
+def test_correlation_uses_incident_service_and_window(
+    authenticated_client,
+    service,
+    db,
+    monkeypatch,
+):
+    client = authenticated_client
+    incident_id = create(client, service)
+    incident = db.get(Incident, incident_id)
+
+    incident.created_at = datetime(
+        2026,
+        1,
+        1,
+        10,
+        0,
+        tzinfo=timezone.utc,
+    )
+    incident.resolved_at = datetime(
+        2026,
+        1,
+        1,
+        11,
+        0,
+        tzinfo=timezone.utc,
+    )
+    incident.status = "resolved"
+    db.commit()
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    captured = {}
+
+    def fake_logs(**kwargs):
+        captured["logs"] = kwargs
+
+        return {
+            "total": 3,
+            "logs": [
+                {
+                    "level": "error",
+                    "message": "database unavailable",
+                },
+                {
+                    "level": "critical",
+                    "message": "request failed",
+                },
+                {
+                    "level": "info",
+                    "message": "retrying",
+                },
+            ],
+        }
+
+    def fake_traces(**kwargs):
+        captured["traces"] = kwargs
+
+        return {
+            "total": 1,
+            "traces": [
+                {
+                    "trace_id": "1" * 32,
+                    "service": service.name,
+                    "operation": "GET /health",
+                    "started_at": incident.created_at,
+                    "duration_ms": 125.0,
+                }
+            ],
+        }
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_logs",
+        fake_logs,
+    )
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_traces",
+        fake_traces,
+    )
+
+    response = client.get(
+        f"/incidents/{incident_id}/correlation"
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+
+    assert result["incident_id"] == incident_id
+    assert result["service"]["id"] == service.id
+    assert result["service"]["name"] == service.name
+
+    assert result["sources"] == {
+        "loki": "available",
+        "tempo": "available",
+    }
+
+    assert result["summary"]["logs_total"] == 3
+    assert result["summary"]["errors_total"] == 2
+    assert result["summary"]["traces_total"] == 1
+    assert (
+        result["summary"]["captured_traces_total"]
+        == 0
+    )
+
+    expected_start = datetime(
+        2026,
+        1,
+        1,
+        9,
+        55,
+        tzinfo=timezone.utc,
+    )
+    expected_end = datetime(
+        2026,
+        1,
+        1,
+        11,
+        5,
+        tzinfo=timezone.utc,
+    )
+
+    assert (
+        captured["logs"]["service"]
+        == service.observability_name
+    )
+    assert captured["logs"]["search"] is None
+    assert (
+        captured["logs"]["start_at"]
+        == expected_start
+    )
+    assert (
+        captured["logs"]["end_at"]
+        == expected_end
+    )
+
+    assert (
+        captured["traces"]["service"]
+        == service.observability_name
+    )
+    assert (
+        captured["traces"]["start_at"]
+        == expected_start
+    )
+    assert (
+        captured["traces"]["end_at"]
+        == expected_end
+    )
+
+
+def test_correlation_degrades_when_loki_is_unavailable(
+    authenticated_client,
+    service,
+    monkeypatch,
+):
+    client = authenticated_client
+    incident_id = create(client, service)
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    def unavailable_logs(**kwargs):
+        raise correlation.LokiQueryError(
+            "sensitive upstream error"
+        )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_logs",
+        unavailable_logs,
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_traces",
+        lambda **kwargs: {
+            "total": 1,
+            "traces": [
+                {
+                    "trace_id": "2" * 32,
+                    "service": service.name,
+                    "operation": "GET /health",
+                    "started_at": None,
+                    "duration_ms": 25.0,
+                }
+            ],
+        },
+    )
+
+    response = client.get(
+        f"/incidents/{incident_id}/correlation"
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+
+    assert (
+        result["sources"]["loki"]
+        == "unavailable"
+    )
+    assert (
+        result["sources"]["tempo"]
+        == "available"
+    )
+    assert result["logs"] == []
+    assert result["summary"]["logs_total"] == 0
+    assert result["summary"]["errors_total"] == 0
+    assert result["summary"]["traces_total"] == 1
+
+
+def test_correlation_degrades_when_tempo_is_unavailable(
+    authenticated_client,
+    service,
+    monkeypatch,
+):
+    client = authenticated_client
+    incident_id = create(client, service)
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_logs",
+        lambda **kwargs: {
+            "total": 1,
+            "logs": [
+                {
+                    "level": "warning",
+                    "message": "slow request",
+                }
+            ],
+        },
+    )
+
+    def unavailable_traces(**kwargs):
+        raise correlation.TempoQueryError(
+            "sensitive upstream error"
+        )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_traces",
+        unavailable_traces,
+    )
+
+    response = client.get(
+        f"/incidents/{incident_id}/correlation"
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+
+    assert (
+        result["sources"]["loki"]
+        == "available"
+    )
+    assert (
+        result["sources"]["tempo"]
+        == "unavailable"
+    )
+    assert result["summary"]["logs_total"] == 1
+    assert result["summary"]["errors_total"] == 0
+    assert result["traces"] == []
+
+
+def test_correlation_without_service_uses_incident_id(
+    authenticated_client,
+    service,
+    db,
+    monkeypatch,
+):
+    client = authenticated_client
+    incident_id = create(client, service)
+    incident = db.get(Incident, incident_id)
+
+    incident.service_id = None
+    db.commit()
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    captured = {}
+
+    def fake_logs(**kwargs):
+        captured.update(kwargs)
+
+        return {
+            "total": 0,
+            "logs": [],
+        }
+
+    def tempo_must_not_run(**kwargs):
+        raise AssertionError(
+            "Tempo no debe consultarse sin servicio"
+        )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_logs",
+        fake_logs,
+    )
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_traces",
+        tempo_must_not_run,
+    )
+
+    response = client.get(
+        f"/incidents/{incident_id}/correlation"
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+
+    assert result["service"] is None
+    assert (
+        result["sources"]["loki"]
+        == "available"
+    )
+    assert (
+        result["sources"]["tempo"]
+        == "skipped"
+    )
+    assert captured["service"] is None
+    assert captured["search"] == (
+        f"incident_id={incident_id} "
+    )
+
+
+def test_correlation_without_observability_name_uses_incident_id(
+    authenticated_client,
+    service,
+    db,
+    monkeypatch,
+):
+    client = authenticated_client
+
+    service.observability_name = None
+    db.commit()
+
+    incident_id = create(client, service)
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    captured = {}
+
+    def fake_logs(**kwargs):
+        captured["logs"] = kwargs
+
+        return {
+            "total": 0,
+            "logs": [],
+        }
+
+    def unexpected_tempo(**kwargs):
+        raise AssertionError(
+            "Tempo must not be queried without "
+            "observability_name"
+        )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_logs",
+        fake_logs,
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_traces",
+        unexpected_tempo,
+    )
+
+    response = client.get(
+        f"/incidents/{incident_id}/correlation"
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["service"]["id"] == service.id
+
+    assert (
+        result["service"]["observability_name"]
+        is None
+    )
+
+    assert result["sources"] == {
+        "loki": "available",
+        "tempo": "skipped",
+    }
+
+    assert captured["logs"]["service"] is None
+
+    assert (
+        captured["logs"]["search"]
+        == f"incident_id={incident_id} "
+    )

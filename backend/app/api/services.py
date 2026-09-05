@@ -258,6 +258,7 @@ def create_service(
 ):
     new_service = Service(
         name=service.name,
+        observability_name=service.observability_name,
         type=service.type,
         endpoint=service.endpoint,
         status="unknown",
@@ -304,6 +305,12 @@ def update_service(
     service.name = service_update.name
     service.type = service_update.type
     service.endpoint = service_update.endpoint
+
+    if "observability_name" in service_update.model_fields_set:
+        service.observability_name = (
+            service_update.observability_name
+        )
+
     service.status = service_update.status
 
     db.commit()
