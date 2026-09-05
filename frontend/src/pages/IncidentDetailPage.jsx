@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
+import IncidentCorrelation from "../components/IncidentCorrelation";
 import "./IncidentDetailPage.css";
 
 const statuses = { open: "Abierto", investigating: "Investigando", resolved: "Resuelto", closed: "Cerrado" };
@@ -8,7 +9,7 @@ const severities = { low: "Baja", medium: "Media", high: "Alta", critical: "Crí
 const sources = { user: "Operador", checker: "Comprobador", automation: "Automatización", legacy: "Histórico" };
 const executionStatuses = { running: "En ejecución", success: "Correcta", failed: "Fallida", skipped: "Omitida" };
 const fields = { title: "Título", description: "Descripción", severity: "Severidad", status: "Estado", service_id: "Servicio" };
-const tabs = [["timeline", "Línea temporal"], ["automations", "Automatizaciones"], ["logs", "Logs · Loki"], ["traces", "Trazas · Tempo"]];
+const tabs = [["timeline", "Línea temporal"], ["correlation", "Correlación"], ["automations", "Automatizaciones"], ["logs", "Logs · Loki"], ["traces", "Trazas · Tempo"]];
 
 function date(value) {
   if (!value) return "—";
@@ -229,6 +230,13 @@ export default function IncidentDetailPage() {
             </li>)}</ol>
             {data.timeline.events.length < data.timeline.total && <button className="secondary-button" disabled={busy || loading} onClick={() => loadMore("timeline")}>Cargar eventos anteriores</button>}
           </>}
+          {tab === "correlation" && (
+            <IncidentCorrelation
+              incidentId={incidentId}
+              onTrace={openTrace}
+              refreshToken={data}
+            />
+          )}
           {tab === "automations" && <>
             <h2>Automatizaciones vinculadas</h2><p className="incident-hint">Ejecuciones asociadas al incidente por el disparador. Las ejecuciones antiguas sin vínculo explícito no se atribuyen automáticamente.</p>
             {!data.automations.length && <div className="incident-empty">Este incidente no tiene automatizaciones vinculadas.</div>}
