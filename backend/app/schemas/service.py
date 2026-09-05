@@ -3,6 +3,7 @@ from pydantic import BaseModel, ConfigDict
 
 class ServiceBase(BaseModel):
     name: str
+    observability_name: str | None = None
     type: str
     endpoint: str
 

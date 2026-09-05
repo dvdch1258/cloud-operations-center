@@ -408,7 +408,7 @@ def test_correlation_uses_incident_service_and_window(
 
     assert (
         captured["logs"]["service"]
-        == service.name
+        == service.observability_name
     )
     assert captured["logs"]["search"] is None
     assert (
@@ -422,7 +422,7 @@ def test_correlation_uses_incident_service_and_window(
 
     assert (
         captured["traces"]["service"]
-        == service.name
+        == service.observability_name
     )
     assert (
         captured["traces"]["start_at"]
@@ -614,4 +614,77 @@ def test_correlation_without_service_uses_incident_id(
     assert captured["service"] is None
     assert captured["search"] == (
         f"incident_id={incident_id} "
+    )
+
+
+def test_correlation_without_observability_name_uses_incident_id(
+    authenticated_client,
+    service,
+    db,
+    monkeypatch,
+):
+    client = authenticated_client
+
+    service.observability_name = None
+    db.commit()
+
+    incident_id = create(client, service)
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    captured = {}
+
+    def fake_logs(**kwargs):
+        captured["logs"] = kwargs
+
+        return {
+            "total": 0,
+            "logs": [],
+        }
+
+    def unexpected_tempo(**kwargs):
+        raise AssertionError(
+            "Tempo must not be queried without "
+            "observability_name"
+        )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_logs",
+        fake_logs,
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_traces",
+        unexpected_tempo,
+    )
+
+    response = client.get(
+        f"/incidents/{incident_id}/correlation"
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["service"]["id"] == service.id
+
+    assert (
+        result["service"]["observability_name"]
+        is None
+    )
+
+    assert result["sources"] == {
+        "loki": "available",
+        "tempo": "skipped",
+    }
+
+    assert captured["logs"]["service"] is None
+
+    assert (
+        captured["logs"]["search"]
+        == f"incident_id={incident_id} "
     )

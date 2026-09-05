@@ -88,6 +88,7 @@ def authenticated_client(client, user):
 def service(db):
     test_service = Service(
         name="Test API",
+        observability_name="instrumented-api",
         type="api",
         endpoint="http://test-service.local/health",
         status="unknown",

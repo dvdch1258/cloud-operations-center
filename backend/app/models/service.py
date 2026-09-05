@@ -11,6 +11,11 @@ class Service(Base):
 
     name = Column(String, nullable=False)
 
+    observability_name = Column(
+        String,
+        nullable=True,
+    )
+
     type = Column(String, nullable=False)
 
     endpoint = Column(String, nullable=False)

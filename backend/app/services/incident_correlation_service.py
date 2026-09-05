@@ -36,8 +36,8 @@ def get_incident_correlation(
         else None
     )
 
-    service_name = (
-        service.name
+    observability_name = (
+        service.observability_name
         if service is not None
         else None
     )
@@ -56,10 +56,10 @@ def get_incident_correlation(
 
     try:
         log_result = get_observability_logs(
-            service=service_name,
+            service=observability_name,
             search=(
                 None
-                if service_name
+                if observability_name
                 else f"incident_id={incident.id} "
             ),
             limit=log_limit,
@@ -74,10 +74,10 @@ def get_incident_correlation(
     except LokiQueryError:
         loki_status = "unavailable"
 
-    if service_name:
+    if observability_name:
         try:
             trace_result = get_observability_traces(
-                service=service_name,
+                service=observability_name,
                 limit=trace_limit,
                 start_at=window["start_at"],
                 end_at=window["end_at"],
