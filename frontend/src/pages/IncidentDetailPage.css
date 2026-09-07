@@ -103,7 +103,7 @@
 .incident-correlation-summary {
   display: grid;
   grid-template-columns:
-    repeat(4, minmax(0, 1fr));
+    repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin: 22px 0 30px;
 }
@@ -152,5 +152,135 @@
 @media (max-width: 520px) {
   .incident-correlation-summary {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* Incident Correlation v2 */
+
+.incident-signal-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.incident-signal-card {
+  display: grid;
+  gap: 15px;
+  padding: 18px;
+  border: 1px solid #273852;
+  border-left-width: 4px;
+  border-radius: 10px;
+  background: #0c1525;
+  overflow-wrap: anywhere;
+}
+
+.incident-signal-card--high {
+  border-left-color: #ff7c8b;
+}
+
+.incident-signal-card--medium {
+  border-left-color: #f4d58a;
+}
+
+.incident-signal-card--low {
+  border-left-color: #719fff;
+}
+
+.incident-signal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.incident-signal-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.incident-signal-severity,
+.incident-signal-source {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.incident-signal-severity--high {
+  color: #ffabb4;
+  background: #471e2a;
+}
+
+.incident-signal-severity--medium {
+  color: #f4d58a;
+  background: #3c321b;
+}
+
+.incident-signal-severity--low {
+  color: #b7cfff;
+  background: #1b2e4c;
+}
+
+.incident-signal-source {
+  color: #c9d8ef;
+  background: #1b2e4c;
+}
+
+.incident-signal-score {
+  color: #e8f0ff;
+  font-size: 0.9rem;
+}
+
+.incident-signal-body {
+  display: grid;
+  gap: 8px;
+}
+
+.incident-signal-title {
+  color: #e8f0ff;
+  font-size: 1rem;
+}
+
+.incident-signal-body time,
+.incident-signal-technical {
+  color: #92a5c1;
+  font-size: 0.82rem;
+}
+
+.incident-signal-body code {
+  width: fit-content;
+  max-width: 100%;
+  color: #b7cfff;
+  overflow-wrap: anywhere;
+}
+
+.incident-signal-body pre {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.incident-signal-reasons {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  color: #b8c7dd;
+  font-size: 0.86rem;
+}
+
+.incident-signal-card > .secondary-button {
+  width: fit-content;
+}
+
+@media (max-width: 650px) {
+  .incident-signal-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

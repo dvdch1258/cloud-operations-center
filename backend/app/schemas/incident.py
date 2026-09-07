@@ -93,6 +93,28 @@ class IncidentCorrelationSummary(BaseModel):
     errors_total: int
     traces_total: int
     captured_traces_total: int
+    signals_total: int
+
+
+class IncidentCorrelationSignal(BaseModel):
+    kind: Literal["trace", "log"]
+    source: Literal["tempo", "loki", "incident"]
+    score: int
+    severity: Literal["high", "medium", "low"]
+    title: str
+    reasons: list[str]
+    trace_id: str | None = None
+    started_at: datetime | None = None
+    service: str | None = None
+    operation: str | None = None
+    duration_ms: float | None = None
+    status: str | None = None
+    level: str | None = None
+    message: str | None = None
+    spans_total: int | None = None
+    http_status_codes: list[int] = Field(
+        default_factory=list
+    )
 
 
 class IncidentCorrelationSources(BaseModel):
@@ -105,6 +127,7 @@ class IncidentCorrelationResponse(BaseModel):
     service: ServiceResponse | None
     window: IncidentWindow
     summary: IncidentCorrelationSummary
+    ranked_signals: list[IncidentCorrelationSignal]
     logs: list[dict[str, Any]]
     traces: list[dict[str, Any]]
     captured_traces: list[dict[str, Any]]

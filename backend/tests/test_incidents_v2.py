@@ -365,6 +365,21 @@ def test_correlation_uses_incident_service_and_window(
         fake_traces,
     )
 
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_trace",
+        lambda trace_id: {
+            "trace_id": trace_id,
+            "service": service.observability_name,
+            "operation": "GET /health",
+            "started_at": incident.created_at,
+            "duration_ms": 125.0,
+            "status": "ok",
+            "spans_total": 1,
+            "spans": [],
+        },
+    )
+
     response = client.get(
         f"/incidents/{incident_id}/correlation"
     )
@@ -471,6 +486,21 @@ def test_correlation_degrades_when_loki_is_unavailable(
                     "duration_ms": 25.0,
                 }
             ],
+        },
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_trace",
+        lambda trace_id: {
+            "trace_id": trace_id,
+            "service": service.observability_name,
+            "operation": "GET /health",
+            "started_at": None,
+            "duration_ms": 25.0,
+            "status": "ok",
+            "spans_total": 1,
+            "spans": [],
         },
     )
 
@@ -688,3 +718,523 @@ def test_correlation_without_observability_name_uses_incident_id(
         captured["logs"]["search"]
         == f"incident_id={incident_id} "
     )
+
+
+
+def test_correlation_v2_ranks_captured_error_trace_first(
+    authenticated_client,
+    service,
+    db,
+    monkeypatch,
+):
+    client = authenticated_client
+    incident_id = create(client, service)
+    incident = db.get(Incident, incident_id)
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    trace_id = "a" * 32
+
+    monkeypatch.setattr(
+        correlation,
+        "get_captured_traces",
+        lambda *args, **kwargs: [
+            {
+                "trace_id": trace_id,
+                "started_at": incident.created_at,
+                "operation": (
+                    "Traza capturada en un "
+                    "evento del incidente"
+                ),
+                "service": None,
+                "duration_ms": None,
+            }
+        ],
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_logs",
+        lambda **kwargs: {
+            "total": 1,
+            "logs": [
+                {
+                    "timestamp": incident.created_at,
+                    "service": (
+                        service.observability_name
+                    ),
+                    "level": "error",
+                    "message": "database unavailable",
+                    "trace_id": None,
+                    "span_id": None,
+                }
+            ],
+        },
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_traces",
+        lambda **kwargs: {
+            "total": 2,
+            "traces": [
+                {
+                    "trace_id": trace_id,
+                    "service": (
+                        service.observability_name
+                    ),
+                    "operation": "POST /incidents/",
+                    "started_at": incident.created_at,
+                    "duration_ms": 250.0,
+                },
+                {
+                    "trace_id": "b" * 32,
+                    "service": (
+                        service.observability_name
+                    ),
+                    "operation": "GET /health",
+                    "started_at": incident.created_at,
+                    "duration_ms": 25.0,
+                },
+            ],
+        },
+    )
+
+    def fake_trace_detail(requested_trace_id):
+        assert requested_trace_id == trace_id
+
+        return {
+            "trace_id": trace_id,
+            "service": (
+                service.observability_name
+            ),
+            "operation": "POST /incidents/",
+            "started_at": incident.created_at,
+            "duration_ms": 250.0,
+            "status": "error",
+            "spans_total": 2,
+            "spans": [
+                {
+                    "http_status_code": 500,
+                },
+                {
+                    "http_status_code": None,
+                },
+            ],
+        }
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_trace",
+        fake_trace_detail,
+    )
+
+    response = client.get(
+        f"/incidents/{incident_id}/correlation"
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["summary"]["signals_total"] == 2
+
+    signals = result["ranked_signals"]
+
+    assert signals[0]["kind"] == "trace"
+    assert signals[0]["source"] == "tempo"
+    assert signals[0]["trace_id"] == trace_id
+    assert signals[0]["operation"] == "POST /incidents/"
+    assert signals[0]["status"] == "error"
+    assert signals[0]["http_status_codes"] == [500]
+    assert signals[0]["score"] == 290
+    assert signals[0]["severity"] == "high"
+
+    assert (
+        "Traza capturada directamente por el incidente"
+        in signals[0]["reasons"]
+    )
+    assert (
+        "Se detectó una respuesta HTTP 5xx"
+        in signals[0]["reasons"]
+    )
+
+    assert signals[1]["kind"] == "log"
+    assert signals[1]["score"] == 100
+
+    assert all(
+        signal.get("operation") != "GET /health"
+        for signal in signals
+    )
+
+
+def test_correlation_v2_enriches_captured_trace_missing_from_search(
+    authenticated_client,
+    service,
+    db,
+    monkeypatch,
+):
+    client = authenticated_client
+    incident_id = create(client, service)
+    incident = db.get(Incident, incident_id)
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    trace_id = "c" * 32
+
+    monkeypatch.setattr(
+        correlation,
+        "get_captured_traces",
+        lambda *args, **kwargs: [
+            {
+                "trace_id": trace_id,
+                "started_at": incident.created_at,
+                "operation": (
+                    "Traza capturada en un "
+                    "evento del incidente"
+                ),
+                "service": None,
+                "duration_ms": None,
+            }
+        ],
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_logs",
+        lambda **kwargs: {
+            "total": 0,
+            "logs": [],
+        },
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_traces",
+        lambda **kwargs: {
+            "total": 0,
+            "traces": [],
+        },
+    )
+
+    requested = []
+
+    def fake_trace_detail(requested_trace_id):
+        requested.append(
+            requested_trace_id
+        )
+
+        return {
+            "trace_id": trace_id,
+            "service": (
+                service.observability_name
+            ),
+            "operation": "PUT /incidents/1",
+            "started_at": incident.created_at,
+            "duration_ms": 80.0,
+            "status": "warning",
+            "spans_total": 1,
+            "spans": [
+                {
+                    "http_status_code": 409,
+                }
+            ],
+        }
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_trace",
+        fake_trace_detail,
+    )
+
+    result = client.get(
+        f"/incidents/{incident_id}/correlation"
+    ).json()
+
+    assert requested == [trace_id]
+
+    signal = result["ranked_signals"][0]
+
+    assert signal["source"] == "tempo"
+    assert signal["trace_id"] == trace_id
+    assert signal["status"] == "warning"
+    assert signal["http_status_codes"] == [409]
+    assert signal["spans_total"] == 1
+
+
+def test_correlation_v2_keeps_signal_when_trace_detail_fails(
+    authenticated_client,
+    service,
+    db,
+    monkeypatch,
+):
+    client = authenticated_client
+    incident_id = create(client, service)
+    incident = db.get(Incident, incident_id)
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_captured_traces",
+        lambda *args, **kwargs: [],
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_logs",
+        lambda **kwargs: {
+            "total": 0,
+            "logs": [],
+        },
+    )
+
+    trace_id = "d" * 32
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_traces",
+        lambda **kwargs: {
+            "total": 1,
+            "traces": [
+                {
+                    "trace_id": trace_id,
+                    "service": (
+                        service.observability_name
+                    ),
+                    "operation": "POST /jobs",
+                    "started_at": incident.created_at,
+                    "duration_ms": 100.0,
+                }
+            ],
+        },
+    )
+
+    def unavailable_detail(requested_trace_id):
+        assert requested_trace_id == trace_id
+
+        raise correlation.TempoQueryError(
+            "temporary detail failure"
+        )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_trace",
+        unavailable_detail,
+    )
+
+    response = client.get(
+        f"/incidents/{incident_id}/correlation"
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["sources"]["tempo"] == "available"
+    assert result["summary"]["signals_total"] == 1
+
+    signal = result["ranked_signals"][0]
+
+    assert signal["trace_id"] == trace_id
+    assert signal["score"] == 50
+    assert signal["status"] is None
+    assert signal["http_status_codes"] == []
+
+
+
+def test_correlation_v2_discovers_error_without_pre_score(
+    authenticated_client,
+    service,
+    db,
+    monkeypatch,
+):
+    client = authenticated_client
+    incident_id = create(client, service)
+    incident = db.get(Incident, incident_id)
+
+    incident.created_at = (
+        datetime.now(timezone.utc)
+        - timedelta(minutes=10)
+    )
+    db.commit()
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    trace_id = "e" * 32
+
+    started_at = (
+        incident.created_at
+        + timedelta(minutes=5)
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_captured_traces",
+        lambda *args, **kwargs: [],
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_logs",
+        lambda **kwargs: {
+            "total": 0,
+            "logs": [],
+        },
+    )
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_traces",
+        lambda **kwargs: {
+            "total": 1,
+            "traces": [
+                {
+                    "trace_id": trace_id,
+                    "service": (
+                        service.observability_name
+                    ),
+                    "operation": "GET /orders",
+                    "started_at": started_at,
+                    "duration_ms": 50.0,
+                }
+            ],
+        },
+    )
+
+    requested = []
+
+    def fake_trace_detail(requested_trace_id):
+        requested.append(
+            requested_trace_id
+        )
+
+        return {
+            "trace_id": trace_id,
+            "service": (
+                service.observability_name
+            ),
+            "operation": "GET /orders",
+            "started_at": started_at,
+            "duration_ms": 50.0,
+            "status": "error",
+            "spans_total": 1,
+            "spans": [
+                {
+                    "http_status_code": 500,
+                }
+            ],
+        }
+
+    monkeypatch.setattr(
+        correlation,
+        "get_observability_trace",
+        fake_trace_detail,
+    )
+
+    response = client.get(
+        f"/incidents/{incident_id}/correlation"
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert requested == [trace_id]
+    assert result["summary"]["signals_total"] == 1
+
+    signal = result["ranked_signals"][0]
+
+    assert signal["kind"] == "trace"
+    assert signal["trace_id"] == trace_id
+    assert signal["operation"] == "GET /orders"
+    assert signal["status"] == "error"
+    assert signal["http_status_codes"] == [500]
+    assert signal["score"] == 140
+    assert signal["severity"] == "high"
+
+
+
+def test_correlation_v2_rescores_captured_trace_after_enrichment():
+    from types import SimpleNamespace
+
+    from app.services import (
+        incident_correlation_service as correlation,
+    )
+
+    trace_id = "f" * 32
+
+    started_at = datetime(
+        2026,
+        9,
+        7,
+        10,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+    incident = SimpleNamespace(
+        created_at=started_at,
+        resolved_at=None,
+    )
+
+    captured_trace = {
+        "trace_id": trace_id,
+        "service": None,
+        "operation": (
+            "Traza capturada en un "
+            "evento del incidente"
+        ),
+        "started_at": started_at,
+        "duration_ms": None,
+        "_tempo": False,
+    }
+
+    detail = {
+        "trace_id": trace_id,
+        "service": "cloud-operations-backend",
+        "operation": "PUT /incidents/1",
+        "started_at": started_at,
+        "duration_ms": 80.0,
+        "status": "warning",
+        "spans_total": 1,
+        "spans": [
+            {
+                "http_status_code": 409,
+            }
+        ],
+    }
+
+    signal = correlation._build_trace_signal(
+        incident,
+        captured_trace,
+        {trace_id},
+        detail=detail,
+    )
+
+    assert signal is not None
+    assert signal["operation"] == "PUT /incidents/1"
+
+    # 100 captured
+    # + 20 write operation
+    # + 30 temporal proximity
+    # + 35 warning
+    # + 35 HTTP 4xx
+    assert signal["score"] == 220
+
+    assert (
+        "Operación de escritura"
+        in signal["reasons"]
+    )
+
+    assert signal["status"] == "warning"
+    assert signal["http_status_codes"] == [409]
+    assert signal["source"] == "tempo"

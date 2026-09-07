@@ -81,6 +81,9 @@ export default function IncidentCorrelation({
   const capturedTraces =
     correlation.captured_traces || [];
 
+  const rankedSignals =
+    correlation.ranked_signals || [];
+
   return (
     <div className="incident-correlation">
       <div className="incident-section-heading">
@@ -152,7 +155,194 @@ export default function IncidentCorrelation({
             {summary.captured_traces_total}
           </strong>
         </article>
+
+          <article>
+            <span>Señales prioritarias</span>
+            <strong>
+              {summary.signals_total ??
+                rankedSignals.length}
+            </strong>
+          </article>
       </div>
+
+        <section className="incident-correlation-section">
+          <div className="incident-section-heading">
+            <div>
+              <h3>Señales prioritarias</h3>
+              <p className="incident-hint">
+                Evidencia ordenada por relevancia para
+                investigar primero. El ranking no implica
+                causalidad.
+              </p>
+            </div>
+
+            <span>
+              {rankedSignals.length} resultados
+            </span>
+          </div>
+
+          {!rankedSignals.length && (
+            <div className="incident-empty">
+              No se encontraron señales con relevancia
+              suficiente durante esta ventana.
+            </div>
+          )}
+
+          {rankedSignals.length > 0 && (
+            <div className="incident-signal-list">
+              {rankedSignals.map((signal, index) => {
+                const traceIdValid =
+                  signal.trace_id &&
+                  /^[a-f0-9]{32}$/i.test(
+                    signal.trace_id,
+                  ) &&
+                  !/^0+$/.test(signal.trace_id);
+
+                const sourceLabel =
+                  {
+                    tempo: "Tempo",
+                    loki: "Loki",
+                    incident: "Incidente",
+                  }[signal.source] ||
+                  signal.source;
+
+                const kindLabel =
+                  signal.kind === "trace"
+                    ? "Traza"
+                    : "Log";
+
+                const severityLabel =
+                  {
+                    high: "Alta",
+                    medium: "Media",
+                    low: "Baja",
+                  }[signal.severity] ||
+                  signal.severity;
+
+                const technicalDetails = [
+                  signal.status
+                    ? `Estado ${signal.status}`
+                    : null,
+                  signal.level
+                    ? `Nivel ${signal.level}`
+                    : null,
+                  signal.http_status_codes?.length
+                    ? `HTTP ${signal.http_status_codes.join(
+                        ", ",
+                      )}`
+                    : null,
+                  signal.duration_ms != null
+                    ? `${signal.duration_ms} ms`
+                    : null,
+                  signal.spans_total != null
+                    ? `${signal.spans_total} spans`
+                    : null,
+                ].filter(Boolean);
+
+                return (
+                  <article
+                    className={
+                      `incident-signal-card ` +
+                      `incident-signal-card--${signal.severity}`
+                    }
+                    key={
+                      `${signal.kind}-` +
+                      `${signal.trace_id ||
+                        signal.started_at ||
+                        index}-` +
+                      `${index}`
+                    }
+                  >
+                    <div className="incident-signal-header">
+                      <div className="incident-signal-badges">
+                        <span
+                          className={
+                            `incident-signal-severity ` +
+                            `incident-signal-severity--${signal.severity}`
+                          }
+                        >
+                          {severityLabel}
+                        </span>
+
+                        <span className="incident-signal-source">
+                          {kindLabel} · {sourceLabel}
+                        </span>
+                      </div>
+
+                      <strong className="incident-signal-score">
+                        Relevancia {signal.score}
+                      </strong>
+                    </div>
+
+                    <div className="incident-signal-body">
+                      <strong className="incident-signal-title">
+                        {signal.title}
+                      </strong>
+
+                      {signal.started_at && (
+                        <time>
+                          {formatDate(
+                            signal.started_at,
+                          )}
+                        </time>
+                      )}
+
+                      {technicalDetails.length > 0 && (
+                        <span className="incident-signal-technical">
+                          {technicalDetails.join(
+                            " · ",
+                          )}
+                        </span>
+                      )}
+
+                      {signal.trace_id && (
+                        <code>
+                          {signal.trace_id}
+                        </code>
+                      )}
+
+                      {signal.message &&
+                        signal.kind === "log" && (
+                          <pre>
+                            {signal.message}
+                          </pre>
+                        )}
+                    </div>
+
+                    {signal.reasons?.length > 0 && (
+                      <ul className="incident-signal-reasons">
+                        {signal.reasons.map(
+                          (reason, reasonIndex) => (
+                            <li
+                              key={
+                                `${reason}-` +
+                                `${reasonIndex}`
+                              }
+                            >
+                              {reason}
+                            </li>
+                          ),
+                        )}
+                      </ul>
+                    )}
+
+                    {traceIdValid && (
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() =>
+                          onTrace(signal.trace_id)
+                        }
+                      >
+                        Abrir traza
+                      </button>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
       <section className="incident-correlation-section">
         <div className="incident-section-heading">
