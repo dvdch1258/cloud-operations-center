@@ -107,9 +107,31 @@ export default function Layout() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [sidebarHidden, setSidebarHidden] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    try {
+      return window.localStorage.getItem("cloudops.sidebar.hidden") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [securityOpen, setSecurityOpen] = useState(
     () => location.pathname.startsWith("/seguridad"),
   );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        "cloudops.sidebar.hidden",
+        String(sidebarHidden),
+      );
+    } catch {
+      // La aplicación sigue funcionando aunque el almacenamiento esté bloqueado.
+    }
+  }, [sidebarHidden]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -129,7 +151,11 @@ export default function Layout() {
   const initial = username.charAt(0).toUpperCase();
 
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${
+        sidebarHidden ? "app-shell--sidebar-hidden" : ""
+      }`}
+    >
       <header className="mobile-header">
         <NavLink
           to="/"
@@ -169,7 +195,55 @@ export default function Layout() {
         />
       )}
 
-      <aside className={`sidebar ${menuOpen ? "sidebar--open" : ""}`}>
+      {sidebarHidden && (
+        <button
+          type="button"
+          className="sidebar-restore-button"
+          aria-label="Mostrar barra lateral"
+          title="Mostrar barra lateral"
+          onClick={() => setSidebarHidden(false)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </button>
+      )}
+
+      <aside
+        className={`sidebar ${menuOpen ? "sidebar--open" : ""} ${
+          sidebarHidden ? "sidebar--desktop-hidden" : ""
+        }`}
+      >
+        <button
+          type="button"
+          className="sidebar__collapse-button"
+          aria-label="Ocultar barra lateral"
+          title="Ocultar barra lateral"
+          onClick={() => {
+            setSidebarHidden(true);
+            setAccountOpen(false);
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
         <NavLink
           to="/"
           end
