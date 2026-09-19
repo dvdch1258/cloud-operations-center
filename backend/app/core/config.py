@@ -70,6 +70,8 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "https://app.cloudopscenter.es",
+        "https://cloudopscenter.es",
+        "https://www.cloudopscenter.es",
     )
 
     # Rango privado 100.64.0.0/10 utilizado por NetBird.

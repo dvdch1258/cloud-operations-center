@@ -16,6 +16,16 @@ spec:
             name: frontend
             port:
               number: 80
+  - host: cloudopscenter.es
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
   - host: frontend.cloud-ops.local
     http:
       paths:

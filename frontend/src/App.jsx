@@ -9,6 +9,7 @@ import Layout from "./components/Layout";
 import IncidentsPage from "./pages/IncidentsPage";
 import IncidentDetailPage from "./pages/IncidentDetailPage";
 import LoginPage from "./pages/LoginPage";
+import LandingPage from "./pages/LandingPage";
 import ServiceDetailPage from "./pages/ServiceDetailPage";
 import ServicesPage from "./pages/ServicesPage";
 import SecurityPage from "./pages/SecurityPage";
@@ -25,8 +26,23 @@ import "./App.css";
 
 
 export default function App() {
+  const hostname =
+    window.location.hostname.toLowerCase();
+
+  const marketingHost =
+    hostname === "cloudopscenter.es" ||
+    hostname === "www.cloudopscenter.es";
+
+  if (marketingHost) {
+    return <LandingPage />;
+  }
+
   return (
     <Routes>
+      <Route
+        path="/landing"
+        element={<LandingPage />}
+      />
       <Route
         path="/login"
         element={<LoginPage />}
