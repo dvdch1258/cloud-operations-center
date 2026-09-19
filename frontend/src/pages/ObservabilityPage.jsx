@@ -1062,7 +1062,7 @@ export default function ObservabilityPage() {
           : "checking";
 
   return (
-    <section className="observability-page">
+    <section className="observability-page observability-v2">
       <header className="topbar">
         <div>
           <p className="eyebrow">
