@@ -142,6 +142,40 @@ export default function Layout() {
     }
   }, [location.pathname]);
 
+  // MOBILE_ROUTE_VIEWPORT_RESET
+  useEffect(() => {
+    const resetViewport = () => {
+      if (
+        document.activeElement &&
+        typeof document.activeElement.blur === "function"
+      ) {
+        document.activeElement.blur();
+      }
+
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+
+      document.documentElement.scrollTop = 0;
+      document.documentElement.scrollLeft = 0;
+
+      document.body.scrollTop = 0;
+      document.body.scrollLeft = 0;
+    };
+
+    resetViewport();
+
+    const frame = window.requestAnimationFrame(resetViewport);
+    const timer = window.setTimeout(resetViewport, 180);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [location.pathname]);
+
   async function handleLogout() {
     await logout();
     navigate("/login", { replace: true });
@@ -149,6 +183,43 @@ export default function Layout() {
 
   const username = user?.username || "Usuario";
   const initial = username.charAt(0).toUpperCase();
+
+  const mobileSection = (() => {
+    const path = location.pathname;
+
+    if (path.startsWith("/servicios")) return "Servicios";
+    if (path.startsWith("/incidentes")) return "Incidentes";
+    if (path.startsWith("/seguridad")) return "Seguridad";
+    if (path.startsWith("/operaciones")) return "Operaciones";
+    if (path.startsWith("/automatizaciones")) return "Automatizaciones";
+    if (path.startsWith("/observabilidad")) return "Observabilidad";
+    if (path.startsWith("/sistema")) return "Sistema";
+
+    return "Resumen";
+  })();
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
 
   return (
     <div
@@ -163,19 +234,19 @@ export default function Layout() {
           className="mobile-header__brand brand-link"
           aria-label="Ir al resumen"
         >
-          <div className="brand__logo">
+          <span className="mobile-header__logo">
             <img src="/favicon.svg" alt="" />
-          </div>
-
-          <div className="brand__copy">
-            <strong>Cloud Operations</strong>
-            <span>Operations Center</span>
-          </div>
+          </span>
+          <strong>COC</strong>
         </NavLink>
+
+        <div className="mobile-header__section" aria-live="polite">
+          {mobileSection}
+        </div>
 
         <button
           type="button"
-          className="menu-button"
+          className={`menu-button ${menuOpen ? "menu-button--open" : ""}`}
           aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((current) => !current)}
@@ -461,6 +532,81 @@ export default function Layout() {
       <main className="content">
         <Outlet />
       </main>
+
+      <nav
+        className="mobile-bottom-nav"
+        aria-label="Navegación principal móvil"
+      >
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) =>
+            `mobile-bottom-nav__item ${
+              isActive ? "mobile-bottom-nav__item--active" : ""
+            }`
+          }
+        >
+          <NavIcon name="summary" />
+          <span>Resumen</span>
+        </NavLink>
+
+        <NavLink
+          to="/servicios"
+          className={({ isActive }) =>
+            `mobile-bottom-nav__item ${
+              isActive ? "mobile-bottom-nav__item--active" : ""
+            }`
+          }
+        >
+          <NavIcon name="services" />
+          <span>Servicios</span>
+        </NavLink>
+
+        <NavLink
+          to="/incidentes"
+          className={({ isActive }) =>
+            `mobile-bottom-nav__item ${
+              isActive ? "mobile-bottom-nav__item--active" : ""
+            }`
+          }
+        >
+          <NavIcon name="incidents" />
+          <span>Incidentes</span>
+        </NavLink>
+
+        <NavLink
+          to="/seguridad"
+          className={({ isActive }) =>
+            `mobile-bottom-nav__item ${
+              isActive ? "mobile-bottom-nav__item--active" : ""
+            }`
+          }
+        >
+          <NavIcon name="security" />
+          <span>Seguridad</span>
+        </NavLink>
+
+        <button
+          type="button"
+          className={`mobile-bottom-nav__item mobile-bottom-nav__more ${
+            menuOpen ? "mobile-bottom-nav__item--active" : ""
+          }`}
+          aria-label="Abrir más secciones"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            fill="currentColor"
+          >
+            <circle cx="5" cy="12" r="1.8" />
+            <circle cx="12" cy="12" r="1.8" />
+            <circle cx="19" cy="12" r="1.8" />
+          </svg>
+          <span>Más</span>
+        </button>
+      </nav>
     </div>
   );
 }

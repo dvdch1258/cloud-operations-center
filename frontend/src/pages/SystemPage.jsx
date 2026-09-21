@@ -200,7 +200,7 @@ export default function SystemPage() {
       )}
 
 
-      <section className="platform-status">
+      <section className="platform-status system-platform-status">
         <div>
           <span
             className={
