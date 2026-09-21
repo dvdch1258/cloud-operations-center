@@ -2,20 +2,80 @@ const API_URL =
   import.meta.env.VITE_API_URL || "/api";
 
 
+/* V2_API_ERROR_NORMALIZATION */
+
+function apiErrorMessage(status, path) {
+  if (
+    status === 401 &&
+    path === "/auth/login"
+  ) {
+    return "Usuario o contraseña incorrectos.";
+  }
+
+  switch (status) {
+    case 400:
+      return "La solicitud no se pudo procesar.";
+
+    case 401:
+      return "Tu sesión ha caducado.";
+
+    case 403:
+      return "No tienes permisos para realizar esta acción.";
+
+    case 404:
+      return "El recurso solicitado no está disponible.";
+
+    case 409:
+      return "La operación no pudo completarse por un conflicto.";
+
+    case 422:
+      return "Algunos datos enviados no son válidos.";
+
+    case 429:
+      return "Se han realizado demasiadas solicitudes. Inténtalo de nuevo en unos instantes.";
+
+    default:
+      if (status >= 500) {
+        return "El servidor no pudo completar la solicitud.";
+      }
+
+      return `No se pudo completar la solicitud (${status}).`;
+  }
+}
+
+
 async function request(path, options = {}) {
-  const response = await fetch(
-    `${API_URL}${path}`,
-    {
-      ...options,
+  let response;
 
-      credentials: "include",
+  try {
+    response = await fetch(
+      `${API_URL}${path}`,
+      {
+        ...options,
 
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
+        credentials: "include",
+
+        headers: {
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
       },
-    },
-  );
+    );
+  } catch (cause) {
+    const error = new Error(
+      "No se pudo conectar con el servidor.",
+    );
+
+    error.status = 0;
+    error.networkError = true;
+
+    error.detail =
+      cause instanceof Error
+        ? cause.message
+        : String(cause);
+
+    throw error;
+  }
 
   if (
     response.status === 401 &&
@@ -27,19 +87,33 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    let message =
-      `Error HTTP ${response.status}`;
+    let detail = null;
 
     try {
       const body = await response.json();
-      message = body.detail || message;
+
+      if (
+        body &&
+        Object.prototype.hasOwnProperty.call(
+          body,
+          "detail",
+        )
+      ) {
+        detail = body.detail;
+      }
     } catch {
       // La respuesta puede no contener JSON.
     }
 
-    const error = new Error(message);
+    const error = new Error(
+      apiErrorMessage(
+        response.status,
+        path,
+      ),
+    );
 
     error.status = response.status;
+    error.detail = detail;
 
     const retryAfterHeader =
       response.headers.get("Retry-After");

@@ -553,6 +553,17 @@ export default function OperationsPage() {
           </strong>
 
           <span>{error}</span>
+
+          <div className="v2-error-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={loading || executing}
+              onClick={loadExecutions}
+            >
+              Reintentar
+            </button>
+          </div>
         </section>
       )}
 

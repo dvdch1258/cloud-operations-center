@@ -27,19 +27,73 @@ function changeValue(field, value) {
 
 function TraceDetail({ traceId }) {
   const [state, setState] = useState({ loading: true });
+  const [revision, setRevision] = useState(0);
+
   useEffect(() => {
     let active = true;
+
     setState({ loading: true });
+
     api.getObservabilityTrace(traceId).then(
-      (data) => { if (active) setState({ data }); },
-      (error) => { if (active) setState({ error: error.status === 404 ? "Esta traza ya no está disponible en Tempo o aún no se ha indexado." : error.message }); },
+      (data) => {
+        if (active) setState({ data });
+      },
+      (error) => {
+        if (active) {
+          setState({
+            error:
+              error.status === 404
+                ? "Esta traza ya no está disponible en Tempo o aún no se ha indexado."
+                : error.message,
+          });
+        }
+      },
     );
-    return () => { active = false; };
-  }, [traceId]);
+
+    return () => {
+      active = false;
+    };
+  }, [traceId, revision]);
   return <section className="incident-trace-detail" aria-live="polite">
     <h3>Detalle de traza</h3><code>{traceId}</code>
-    {state.loading && <p>Cargando traza…</p>}
-    {state.error && <p role="alert">{state.error}</p>}
+    {/* V2_INCIDENT_TELEMETRY_STATES */}
+
+    {state.loading && (
+      <div
+        className="incident-telemetry-state"
+        role="status"
+        aria-live="polite"
+      >
+        Consultando traza en Tempo…
+      </div>
+    )}
+
+    {state.error && (
+      <div
+        className="alert alert--error incident-telemetry-error"
+        role="alert"
+      >
+        <strong>
+          No se pudo cargar la traza
+        </strong>
+
+        <span>{state.error}</span>
+
+        <div className="v2-error-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() =>
+              setRevision(
+                (value) => value + 1,
+              )
+            }
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )}
     {state.data && <>
       <p>{state.data.operation} · {state.data.service} · {Number(state.data.duration_ms).toFixed(2)} ms</p>
       <div className="incident-span-list">{state.data.spans.map((span) => <article key={span.span_id}>
@@ -84,8 +138,46 @@ function Telemetry({ incidentId, kind, initialTraceId, onTrace, refreshToken }) 
       : kind === "logs"
         ? "Eventos de la aplicación identificados con este incidente. Puedes consultar también el contexto de un servicio indicando su etiqueta exacta."
         : "Trazas capturadas en los eventos de este incidente. El nombre de un servicio monitorizado puede diferir de su nombre en Tempo."}</p>
-    {state.loading && <p role="status">Consultando {kind === "logs" ? "Loki" : "las trazas"}…</p>}
-    {state.error && <div className="alert alert--error" role="alert">{state.error}</div>}
+    {state.loading && (
+      <div
+        className="incident-telemetry-state"
+        role="status"
+        aria-live="polite"
+      >
+        {kind === "logs"
+          ? "Consultando logs en Loki…"
+          : "Consultando trazas en Tempo…"}
+      </div>
+    )}
+    {state.error && (
+      <div
+        className="alert alert--error incident-telemetry-error"
+        role="alert"
+      >
+        <strong>
+          {kind === "logs"
+            ? "No se pudieron consultar los logs"
+            : "No se pudieron consultar las trazas"}
+        </strong>
+
+        <span>{state.error}</span>
+
+        <div className="v2-error-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={state.loading}
+            onClick={() =>
+              setRevision(
+                (value) => value + 1,
+              )
+            }
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )}
     {state.data && <>
       {(kind === "logs" || filter) && <p className="incident-hint">Ventana de contexto: {date(state.data.window.start_at)} — {date(state.data.window.end_at)}.{state.data.window.truncated ? " Limitada a los últimos 7 días de la ventana del incidente." : " Incluye hasta 5 minutos antes de la creación y después de la resolución."}</p>}
       <p className="incident-hint">{items.length} resultados · Máximo {kind === "logs" ? 100 : 50}</p>
@@ -176,10 +268,60 @@ export default function IncidentDetailPage() {
   const incident = data?.incident;
 
   return <div className="incident-detail">
-    <Link to="/incidentes" className="incident-back-link">← Todos los incidentes</Link>
-    {error && <div className="alert alert--error" role="alert">{error}</div>}
-    {loading && !data && <p role="status">Cargando incidente…</p>}
-    {!data && !loading && <button className="secondary-button" onClick={reload}>Reintentar</button>}
+    <Link
+      to="/incidentes"
+      className="incident-back-link"
+    >
+      ← Todos los incidentes
+    </Link>
+
+    {/* V2_INCIDENT_DETAIL_INITIAL_STATE */}
+
+    {error && (
+      <div
+        className="alert alert--error"
+        role="alert"
+      >
+        <strong>
+          {!data
+            ? "No se pudo cargar el incidente"
+            : "No se pudo completar la operación"}
+        </strong>
+
+        <span>{error}</span>
+
+        {!data && (
+          <div className="v2-error-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={loading}
+              onClick={reload}
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+      </div>
+    )}
+
+    {loading && !data && (
+      <section
+        className="panel incident-detail-state"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <strong>
+          Cargando incidente
+        </strong>
+
+        <span>
+          Recuperando contexto, línea temporal y automatizaciones…
+        </span>
+      </section>
+    )}
+
     {incident && <>
       <header className="topbar incident-detail-header">
         <div><p className="eyebrow">OPERACIONES / INCIDENTE #{incident.id}</p><h1>{incident.title}</h1>
@@ -243,7 +385,17 @@ export default function IncidentDetailPage() {
             <div className="incident-automation-list">{data.automations.map((execution) => <article key={execution.id}>
               <div className="incident-section-heading"><h3>#{execution.id} · {execution.rule_name}</h3><span className={`incident-execution-state incident-execution-state--${execution.status}`}>{executionStatuses[execution.status] || execution.status}</span></div>
               <p>{date(execution.started_at)} · {execution.duration_ms != null ? `${execution.duration_ms.toFixed(2)} ms` : "En curso"}</p>
-              {execution.error && <p role="status">{execution.error}</p>}
+              {execution.error && (
+                <details className="incident-change">
+                  <summary>
+                    Error registrado en la ejecución
+                  </summary>
+
+                  <pre>
+                    {execution.error}
+                  </pre>
+                </details>
+              )}
               <details><summary>Disparador y resultado</summary><pre>{JSON.stringify({ trigger: execution.trigger_type, payload: execution.trigger_payload, result: execution.result }, null, 2)}</pre></details>
             </article>)}</div>
             {data.automations.length < data.automations_total && <button className="secondary-button" disabled={busy || loading} onClick={() => loadMore("automations")}>Cargar más ejecuciones</button>}

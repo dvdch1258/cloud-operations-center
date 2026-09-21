@@ -16053,3 +16053,121 @@ tbody tr:hover {
     grid-column: auto;
   }
 }
+
+
+/* ============================================================
+   V2 PRODUCT POLISH — NAVIGATION
+   ============================================================ */
+
+.summary-v2-quick-link--operations {
+  grid-column: 1 / -1;
+}
+
+.service-detail__header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.service-detail__operations-link {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+
+  border: 1px solid #293d5c;
+  border-radius: 9px;
+
+  color: #cbd8eb;
+  background: rgba(18, 38, 65, 0.48);
+
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.service-detail__operations-link:hover {
+  border-color: #315cae;
+  background: rgba(24, 52, 105, 0.55);
+}
+
+@media (max-width: 700px) {
+  .summary-v2-quick-link--operations {
+    grid-column: auto;
+  }
+
+  .service-detail__header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+
+/* ============================================================
+   V2 PRODUCT POLISH — ERROR RECOVERY
+   ============================================================ */
+
+.v2-error-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.v2-error-actions .secondary-button {
+  width: auto;
+}
+
+
+/* ============================================================
+   V2 FINAL — NARROW MOBILE
+   375–430 px hardening
+   ============================================================ */
+
+@media (max-width: 430px) {
+  .operations-v2__header-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .operations-v2__last-run {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .operations-v2__header-actions
+  .refresh-button {
+    width: 100%;
+  }
+
+  .operations-v2-status__meta {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .operations-v2-latest__meta,
+  .operations-v2-latest__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .operations-v2-history-detail__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .service-detail__header-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .service-detail__operations-link,
+  .service-detail__header-actions
+  .refresh-button {
+    width: 100%;
+  }
+}

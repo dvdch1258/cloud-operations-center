@@ -245,6 +245,10 @@ const resources = {
             "Logs, metrics and traces",
           securityHint:
             "Active lockouts",
+          operations:
+            "Control center",
+          operationsHint:
+            "Runs, checks and audit history",
           metrics:
             "Metrics",
         },
@@ -498,6 +502,10 @@ const resources = {
             "Logs, métricas y trazas",
           securityHint:
             "Bloqueos activos",
+          operations:
+            "Centro de control",
+          operationsHint:
+            "Ejecuciones, checks y auditoría",
           metrics:
             "Métricas",
         },

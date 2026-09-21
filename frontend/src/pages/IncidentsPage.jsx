@@ -750,6 +750,21 @@ export default function IncidentsPage() {
           </strong>
 
           <span>{error}</span>
+
+          <div className="v2-error-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={loading || refreshing}
+              onClick={() =>
+                loadData({
+                  refresh: true,
+                })
+              }
+            >
+              Reintentar
+            </button>
+          </div>
         </section>
       )}
 

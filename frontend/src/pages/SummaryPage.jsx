@@ -575,6 +575,23 @@ export default function SummaryPage() {
               },
             )}
           </span>
+
+          <div className="v2-error-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={refreshing}
+              onClick={() =>
+                loadDashboard({
+                  refresh: true,
+                })
+              }
+            >
+              {refreshing
+                ? t("common.refreshing")
+                : t("common.refresh")}
+            </button>
+          </div>
         </div>
       )}
 
@@ -1133,6 +1150,28 @@ export default function SummaryPage() {
               <small>
                 {t(
                   "summary.quick.securityHint",
+                )}
+              </small>
+            </Link>
+
+            {/* V2_NAVIGATION_INTEGRATION */}
+            <Link
+              to="/operaciones"
+              className="summary-v2-quick-link summary-v2-quick-link--operations"
+            >
+              <span>
+                {t("nav.operations")}
+              </span>
+
+              <strong>
+                {t(
+                  "summary.quick.operations",
+                )}
+              </strong>
+
+              <small>
+                {t(
+                  "summary.quick.operationsHint",
                 )}
               </small>
             </Link>

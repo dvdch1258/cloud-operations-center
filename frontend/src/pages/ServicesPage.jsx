@@ -513,6 +513,7 @@ export default function ServicesPage() {
       </header>
 
 
+      {/* V2_CORE_ERROR_RECOVERY */}
       {error && (
         <section className="alert alert--error">
           <strong>
@@ -520,6 +521,17 @@ export default function ServicesPage() {
           </strong>
 
           <span>{error}</span>
+
+          <div className="v2-error-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={loading}
+              onClick={loadServices}
+            >
+              Reintentar
+            </button>
+          </div>
         </section>
       )}
 

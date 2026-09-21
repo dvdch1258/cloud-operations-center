@@ -249,7 +249,19 @@ export default function ServiceDetailPage() {
 
         <section className="alert alert--error">
           <strong>{t("serviceDetail.loadError")}</strong>
+
           <span>{error}</span>
+
+          <div className="v2-error-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={loading}
+              onClick={loadData}
+            >
+              {t("common.refresh")}
+            </button>
+          </div>
         </section>
       </>
     );
@@ -273,16 +285,25 @@ export default function ServiceDetailPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="refresh-button"
-          onClick={loadData}
-          disabled={loading}
-        >
-          {loading
-            ? t("serviceDetail.refreshing")
-            : t("serviceDetail.refresh")}
-        </button>
+        <div className="service-detail__header-actions">
+          <Link
+            to="/operaciones"
+            className="service-detail__operations-link"
+          >
+            {t("nav.operations")}
+          </Link>
+
+          <button
+            type="button"
+            className="refresh-button"
+            onClick={loadData}
+            disabled={loading}
+          >
+            {loading
+              ? t("serviceDetail.refreshing")
+              : t("serviceDetail.refresh")}
+          </button>
+        </div>
       </header>
 
       {error && (
