@@ -1,13 +1,17 @@
+/* SERVICES_I18N_FOUNDATION */
+/* SERVICES_I18N_VISIBLE */
 import {
   useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Link } from "react-router-dom";
 
 import { api } from "../api/client";
+import i18n from "../i18n";
 
 
 const emptyForm = {
@@ -19,37 +23,47 @@ const emptyForm = {
 
 
 const statusLabels = {
-  up: "Operativo",
-  down: "Caído",
-  unknown: "Desconocido",
+  up: "services.status.up",
+  down: "services.status.down",
+  unknown: "services.status.unknown",
 };
 
 
 const typeLabels = {
-  api: "API",
-  database: "Base de datos",
-  frontend: "Frontend",
-  monitoring: "Monitorización",
-  other: "Otro",
+  api: "services.types.api",
+  database: "services.types.database",
+  frontend: "services.types.frontend",
+  monitoring: "services.types.monitoring",
+  other: "services.types.other",
 };
 
 
 function formatTime(value) {
   if (!value) {
-    return "Sin datos";
+    return i18n.t("services.noData");
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Sin datos";
+    return i18n.t("services.noData");
   }
 
-  return date.toLocaleTimeString("es-ES", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const locale =
+    String(i18n.language || "")
+      .toLowerCase()
+      .startsWith("es")
+      ? "es-ES"
+      : "en-GB";
+
+  return date.toLocaleTimeString(
+    locale,
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    },
+  );
 }
 
 
@@ -94,6 +108,7 @@ function ServicesKpi({
 
 
 export default function ServicesPage() {
+  const { t } = useTranslation();
   const [services, setServices] =
     useState([]);
 
@@ -376,11 +391,19 @@ export default function ServicesPage() {
 
     const confirmed =
       window.confirm(
-        `¿Seguro que quieres eliminar ${
-          service?.name
-            ? `"${service.name}"`
-            : "este servicio"
-        }?`,
+        t(
+          "services.confirmDelete",
+          {
+            name: service?.name
+              ? `"${service.name}"`
+              : t(
+                  "services.inventory.service",
+                  {
+                    count: 1,
+                  },
+                ),
+          },
+        ),
       );
 
     if (!confirmed) {
@@ -406,32 +429,45 @@ export default function ServicesPage() {
       <header className="topbar services-v2__topbar">
         <div>
           <p className="eyebrow">
-            SERVICE INVENTORY
+            {t("services.eyebrow")}
           </p>
 
-          <h1>Servicios</h1>
+          <h1>
+            {t("services.title")}
+          </h1>
 
           <p className="subtitle">
-            Inventario, disponibilidad y
-            monitorización de los componentes
-            de la plataforma.
+            {t("services.subtitle")}
           </p>
         </div>
 
         <div className="services-v2__header-actions">
           <div className="services-v2__update-copy">
             <span>
-              {lastUpdatedAt
-                ? `Actualizado ${formatTime(
-                    lastUpdatedAt,
-                  )}`
-                : "Esperando datos"}
+              {t(
+                "services.updated",
+                {
+                  time: lastUpdatedAt
+                    ? formatTime(
+                        lastUpdatedAt,
+                      )
+                    : t(
+                        "services.noData",
+                      ),
+                },
+              )}
             </span>
 
             {lastCheckedAt && (
               <small>
-                Check manual{" "}
-                {formatTime(lastCheckedAt)}
+                {t(
+                  "services.lastManualCheck",
+                  {
+                    time: formatTime(
+                      lastCheckedAt,
+                    ),
+                  },
+                )}
               </small>
             )}
           </div>
@@ -447,8 +483,8 @@ export default function ServicesPage() {
             </span>
 
             {checking
-              ? "Comprobando..."
-              : "Comprobar ahora"}
+              ? t("services.checking")
+              : t("services.checkNow")}
           </button>
 
           <button
@@ -490,7 +526,7 @@ export default function ServicesPage() {
 
       <section className="services-v2-kpis">
         <ServicesKpi
-          label="Servicios"
+          label={t("services.kpi.services")}
           value={
             loading
               ? "—"
@@ -500,7 +536,7 @@ export default function ServicesPage() {
         />
 
         <ServicesKpi
-          label="Operativos"
+          label={t("services.kpi.operational")}
           value={
             loading
               ? "—"
@@ -519,7 +555,7 @@ export default function ServicesPage() {
         />
 
         <ServicesKpi
-          label="Caídos"
+          label={t("services.kpi.down")}
           value={
             loading
               ? "—"
@@ -538,7 +574,7 @@ export default function ServicesPage() {
         />
 
         <ServicesKpi
-          label="Uptime medio · 1h"
+          label={t("services.kpi.averageUptime")}
           value={
             loading
               ? "—"
@@ -551,7 +587,7 @@ export default function ServicesPage() {
           description={
             stats.unknown > 0
               ? `${stats.unknown} con estado desconocido`
-              : "Disponibilidad monitorizada"
+              : t("services.kpi.monitoredAvailability")
           }
           tone={
             stats.averageUptime == null
@@ -578,7 +614,7 @@ export default function ServicesPage() {
 
               <h2>
                 {editingId
-                  ? "Editar servicio"
+                  ? t("services.form.editTitle")
                   : "Nuevo servicio"}
               </h2>
 
@@ -592,7 +628,7 @@ export default function ServicesPage() {
             <button
               type="button"
               className="services-v2-form-panel__close"
-              aria-label="Cerrar formulario"
+              aria-label={t("services.form.close")}
               onClick={cancelEditing}
             >
               ×
@@ -604,7 +640,7 @@ export default function ServicesPage() {
             onSubmit={submitService}
           >
             <label>
-              <span>Nombre</span>
+              <span>{t("services.form.name")}</span>
 
               <input
                 name="name"
@@ -616,7 +652,7 @@ export default function ServicesPage() {
             </label>
 
             <label>
-              <span>Tipo</span>
+              <span>{t("services.form.type")}</span>
 
               <select
                 name="type"
@@ -627,56 +663,46 @@ export default function ServicesPage() {
                   API
                 </option>
 
-                <option value="database">
-                  Base de datos
-                </option>
+                <option value="database">{t("services.types.database")}</option>
 
                 <option value="frontend">
                   Frontend
                 </option>
 
-                <option value="monitoring">
-                  Monitorización
-                </option>
+                <option value="monitoring">{t("services.types.monitoring")}</option>
 
-                <option value="other">
-                  Otro
-                </option>
+                <option value="other">{t("services.types.other")}</option>
               </select>
             </label>
 
             <label className="services-v2-form__endpoint">
-              <span>Endpoint</span>
+              <span>{t("services.form.endpoint")}</span>
 
               <input
                 name="endpoint"
                 value={form.endpoint}
                 onChange={updateField}
-                placeholder="http://servicio:puerto"
+                placeholder={t(
+                  "services.form.endpointPlaceholder",
+                )}
                 required
               />
             </label>
 
             {editingId && (
               <label>
-                <span>Estado</span>
+                <span>{t("services.table.status")}</span>
 
                 <select
                   name="status"
                   value={form.status}
                   onChange={updateField}
                 >
-                  <option value="unknown">
-                    Desconocido
-                  </option>
+                  <option value="unknown">{t("services.status.unknown")}</option>
 
-                  <option value="up">
-                    Operativo
-                  </option>
+                  <option value="up">{t("services.status.up")}</option>
 
-                  <option value="down">
-                    Caído
-                  </option>
+                  <option value="down">{t("services.status.down")}</option>
                 </select>
               </label>
             )}
@@ -686,9 +712,7 @@ export default function ServicesPage() {
                 type="button"
                 className="secondary-button"
                 onClick={cancelEditing}
-              >
-                Cancelar
-              </button>
+              >{t("services.form.cancel")}</button>
 
               <button
                 type="submit"
@@ -696,10 +720,10 @@ export default function ServicesPage() {
                 disabled={saving}
               >
                 {saving
-                  ? "Guardando..."
+                  ? t("services.form.saving")
                   : editingId
-                    ? "Guardar cambios"
-                    : "Crear servicio"}
+                    ? t("services.form.save")
+                    : t("services.form.create")}
               </button>
             </div>
           </form>
@@ -710,18 +734,11 @@ export default function ServicesPage() {
       <section className="services-v2-inventory">
         <div className="services-v2-inventory__header">
           <div>
-            <span>
-              INVENTARIO MONITORIZADO
-            </span>
+            <span>{t("services.inventory.eyebrow")}</span>
 
-            <h2>
-              Servicios registrados
-            </h2>
+            <h2>{t("services.inventory.title")}</h2>
 
-            <p>
-              Estado, disponibilidad y
-              telemetría de cada componente.
-            </p>
+            <p>{t("services.inventory.description")}</p>
           </div>
 
           <div className="services-v2-inventory__count">
@@ -730,18 +747,19 @@ export default function ServicesPage() {
             </strong>
 
             <span>
-              {services.length === 1
-                ? "servicio"
-                : "servicios"}
+              {t(
+                "services.inventory.service",
+                {
+                  count: services.length,
+                },
+              )}
             </span>
           </div>
         </div>
 
 
         {loading && services.length === 0 && (
-          <div className="services-v2-loading">
-            Cargando servicios...
-          </div>
+          <div className="services-v2-loading">{t("services.inventory.loading")}</div>
         )}
 
 
@@ -753,23 +771,16 @@ export default function ServicesPage() {
               </div>
 
               <div>
-                <strong>
-                  No hay servicios registrados
-                </strong>
+                <strong>{t("services.inventory.emptyTitle")}</strong>
 
-                <p>
-                  Añade el primer componente
-                  para comenzar a monitorizarlo.
-                </p>
+                <p>{t("services.inventory.emptyDescription")}</p>
               </div>
 
               <button
                 type="button"
                 className="primary-button"
                 onClick={openNewService}
-              >
-                Nuevo servicio
-              </button>
+              >{t("services.newService")}</button>
             </div>
           )}
 
@@ -777,12 +788,12 @@ export default function ServicesPage() {
         {services.length > 0 && (
           <div className="services-v2-list">
             <div className="services-v2-row services-v2-row--header">
-              <span>Servicio</span>
-              <span>Estado</span>
-              <span>Uptime · 1h</span>
-              <span>Latencia</span>
-              <span>Último check</span>
-              <span>Acciones</span>
+              <span>{t("services.table.service")}</span>
+              <span>{t("services.table.status")}</span>
+              <span>{t("services.table.uptime1h")}</span>
+              <span>{t("services.table.latency")}</span>
+              <span>{t("services.table.lastCheck")}</span>
+              <span>{t("services.table.actions")}</span>
             </div>
 
             {services.map((service) => {
@@ -823,10 +834,13 @@ export default function ServicesPage() {
 
                       <div className="services-v2-service__meta">
                         <span>
-                          {typeLabels[
-                            service.type
-                          ] ||
-                            service.type}
+                          {typeLabels[service.type]
+                          ? t(
+                              typeLabels[
+                                service.type
+                              ],
+                            )
+                          : service.type}
                         </span>
 
                         <span>
@@ -843,24 +857,27 @@ export default function ServicesPage() {
 
                   <div
                     className="services-v2-row__metric"
-                    data-label="Estado"
+                    data-label={t("services.table.status")}
                   >
                     <span
                       className={`services-v2-status services-v2-status--${service.status}`}
                     >
                       <span />
 
-                      {statusLabels[
-                        service.status
-                      ] ||
-                        service.status}
+                      {statusLabels[service.status]
+                        ? t(
+                            statusLabels[
+                              service.status
+                            ],
+                          )
+                        : service.status}
                     </span>
                   </div>
 
 
                   <div
                     className="services-v2-row__metric"
-                    data-label="Uptime · 1h"
+                    data-label={t("services.table.uptime1h")}
                   >
                     <strong
                       className={`services-v2-uptime services-v2-uptime--${tone}`}
@@ -899,7 +916,7 @@ export default function ServicesPage() {
 
                   <div
                     className="services-v2-row__metric"
-                    data-label="Latencia"
+                    data-label={t("services.table.latency")}
                   >
                     <strong>
                       {latency != null
@@ -911,15 +928,13 @@ export default function ServicesPage() {
                         : "—"}
                     </strong>
 
-                    <span>
-                      Media última hora
-                    </span>
+                    <span>{t("services.table.averageLastHour")}</span>
                   </div>
 
 
                   <div
                     className="services-v2-row__metric"
-                    data-label="Último check"
+                    data-label={t("services.table.lastCheck")}
                   >
                     <strong>
                       {formatTime(
@@ -928,9 +943,7 @@ export default function ServicesPage() {
                       )}
                     </strong>
 
-                    <span>
-                      Monitorización
-                    </span>
+                    <span>{t("services.types.monitoring")}</span>
                   </div>
 
 
@@ -938,9 +951,7 @@ export default function ServicesPage() {
                     <Link
                       className="services-v2-action services-v2-action--primary"
                       to={`/servicios/${service.id}`}
-                    >
-                      Detalle
-                    </Link>
+                    >{t("services.table.detail")}</Link>
 
                     <button
                       type="button"
@@ -950,9 +961,7 @@ export default function ServicesPage() {
                           service,
                         )
                       }
-                    >
-                      Editar
-                    </button>
+                    >{t("services.table.edit")}</button>
 
                     <button
                       type="button"
@@ -962,9 +971,7 @@ export default function ServicesPage() {
                           service.id,
                         )
                       }
-                    >
-                      Eliminar
-                    </button>
+                    >{t("services.table.delete")}</button>
                   </div>
                 </article>
               );

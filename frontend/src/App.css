@@ -15138,3 +15138,173 @@ tbody tr:hover {
     padding: 10px;
   }
 }
+
+/* ============================================================
+   I18N LANGUAGE SWITCHER
+   ============================================================ */
+
+.language-switcher {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 4px;
+
+  margin:
+    0
+    12px
+    14px;
+
+  padding: 4px;
+
+  border:
+    1px solid rgba(67, 92, 128, 0.22);
+  border-radius: 10px;
+
+  background:
+    rgba(7, 15, 27, 0.52);
+}
+
+.language-switcher__button {
+  min-width: 0;
+  min-height: 32px;
+
+  padding: 0 8px;
+
+  border: 1px solid transparent;
+  border-radius: 7px;
+
+  color: #6f819b;
+  background: transparent;
+
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 800;
+
+  letter-spacing: 0.08em;
+
+  cursor: pointer;
+
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.language-switcher__button:hover {
+  color: #dce7f7;
+
+  background:
+    rgba(37, 62, 98, 0.35);
+}
+
+.language-switcher__button--active {
+  border-color:
+    rgba(78, 133, 255, 0.28);
+
+  color: #dce8ff;
+
+  background:
+    rgba(58, 104, 202, 0.22);
+}
+
+.language-switcher__button:focus-visible {
+  outline:
+    2px solid rgba(88, 143, 255, 0.72);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .language-switcher {
+    margin:
+      4px
+      12px
+      14px;
+  }
+
+  .language-switcher__button {
+    min-height: 44px;
+
+    font-size: 0.7rem;
+  }
+}
+
+/* ============================================================
+   I18N LANGUAGE SWITCHER — COMPACT
+   ============================================================ */
+
+.language-switcher {
+  display: inline-flex;
+  grid-template-columns: none;
+
+  width: auto;
+
+  margin:
+    0
+    12px
+    12px
+    auto;
+
+  padding: 2px;
+
+  gap: 2px;
+
+  border-radius: 8px;
+}
+
+.language-switcher__button {
+  min-width: 28px;
+  min-height: 26px;
+
+  padding: 0 6px;
+
+  border-radius: 6px;
+
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+}
+
+.login-card {
+  position: relative;
+}
+
+.login-card
+.language-switcher--login {
+  position: absolute;
+
+  top: 12px;
+  right: 12px;
+
+  margin: 0;
+
+  z-index: 2;
+}
+
+@media (max-width: 900px) {
+  .language-switcher {
+    width: auto;
+
+    margin:
+      2px
+      12px
+      10px
+      auto;
+  }
+
+  .language-switcher__button {
+    min-width: 30px;
+    min-height: 30px;
+
+    padding: 0 6px;
+
+    font-size: 0.6rem;
+  }
+
+  .login-card
+  .language-switcher--login {
+    top: 10px;
+    right: 10px;
+
+    margin: 0;
+  }
+}

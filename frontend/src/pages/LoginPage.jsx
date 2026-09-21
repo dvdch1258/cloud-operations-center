@@ -9,15 +9,21 @@ import {
   useNavigate,
 } from "react-router-dom";
 
+import {
+  useTranslation,
+} from "react-i18next";
+
 import { useAuth } from "../auth/AuthContext";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 
 function formatCountdown(totalSeconds) {
   const minutes = Math.floor(
-    totalSeconds / 60
+    totalSeconds / 60,
   );
 
-  const seconds = totalSeconds % 60;
+  const seconds =
+    totalSeconds % 60;
 
   return `${String(minutes).padStart(
     2,
@@ -36,15 +42,37 @@ export default function LoginPage() {
     login,
   } = useAuth();
 
+  const {
+    t,
+  } = useTranslation();
+
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [lockSeconds, setLockSeconds] =
-    useState(0);
+  const [
+    username,
+    setUsername,
+  ] = useState("");
+
+  const [
+    password,
+    setPassword,
+  ] = useState("");
+
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
+
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+  const [
+    lockSeconds,
+    setLockSeconds,
+  ] = useState(0);
 
 
   useEffect(() => {
@@ -52,14 +80,19 @@ export default function LoginPage() {
       return undefined;
     }
 
-    const timer = window.setTimeout(
-      () => {
-        setLockSeconds((current) =>
-          Math.max(0, current - 1)
-        );
-      },
-      1000,
-    );
+    const timer =
+      window.setTimeout(
+        () => {
+          setLockSeconds(
+            (current) =>
+              Math.max(
+                0,
+                current - 1,
+              ),
+          );
+        },
+        1000,
+      );
 
     return () => {
       window.clearTimeout(timer);
@@ -70,15 +103,25 @@ export default function LoginPage() {
   if (loading) {
     return (
       <div className="auth-loading">
-        <div className="brand__logo">CO</div>
-        <span>Validando sesión...</span>
+        <div className="brand__logo">
+          CO
+        </div>
+
+        <span>
+          {t("login.validating")}
+        </span>
       </div>
     );
   }
 
 
   if (user) {
-    return <Navigate to="/" replace />;
+    return (
+      <Navigate
+        to="/"
+        replace
+      />
+    );
   }
 
 
@@ -99,27 +142,32 @@ export default function LoginPage() {
       );
 
       const destination =
-        location.state?.from?.pathname || "/";
+        location.state
+          ?.from
+          ?.pathname || "/";
 
-      navigate(destination, {
-        replace: true,
-      });
+      navigate(
+        destination,
+        {
+          replace: true,
+        },
+      );
     } catch (err) {
       if (err.status === 429) {
         setLockSeconds(
-          Number.isFinite(err.retryAfter)
+          Number.isFinite(
+            err.retryAfter,
+          )
             ? err.retryAfter
-            : 15 * 60
+            : 15 * 60,
         );
 
         setError(
-          err.message ||
-            "Cuenta bloqueada temporalmente."
+          t("login.errors.locked"),
         );
       } else {
         setError(
-          err.message ||
-            "No se pudo iniciar sesión",
+          t("login.errors.failed"),
         );
       }
     } finally {
@@ -131,25 +179,41 @@ export default function LoginPage() {
   return (
     <main className="login-page">
       <section className="login-card">
+        <LanguageSwitcher
+          className="language-switcher--login"
+        />
+
         <div className="login-brand">
-          <div className="brand__logo">CO</div>
+          <div className="brand__logo">
+            CO
+          </div>
 
           <div>
-            <strong>Cloud Operations</strong>
-            <span>Observabilidad · Operaciones</span>
+            <strong>
+              Cloud Operations
+            </strong>
+
+            <span>
+              {t(
+                "login.brandTagline",
+              )}
+            </span>
           </div>
         </div>
 
         <div className="login-card__heading">
           <p className="eyebrow">
-            CONEXIÓN SEGURA
+            {t("login.eyebrow")}
           </p>
 
-          <h1>Iniciar sesión</h1>
+          <h1>
+            {t("login.title")}
+          </h1>
 
           <p>
-            Identifícate para acceder al centro
-            de operaciones.
+            {t(
+              "login.description",
+            )}
           </p>
         </div>
 
@@ -157,16 +221,29 @@ export default function LoginPage() {
           <div className="alert alert--error">
             <strong>
               {lockSeconds > 0
-                ? "Acceso temporalmente bloqueado"
-                : "No se pudo iniciar sesión"}
+                ? t(
+                    "login.accessBlocked",
+                  )
+                : t(
+                    "login.signInFailed",
+                  )}
             </strong>
 
-            <span>{error}</span>
+            <span>
+              {error}
+            </span>
 
             {lockSeconds > 0 && (
               <span>
-                Puedes volver a intentarlo en{" "}
-                {formatCountdown(lockSeconds)}
+                {t(
+                  "login.retryIn",
+                  {
+                    countdown:
+                      formatCountdown(
+                        lockSeconds,
+                      ),
+                  },
+                )}
               </span>
             )}
           </div>
@@ -177,7 +254,7 @@ export default function LoginPage() {
           onSubmit={handleSubmit}
         >
           <label>
-            Usuario
+            {t("login.username")}
 
             <input
               type="text"
@@ -186,13 +263,15 @@ export default function LoginPage() {
               required
               maxLength={100}
               onChange={(event) =>
-                setUsername(event.target.value)
+                setUsername(
+                  event.target.value,
+                )
               }
             />
           </label>
 
           <label>
-            Contraseña
+            {t("login.password")}
 
             <input
               type="password"
@@ -200,7 +279,9 @@ export default function LoginPage() {
               autoComplete="current-password"
               required
               onChange={(event) =>
-                setPassword(event.target.value)
+                setPassword(
+                  event.target.value,
+                )
               }
             />
           </label>
@@ -209,22 +290,36 @@ export default function LoginPage() {
             type="submit"
             className="primary-button login-button"
             disabled={
-              submitting || lockSeconds > 0
+              submitting ||
+              lockSeconds > 0
             }
           >
             {lockSeconds > 0
-              ? `Bloqueado · ${formatCountdown(
-                  lockSeconds
-                )}`
+              ? t(
+                  "login.lockedButton",
+                  {
+                    countdown:
+                      formatCountdown(
+                        lockSeconds,
+                      ),
+                  },
+                )
               : submitting
-                ? "Iniciando sesión..."
-                : "Entrar"}
+                ? t(
+                    "login.submitting",
+                  )
+                : t(
+                    "login.submit",
+                  )}
           </button>
         </form>
 
         <div className="login-security">
           <span className="connection-dot" />
-          Conexión cifrada · TLS
+
+          {t(
+            "login.encryptedConnection",
+          )}
         </div>
       </section>
     </main>
