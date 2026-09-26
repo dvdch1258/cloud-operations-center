@@ -1,27 +1,19 @@
 import {
-  createContext,
-  useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
 
 import { api } from "../api/client";
-
-
-const AuthContext = createContext(null);
-
+import AuthContext from "./AuthContext";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-
   useEffect(() => {
     let active = true;
 
-    // Elimina el JWT antiguo de la versión
-    // anterior basada en localStorage.
     localStorage.removeItem(
       "cloud_ops_access_token"
     );
@@ -52,7 +44,6 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-
   useEffect(() => {
     function handleUnauthorized() {
       setUser(null);
@@ -71,22 +62,13 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-
-  async function login(
-    username,
-    password,
-  ) {
+  async function login(username, password) {
     const currentUser =
-      await api.login(
-        username,
-        password,
-      );
+      await api.login(username, password);
 
     setUser(currentUser);
-
     return currentUser;
   }
-
 
   async function logout() {
     try {
@@ -95,7 +77,6 @@ export function AuthProvider({ children }) {
       setUser(null);
     }
   }
-
 
   const value = useMemo(
     () => ({
@@ -108,24 +89,9 @@ export function AuthProvider({ children }) {
     [user, loading],
   );
 
-
   return (
     <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-
-export function useAuth() {
-  const context =
-    useContext(AuthContext);
-
-  if (!context) {
-    throw new Error(
-      "useAuth debe utilizarse dentro de AuthProvider"
-    );
-  }
-
-  return context;
 }
