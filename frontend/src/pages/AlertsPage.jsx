@@ -4,25 +4,50 @@ import {
   useState,
 } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { api } from "../api/client";
 
 
-const SEVERITY_LABELS = {
-  CRITICAL: "Crítica",
-  HIGH: "Alta",
-  MEDIUM: "Media",
-  LOW: "Baja",
-  UNKNOWN: "Desconocida",
-};
+const severityKeys = new Set([
+  "CRITICAL",
+  "HIGH",
+  "MEDIUM",
+  "LOW",
+  "UNKNOWN",
+]);
 
-const STATUS_LABELS = {
-  open: "Abierta",
-  acknowledged: "Reconocida",
-  resolved: "Resuelta",
-};
+const statusKeys = new Set([
+  "open",
+  "acknowledged",
+  "resolved",
+]);
 
 
-function formatDate(value) {
+function severityLabel(value, t) {
+  return severityKeys.has(value)
+    ? t(`alerts.severity.${value}`)
+    : value;
+}
+
+
+function statusLabel(value, t) {
+  return statusKeys.has(value)
+    ? t(`alerts.status.${value}`)
+    : value;
+}
+
+
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
+}
+
+
+function formatDate(value, language) {
   if (!value) {
     return "—";
   }
@@ -33,17 +58,24 @@ function formatDate(value) {
     return "—";
   }
 
-  return date.toLocaleString("es-ES", {
+  return date.toLocaleString(
+    localeForLanguage(language),
+    {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit",
-  });
+      minute: "2-digit",
+    },
+  );
 }
 
 
 export default function AlertsPage() {
+  const { t, i18n } = useTranslation();
+  const language =
+    i18n.resolvedLanguage || i18n.language;
+
   const [summary, setSummary] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [status, setStatus] = useState("");
@@ -88,12 +120,12 @@ export default function AlertsPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-        "No se pudieron cargar las alertas.",
+        t("alerts.errors.load"),
       );
     } finally {
       setLoading(false);
     }
-  }, [status, severity, component]);
+  }, [status, severity, component, t]);
 
 
   useEffect(() => {
@@ -116,7 +148,7 @@ export default function AlertsPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-        "No se pudo actualizar la alerta.",
+        t("alerts.errors.update"),
       );
     } finally {
       setActionId(null);
@@ -129,14 +161,13 @@ export default function AlertsPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            SECURITY OPERATIONS
+            {t("alerts.eyebrow")}
           </p>
 
-          <h1>Alertas</h1>
+          <h1>{t("alerts.title")}</h1>
 
           <p className="subtitle">
-            Alertas de seguridad activas generadas
-            automáticamente por la plataforma.
+            {t("alerts.subtitle")}
           </p>
         </div>
 
@@ -147,15 +178,15 @@ export default function AlertsPage() {
           onClick={loadAlerts}
         >
           {loading
-            ? "Actualizando..."
-            : "Actualizar"}
+            ? t("alerts.refreshing")
+            : t("alerts.refresh")}
         </button>
       </header>
 
       {error && (
         <div className="alert alert--error">
           <strong>
-            No se pudieron procesar las alertas
+            {t("alerts.errors.heading")}
           </strong>
           <span>{error}</span>
         </div>
@@ -163,57 +194,57 @@ export default function AlertsPage() {
 
       <div className="metrics-grid alert-metrics">
         <article className="metric-card">
-          <span>Total alertas</span>
+          <span>{t("alerts.kpi.total")}</span>
           <strong className="metric-card__value">
             {loading ? "—" : summary?.total ?? 0}
           </strong>
-          <p>Histórico registrado</p>
+          <p>{t("alerts.kpi.totalDescription")}</p>
         </article>
 
         <article className="metric-card metric-card--warning">
-          <span>Abiertas</span>
+          <span>{t("alerts.kpi.open")}</span>
           <strong className="metric-card__value">
             {loading ? "—" : summary?.open ?? 0}
           </strong>
-          <p>Pendientes de actuación</p>
+          <p>{t("alerts.kpi.openDescription")}</p>
         </article>
 
         <article className="metric-card">
-          <span>Reconocidas</span>
+          <span>{t("alerts.kpi.acknowledged")}</span>
           <strong className="metric-card__value">
             {loading
               ? "—"
               : summary?.acknowledged ?? 0}
           </strong>
-          <p>En revisión</p>
+          <p>{t("alerts.kpi.acknowledgedDescription")}</p>
         </article>
 
         <article className="metric-card">
-          <span>Resueltas</span>
+          <span>{t("alerts.kpi.resolved")}</span>
           <strong className="metric-card__value">
             {loading ? "—" : summary?.resolved ?? 0}
           </strong>
-          <p>Sin riesgo activo</p>
+          <p>{t("alerts.kpi.resolvedDescription")}</p>
         </article>
 
         <article className="metric-card metric-card--danger">
-          <span>Críticas activas</span>
+          <span>{t("alerts.kpi.criticalActive")}</span>
           <strong className="metric-card__value">
             {loading
               ? "—"
               : summary?.critical_active ?? 0}
           </strong>
-          <p>Prioridad inmediata</p>
+          <p>{t("alerts.kpi.criticalActiveDescription")}</p>
         </article>
 
         <article className="metric-card metric-card--warning">
-          <span>Altas activas</span>
+          <span>{t("alerts.kpi.highActive")}</span>
           <strong className="metric-card__value">
             {loading
               ? "—"
               : summary?.high_active ?? 0}
           </strong>
-          <p>Riesgo elevado</p>
+          <p>{t("alerts.kpi.highActiveDescription")}</p>
         </article>
       </div>
 
@@ -221,19 +252,21 @@ export default function AlertsPage() {
         <div className="security-panel-header">
           <div>
             <p className="eyebrow">
-              SECURITY ALERTING
+              {t("alerts.inventory.eyebrow")}
             </p>
 
-            <h2>Alertas detectadas</h2>
+            <h2>{t("alerts.inventory.title")}</h2>
 
             <p>
-              Estado operativo de los riesgos
-              detectados automáticamente.
+              {t("alerts.inventory.description")}
             </p>
           </div>
 
           <span className="security-event-count">
-            {alerts.length} resultados
+            {t(
+              "alerts.inventory.results",
+              { count: alerts.length },
+            )}
           </span>
         </div>
 
@@ -244,12 +277,18 @@ export default function AlertsPage() {
               setStatus(event.target.value)
             }
           >
-            <option value="">Todos los estados</option>
-            <option value="open">Abiertas</option>
-            <option value="acknowledged">
-              Reconocidas
+            <option value="">
+              {t("alerts.filters.allStatuses")}
             </option>
-            <option value="resolved">Resueltas</option>
+            <option value="open">
+              {statusLabel("open", t)}
+            </option>
+            <option value="acknowledged">
+              {statusLabel("acknowledged", t)}
+            </option>
+            <option value="resolved">
+              {statusLabel("resolved", t)}
+            </option>
           </select>
 
           <select
@@ -258,11 +297,21 @@ export default function AlertsPage() {
               setSeverity(event.target.value)
             }
           >
-            <option value="">Todas las severidades</option>
-            <option value="CRITICAL">Crítica</option>
-            <option value="HIGH">Alta</option>
-            <option value="MEDIUM">Media</option>
-            <option value="LOW">Baja</option>
+            <option value="">
+              {t("alerts.filters.allSeverities")}
+            </option>
+            <option value="CRITICAL">
+              {severityLabel("CRITICAL", t)}
+            </option>
+            <option value="HIGH">
+              {severityLabel("HIGH", t)}
+            </option>
+            <option value="MEDIUM">
+              {severityLabel("MEDIUM", t)}
+            </option>
+            <option value="LOW">
+              {severityLabel("LOW", t)}
+            </option>
           </select>
 
           <select
@@ -271,26 +320,35 @@ export default function AlertsPage() {
               setComponent(event.target.value)
             }
           >
-            <option value="">Todos los componentes</option>
-            <option value="backend">Backend</option>
-            <option value="frontend">Frontend</option>
+            <option value="">
+              {t("alerts.filters.allComponents")}
+            </option>
+            <option value="backend">
+              {t("alerts.filters.backend")}
+            </option>
+            <option value="frontend">
+              {t("alerts.filters.frontend")}
+            </option>
           </select>
         </div>
 
         <p className="vulnerability-scan-date">
-          Última actividad:{" "}
+          {t("alerts.inventory.lastActivity")}{" "}
           <strong>
-            {formatDate(summary?.last_seen_at)}
+            {formatDate(
+              summary?.last_seen_at,
+              language,
+            )}
           </strong>
         </p>
         {loading ? (
           <div className="security-empty">
-            Cargando alertas...
+            {t("alerts.inventory.loading")}
           </div>
         ) : alerts.length === 0 ? (
           <div className="security-empty">
             <strong>
-              No hay alertas para estos filtros
+              {t("alerts.inventory.empty")}
             </strong>
           </div>
         ) : (
@@ -298,13 +356,13 @@ export default function AlertsPage() {
             <table className="security-table alert-table">
               <thead>
                 <tr>
-                  <th>Severidad</th>
-                  <th>Alerta</th>
-                  <th>Componente</th>
-                  <th>Paquete</th>
-                  <th>Estado</th>
-                  <th>Última detección</th>
-                  <th>Acciones</th>
+                  <th>{t("alerts.table.severity")}</th>
+                  <th>{t("alerts.table.alert")}</th>
+                  <th>{t("alerts.table.component")}</th>
+                  <th>{t("alerts.table.package")}</th>
+                  <th>{t("alerts.table.status")}</th>
+                  <th>{t("alerts.table.lastSeen")}</th>
+                  <th>{t("alerts.table.actions")}</th>
                 </tr>
               </thead>
 
@@ -318,8 +376,10 @@ export default function AlertsPage() {
                           `security-severity--${alert.severity.toLowerCase()}`
                         }
                       >
-                        {SEVERITY_LABELS[alert.severity] ||
-                          alert.severity}
+                        {severityLabel(
+                          alert.severity,
+                          t,
+                        )}
                       </span>
                     </td>
 
@@ -349,13 +409,18 @@ export default function AlertsPage() {
                           `security-alert-status--${alert.status}`
                         }
                       >
-                        {STATUS_LABELS[alert.status] ||
-                          alert.status}
+                        {statusLabel(
+                          alert.status,
+                          t,
+                        )}
                       </span>
                     </td>
 
                     <td>
-                      {formatDate(alert.last_seen_at)}
+                      {formatDate(
+                        alert.last_seen_at,
+                        language,
+                      )}
                     </td>
 
                     <td>
@@ -372,7 +437,7 @@ export default function AlertsPage() {
                               )
                             }
                           >
-                            Reconocer
+                            {t("alerts.actions.acknowledge")}
                           </button>
                         )}
 
@@ -388,13 +453,13 @@ export default function AlertsPage() {
                               )
                             }
                           >
-                            Resolver
+                            {t("alerts.actions.resolve")}
                           </button>
                         )}
 
                         {alert.status === "resolved" && (
                           <span className="security-alert-no-action">
-                            Sin acciones
+                            {t("alerts.actions.none")}
                           </span>
                         )}
                       </div>

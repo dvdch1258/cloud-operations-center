@@ -296,7 +296,7 @@ export default function ServicesPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-          "No se pudo ejecutar la comprobación.",
+          t("services.errors.check"),
       );
     } finally {
       setChecking(false);
@@ -375,7 +375,7 @@ export default function ServicesPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-          "No se pudo guardar el servicio.",
+          t("services.errors.save"),
       );
     } finally {
       setSaving(false);
@@ -418,7 +418,7 @@ export default function ServicesPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-          "No se pudo eliminar el servicio.",
+          t("services.errors.delete"),
       );
     }
   }
@@ -506,8 +506,8 @@ export default function ServicesPage() {
             </span>
 
             {formOpen && !editingId
-              ? "Cerrar formulario"
-              : "Nuevo servicio"}
+              ? t("services.form.close")
+              : t("services.newService")}
           </button>
         </div>
       </header>
@@ -517,7 +517,7 @@ export default function ServicesPage() {
       {error && (
         <section className="alert alert--error">
           <strong>
-            No se pudo completar la operación
+            {t("services.errors.operation")}
           </strong>
 
           <span>{error}</span>
@@ -529,7 +529,7 @@ export default function ServicesPage() {
               disabled={loading}
               onClick={loadServices}
             >
-              Reintentar
+              {t("services.retry")}
             </button>
           </div>
         </section>
@@ -620,20 +620,20 @@ export default function ServicesPage() {
             <div>
               <span>
                 {editingId
-                  ? "EDICIÓN"
-                  : "ALTA DE SERVICIO"}
+                  ? t("services.form.editEyebrow")
+                  : t("services.form.createEyebrow")}
               </span>
 
               <h2>
                 {editingId
                   ? t("services.form.editTitle")
-                  : "Nuevo servicio"}
+                  : t("services.form.createTitle")}
               </h2>
 
               <p>
                 {editingId
-                  ? "Actualiza la configuración del componente monitorizado."
-                  : "Registra un nuevo endpoint para incorporarlo a la monitorización."}
+                  ? t("services.form.editDescription")
+                  : t("services.form.createDescription")}
               </p>
             </div>
 

@@ -6,48 +6,57 @@ import {
 } from "react";
 
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { api } from "../api/client";
 
 
-function operationLabel(operation) {
+function operationLabel(operation, t) {
   if (operation === "service_health_check") {
-    return "Comprobación de servicios";
+    return t("operations.operation.serviceHealthCheck");
   }
 
-  return operation || "Operación";
+  return operation || t("operations.operation.generic");
 }
 
 
-function statusLabel(status) {
+function statusLabel(status, t) {
   switch (status) {
     case "success":
-      return "Completada";
+      return t("operations.status.success");
     case "failed":
-      return "Fallida";
+      return t("operations.status.failed");
     case "running":
-      return "En ejecución";
+      return t("operations.status.running");
     default:
-      return status || "Desconocido";
+      return status || t("operations.status.unknown");
   }
 }
 
 
-function serviceStatusLabel(status) {
+function serviceStatusLabel(status, t) {
   switch (status) {
     case "up":
-      return "Operativo";
+      return t("operations.serviceStatus.up");
     case "down":
-      return "No disponible";
+      return t("operations.serviceStatus.down");
     case "unknown":
-      return "Desconocido";
+      return t("operations.serviceStatus.unknown");
     default:
-      return status || "Desconocido";
+      return status || t("operations.serviceStatus.unknown");
   }
 }
 
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
+}
 
-function formatDate(value) {
+
+function formatDate(value, language) {
   if (!value) {
     return "—";
   }
@@ -58,7 +67,9 @@ function formatDate(value) {
     return "—";
   }
 
-  return date.toLocaleString();
+  return date.toLocaleString(
+    localeForLanguage(language),
+  );
 }
 
 
@@ -239,6 +250,12 @@ function SummaryCard({
 
 
 export default function OperationsPage() {
+  const { t, i18n } = useTranslation();
+
+  const language =
+    i18n.resolvedLanguage ||
+    i18n.language;
+
   const [executions, setExecutions] =
     useState([]);
 
@@ -322,9 +339,10 @@ export default function OperationsPage() {
       const result = execution.result || {};
 
       setSuccessMessage(
-        `Comprobación completada: ` +
-        `${result.services_up || 0} operativos, ` +
-        `${result.services_down || 0} no disponibles.`
+        t("operations.successMessage", {
+          up: result.services_up || 0,
+          down: result.services_down || 0,
+        }),
       );
 
       await loadExecutions();
@@ -395,18 +413,26 @@ export default function OperationsPage() {
 
   const latestStatusTitle =
     !latestExecution
-      ? "Esperando datos operativos"
+      ? t("operations.overview.waitingTitle")
       : latestOperation.hasOperationalIssues
-        ? "La última ejecución requiere atención"
-        : "Operación estable";
+        ? t("operations.overview.attentionTitle")
+        : t("operations.overview.stableTitle");
 
 
   const latestStatusDescription =
     !latestExecution
-      ? "Ejecuta una comprobación para obtener el estado actual."
+      ? t("operations.overview.waitingDescription")
       : latestOperation.hasOperationalIssues
-        ? `${latestOperation.servicesDown} servicios no disponibles · ${latestOperation.automationFailures + latestOperation.automationErrors} problemas de automatización`
-        : `${latestOperation.servicesUp}/${latestOperation.servicesChecked} servicios operativos`;
+        ? t("operations.overview.issuesDescription", {
+            down: latestOperation.servicesDown,
+            issues:
+              latestOperation.automationFailures +
+              latestOperation.automationErrors,
+          })
+        : t("operations.overview.stableDescription", {
+            up: latestOperation.servicesUp,
+            checked: latestOperation.servicesChecked,
+          });
 
 
   const filteredExecutions =
@@ -456,9 +482,7 @@ export default function OperationsPage() {
               );
 
           const haystack = [
-            operationLabel(
-              execution.operation,
-            ),
+            operationLabel(execution.operation, t),
             execution
               .requested_by_username,
             execution.error,
@@ -478,6 +502,8 @@ export default function OperationsPage() {
       historyStatus,
       historySearch,
       historyIssuesOnly,
+      language,
+      t,
     ]);
 
 
@@ -500,31 +526,27 @@ export default function OperationsPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            OPERATIONS CONTROL
+            {t("operations.eyebrow")}
           </p>
 
           <h1>
-            Centro de operaciones
+            {t("operations.title")}
           </h1>
 
           <p className="subtitle">
-            Ejecuta acciones controladas,
-            supervisa su resultado y revisa
-            la actividad operativa de la plataforma.
+            {t("operations.subtitle")}
           </p>
         </div>
 
         <div className="operations-v2__header-actions">
           <div className="operations-v2__last-run">
             <span>
-              Última ejecución
+              {t("operations.lastRun")}
             </span>
 
             <strong>
               {latestExecution
-                ? formatDate(
-                    latestExecution.started_at,
-                  )
+                ? formatDate(latestExecution.started_at, language)
                 : "—"}
             </strong>
           </div>
@@ -539,8 +561,8 @@ export default function OperationsPage() {
             }
           >
             {loading
-              ? "Actualizando..."
-              : "Actualizar"}
+              ? t("common.refreshing")
+              : t("common.refresh")}
           </button>
         </div>
       </header>
@@ -549,7 +571,7 @@ export default function OperationsPage() {
       {error && (
         <section className="alert alert--error">
           <strong>
-            No se pudo completar la operación
+            {t("operations.refreshError")}
           </strong>
 
           <span>{error}</span>
@@ -561,7 +583,7 @@ export default function OperationsPage() {
               disabled={loading || executing}
               onClick={loadExecutions}
             >
-              Reintentar
+              {t("operations.retry")}
             </button>
           </div>
         </section>
@@ -571,7 +593,7 @@ export default function OperationsPage() {
       {successMessage && (
         <section className="alert alert--success">
           <strong>
-            Operación completada
+            {t("operations.successTitle")}
           </strong>
 
           <span>{successMessage}</span>
@@ -581,15 +603,17 @@ export default function OperationsPage() {
 
       <section className="operations-summary-grid">
         <SummaryCard
-          label="Ejecuciones"
+          label={t("operations.kpi.executions")}
           value={executions.length}
           description={
-            `${completedExecutions} finalizadas`
+            t("operations.kpi.completed", {
+              count: completedExecutions,
+            })
           }
         />
 
         <SummaryCard
-          label="Fiabilidad"
+          label={t("operations.kpi.reliability")}
           value={
             successRate != null
               ? `${successRate}%`
@@ -597,13 +621,15 @@ export default function OperationsPage() {
           }
           description={
             failedExecutions > 0
-              ? `${failedExecutions} fallidas`
-              : "Sin fallos registrados"
+              ? t("operations.kpi.failed", {
+                  count: failedExecutions,
+                })
+              : t("operations.kpi.noFailures")
           }
         />
 
         <SummaryCard
-          label="Servicios"
+          label={t("operations.kpi.services")}
           value={
             latestExecution
               ? latestOperation.servicesChecked
@@ -611,13 +637,16 @@ export default function OperationsPage() {
           }
           description={
             latestExecution
-              ? `${latestOperation.servicesUp} operativos · ${latestOperation.servicesDown} no disponibles`
-              : "Esperando ejecución"
+              ? t("operations.kpi.serviceState", {
+                  up: latestOperation.servicesUp,
+                  down: latestOperation.servicesDown,
+                })
+              : t("operations.kpi.waitingExecution")
           }
         />
 
         <SummaryCard
-          label="Automatizaciones"
+          label={t("operations.kpi.automations")}
           value={
             latestExecution
               ? latestOperation.automationExecutions
@@ -625,8 +654,12 @@ export default function OperationsPage() {
           }
           description={
             latestExecution
-              ? `${latestOperation.automationFailures + latestOperation.automationErrors} incidencias`
-              : "Última ejecución"
+              ? t("operations.kpi.issues", {
+                  count:
+                    latestOperation.automationFailures +
+                    latestOperation.automationErrors,
+                })
+              : t("operations.kpi.latestExecution")
           }
         />
       </section>
@@ -658,8 +691,10 @@ export default function OperationsPage() {
         <div className="operations-v2-status__meta">
           <span className="environment-badge">
             {latestExecution
-              ? `Ejecución #${latestExecution.id}`
-              : "Sin ejecución"}
+              ? t("operations.overview.execution", {
+                  id: latestExecution.id,
+                })
+              : t("operations.overview.noExecution")}
           </span>
 
           {latestExecution && (
@@ -678,17 +713,15 @@ export default function OperationsPage() {
           <div className="operations-action-card__heading">
             <div>
               <p className="eyebrow">
-                HEALTH CHECK
+                {t("operations.action.eyebrow")}
               </p>
 
               <h2>
-                Comprobar servicios
+                {t("operations.action.title")}
               </h2>
 
               <p>
-                Ejecuta una comprobación
-                inmediata de todos los servicios
-                registrados y actualiza su estado.
+                {t("operations.action.description")}
               </p>
             </div>
 
@@ -700,23 +733,23 @@ export default function OperationsPage() {
 
           <div className="operations-action-details">
             <div>
-              <span>Tipo</span>
+              <span>{t("operations.action.type")}</span>
               <strong>
-                Acción controlada
+                {t("operations.action.typeValue")}
               </strong>
             </div>
 
             <div>
-              <span>Auditoría</span>
+              <span>{t("operations.action.audit")}</span>
               <strong>
-                Usuario y resultado
+                {t("operations.action.auditValue")}
               </strong>
             </div>
 
             <div>
-              <span>Impacto</span>
+              <span>{t("operations.action.impact")}</span>
               <strong>
-                Comprobación HTTP
+                {t("operations.action.impactValue")}
               </strong>
             </div>
           </div>
@@ -729,8 +762,8 @@ export default function OperationsPage() {
             disabled={executing}
           >
             {executing
-              ? "Comprobando servicios..."
-              : "Comprobar servicios"}
+              ? t("operations.action.running")
+              : t("operations.action.run")}
           </button>
         </article>
 
@@ -740,15 +773,15 @@ export default function OperationsPage() {
           <div className="panel__header operations-v2-latest__header">
             <div>
               <p className="eyebrow">
-                ÚLTIMA EJECUCIÓN
+                {t("operations.latest.eyebrow")}
               </p>
 
               <h2>
-                Resultado operativo
+                {t("operations.latest.title")}
               </h2>
 
               <span>
-                Resumen de la comprobación más reciente
+                {t("operations.latest.subtitle")}
               </span>
             </div>
 
@@ -759,23 +792,21 @@ export default function OperationsPage() {
                   `operation-status--${latestExecution.status}`
                 }
               >
-                {statusLabel(
-                  latestExecution.status,
-                )}
+                {statusLabel(latestExecution.status, t)}
               </span>
             )}
           </div>
 
           {!latestExecution ? (
             <div className="empty-state">
-              Todavía no hay ejecuciones.
+              {t("operations.latest.empty")}
             </div>
           ) : (
             <>
               <div className="operations-v2-latest__meta">
                 <div>
                   <span>
-                    Ejecución
+                    {t("operations.latest.execution")}
                   </span>
 
                   <strong>
@@ -785,7 +816,7 @@ export default function OperationsPage() {
 
                 <div>
                   <span>
-                    Usuario
+                    {t("operations.latest.user")}
                   </span>
 
                   <strong>
@@ -798,7 +829,7 @@ export default function OperationsPage() {
 
                 <div>
                   <span>
-                    Duración
+                    {t("operations.latest.duration")}
                   </span>
 
                   <strong>
@@ -810,13 +841,11 @@ export default function OperationsPage() {
 
                 <div>
                   <span>
-                    Fecha
+                    {t("operations.latest.date")}
                   </span>
 
                   <strong>
-                    {formatDate(
-                      latestExecution.started_at,
-                    )}
+                    {formatDate(latestExecution.started_at, language)}
                   </strong>
                 </div>
               </div>
@@ -825,7 +854,7 @@ export default function OperationsPage() {
               <div className="operations-v2-latest__summary">
                 <div>
                   <span>
-                    Servicios comprobados
+                    {t("operations.latest.servicesChecked")}
                   </span>
 
                   <strong>
@@ -838,7 +867,7 @@ export default function OperationsPage() {
 
                 <div>
                   <span>
-                    Operativos
+                    {t("operations.latest.operational")}
                   </span>
 
                   <strong className="operations-v2-value--success">
@@ -851,7 +880,7 @@ export default function OperationsPage() {
 
                 <div>
                   <span>
-                    No disponibles
+                    {t("operations.latest.unavailable")}
                   </span>
 
                   <strong
@@ -870,7 +899,7 @@ export default function OperationsPage() {
 
                 <div>
                   <span>
-                    Cambios detectados
+                    {t("operations.latest.changesDetected")}
                   </span>
 
                   <strong>
@@ -894,11 +923,11 @@ export default function OperationsPage() {
 
                       <div>
                         <strong>
-                          Cambios de estado
+                          {t("operations.latest.statusChanges")}
                         </strong>
 
                         <small>
-                          Servicios modificados durante la ejecución
+                          {t("operations.latest.statusChangesHint")}
                         </small>
                       </div>
                     </div>
@@ -914,7 +943,7 @@ export default function OperationsPage() {
 
                   {latestOperation.changedServices.length === 0 ? (
                     <div className="operations-v2-empty">
-                      No se detectaron cambios de estado.
+                      {t("operations.latest.noStatusChanges")}
                     </div>
                   ) : (
                     <div className="operations-v2-service-changes">
@@ -947,7 +976,12 @@ export default function OperationsPage() {
                                   }`
                                 }
                               >
-                                {service.previous_status || "—"}
+                                {service.previous_status
+                                  ? serviceStatusLabel(
+                                      service.previous_status,
+                                      t,
+                                    )
+                                  : "—"}
                               </span>
 
                               <span>
@@ -964,7 +998,10 @@ export default function OperationsPage() {
                                   }`
                                 }
                               >
-                                {service.status}
+                                {serviceStatusLabel(
+                                  service.status,
+                                  t,
+                                )}
                               </span>
                             </div>
                           </Link>
@@ -974,12 +1011,12 @@ export default function OperationsPage() {
 
                   {latestOperation.changedServices.length > 6 && (
                     <div className="operations-v2-more">
-                      +
-                      {
-                        latestOperation
-                          .changedServices
-                          .length - 6
-                      } cambios adicionales
+                      {t("operations.latest.additionalChanges", {
+                        count:
+                          latestOperation
+                            .changedServices
+                            .length - 6,
+                      })}
                     </div>
                   )}
                 </section>
@@ -994,11 +1031,11 @@ export default function OperationsPage() {
 
                       <div>
                         <strong>
-                          Incidentes
+                          {t("operations.latest.incidents")}
                         </strong>
 
                         <small>
-                          Efectos detectados por la comprobación
+                          {t("operations.latest.incidentsHint")}
                         </small>
                       </div>
                     </div>
@@ -1007,7 +1044,7 @@ export default function OperationsPage() {
                   <div className="operations-v2-impact-grid">
                     <div>
                       <span>
-                        Creados
+                        {t("operations.latest.created")}
                       </span>
 
                       <strong
@@ -1026,7 +1063,7 @@ export default function OperationsPage() {
 
                     <div>
                       <span>
-                        Resueltos
+                        {t("operations.latest.resolved")}
                       </span>
 
                       <strong
@@ -1045,7 +1082,7 @@ export default function OperationsPage() {
 
                     <div>
                       <span>
-                        Degradados
+                        {t("operations.latest.degraded")}
                       </span>
 
                       <strong>
@@ -1059,7 +1096,7 @@ export default function OperationsPage() {
 
                     <div>
                       <span>
-                        Recuperados
+                        {t("operations.latest.recovered")}
                       </span>
 
                       <strong>
@@ -1083,11 +1120,11 @@ export default function OperationsPage() {
 
                       <div>
                         <strong>
-                          Automatizaciones
+                          {t("operations.latest.automations")}
                         </strong>
 
                         <small>
-                          Acciones disparadas por cambios operativos
+                          {t("operations.latest.automationsHint")}
                         </small>
                       </div>
                     </div>
@@ -1096,7 +1133,7 @@ export default function OperationsPage() {
                   <div className="operations-v2-impact-grid">
                     <div>
                       <span>
-                        Eventos
+                        {t("operations.latest.events")}
                       </span>
 
                       <strong>
@@ -1109,7 +1146,7 @@ export default function OperationsPage() {
 
                     <div>
                       <span>
-                        Ejecuciones
+                        {t("operations.latest.executions")}
                       </span>
 
                       <strong>
@@ -1122,7 +1159,7 @@ export default function OperationsPage() {
 
                     <div>
                       <span>
-                        Fallidas
+                        {t("operations.latest.failed")}
                       </span>
 
                       <strong
@@ -1141,7 +1178,7 @@ export default function OperationsPage() {
 
                     <div>
                       <span>
-                        Errores
+                        {t("operations.latest.errors")}
                       </span>
 
                       <strong
@@ -1165,7 +1202,7 @@ export default function OperationsPage() {
               {latestExecution.error && (
                 <div className="operations-v2-execution-error">
                   <strong>
-                    Error de ejecución
+                    {t("operations.latest.executionError")}
                   </strong>
 
                   <span>
@@ -1184,16 +1221,15 @@ export default function OperationsPage() {
         <div className="panel__header operations-v2-history__header">
           <div>
             <p className="eyebrow">
-              AUDITORÍA OPERATIVA
+              {t("operations.history.eyebrow")}
             </p>
 
             <h2>
-              Historial de operaciones
+              {t("operations.history.title")}
             </h2>
 
             <span>
-              Explora ejecuciones y revisa
-              el resultado de cada servicio.
+              {t("operations.history.subtitle")}
             </span>
           </div>
 
@@ -1208,13 +1244,13 @@ export default function OperationsPage() {
         <div className="operations-v2-history__filters">
           <label className="operations-v2-history__search">
             <span>
-              Buscar
+              {t("operations.history.search")}
             </span>
 
             <input
               type="search"
               value={historySearch}
-              placeholder="Operación, usuario o servicio..."
+              placeholder={t("operations.history.searchPlaceholder")}
               onChange={(event) =>
                 setHistorySearch(
                   event.target.value,
@@ -1225,7 +1261,7 @@ export default function OperationsPage() {
 
           <label>
             <span>
-              Estado
+              {t("operations.history.status")}
             </span>
 
             <select
@@ -1237,19 +1273,19 @@ export default function OperationsPage() {
               }
             >
               <option value="all">
-                Todos
+                {t("operations.history.all")}
               </option>
 
               <option value="success">
-                Completadas
+                {t("operations.history.completed")}
               </option>
 
               <option value="failed">
-                Fallidas
+                {t("operations.history.failed")}
               </option>
 
               <option value="running">
-                En ejecución
+                {t("operations.history.running")}
               </option>
             </select>
           </label>
@@ -1266,7 +1302,7 @@ export default function OperationsPage() {
             />
 
             <span>
-              Solo con incidencias
+              {t("operations.history.issuesOnly")}
               {historyIssueCount > 0
                 ? ` · ${historyIssueCount}`
                 : ""}
@@ -1277,13 +1313,13 @@ export default function OperationsPage() {
 
         {loading && executions.length === 0 ? (
           <div className="empty-state">
-            Cargando operaciones...
+            {t("operations.history.loading")}
           </div>
         ) : filteredExecutions.length === 0 ? (
           <div className="empty-state">
             {executions.length === 0
-              ? "No hay operaciones registradas."
-              : "Ninguna ejecución coincide con los filtros."}
+              ? t("operations.history.none")
+              : t("operations.history.noMatches")}
           </div>
         ) : (
           <div className="operations-v2-history__list">
@@ -1328,9 +1364,7 @@ export default function OperationsPage() {
 
                         <div>
                           <strong>
-                            {operationLabel(
-                              execution.operation,
-                            )}
+                            {operationLabel(execution.operation, t)}
                           </strong>
 
                           <small>
@@ -1346,9 +1380,7 @@ export default function OperationsPage() {
                           `operation-status--${execution.status}`
                         }
                       >
-                        {statusLabel(
-                          execution.status,
-                        )}
+                        {statusLabel(execution.status, t)}
                       </span>
 
                       <div className="operations-v2-history-row__result">
@@ -1368,7 +1400,7 @@ export default function OperationsPage() {
                             </strong>
 
                             <span>
-                              operativos
+                              {t("operations.history.operational")}
                             </span>
                           </>
                         ) : (
@@ -1381,7 +1413,7 @@ export default function OperationsPage() {
                             </strong>
 
                             <span>
-                              no disponibles
+                              {t("operations.history.unavailable")}
                             </span>
                           </>
                         )}
@@ -1395,7 +1427,7 @@ export default function OperationsPage() {
                         </strong>
 
                         <span>
-                          duración
+                          {t("operations.history.duration")}
                         </span>
                       </div>
 
@@ -1405,9 +1437,7 @@ export default function OperationsPage() {
                           ""
                         }
                       >
-                        {formatDate(
-                          execution.started_at,
-                        )}
+                        {formatDate(execution.started_at, language)}
                       </time>
 
                       <span
@@ -1431,7 +1461,7 @@ export default function OperationsPage() {
                         <div className="operations-v2-history-detail__summary">
                           <div>
                             <span>
-                              Servicios
+                              {t("operations.history.services")}
                             </span>
 
                             <strong>
@@ -1444,7 +1474,7 @@ export default function OperationsPage() {
 
                           <div>
                             <span>
-                              Cambios
+                              {t("operations.history.changes")}
                             </span>
 
                             <strong>
@@ -1458,7 +1488,7 @@ export default function OperationsPage() {
 
                           <div>
                             <span>
-                              Incidentes
+                              {t("operations.history.incidents")}
                             </span>
 
                             <strong>
@@ -1474,13 +1504,13 @@ export default function OperationsPage() {
                             </strong>
 
                             <small>
-                              creados / resueltos
+                              {t("operations.history.createdResolved")}
                             </small>
                           </div>
 
                           <div>
                             <span>
-                              Automatizaciones
+                              {t("operations.history.automations")}
                             </span>
 
                             <strong>
@@ -1491,13 +1521,11 @@ export default function OperationsPage() {
                             </strong>
 
                             <small>
-                              {
-                                operationView
-                                  .automationFailures +
-                                operationView
-                                  .automationErrors
-                              }
-                              {" problemas"}
+                              {t("operations.history.problems", {
+                                count:
+                                  operationView.automationFailures +
+                                  operationView.automationErrors,
+                              })}
                             </small>
                           </div>
                         </div>
@@ -1506,7 +1534,7 @@ export default function OperationsPage() {
                         {execution.error && (
                           <div className="operations-v2-execution-error">
                             <strong>
-                              Error de ejecución
+                              {t("operations.history.executionError")}
                             </strong>
 
                             <span>
@@ -1520,11 +1548,11 @@ export default function OperationsPage() {
                           <div className="operations-v2-history-services__header">
                             <div>
                               <strong>
-                                Servicios comprobados
+                                {t("operations.history.servicesChecked")}
                               </strong>
 
                               <span>
-                                Resultado individual de esta ejecución
+                                {t("operations.history.servicesCheckedHint")}
                               </span>
                             </div>
 
@@ -1540,8 +1568,7 @@ export default function OperationsPage() {
 
                           {operationView.services.length === 0 ? (
                             <div className="operations-v2-empty">
-                              Esta ejecución no contiene
-                              resultados individuales de servicios.
+                              {t("operations.history.noServiceResults")}
                             </div>
                           ) : (
                             <div className="operations-v2-history-services__list">
@@ -1568,14 +1595,21 @@ export default function OperationsPage() {
                                           <strong>
                                             {
                                               service.name ||
-                                              `Servicio #${service.service_id}`
+                                              t(
+                                                "operations.history.serviceFallback",
+                                                {
+                                                  id: service.service_id,
+                                                },
+                                              )
                                             }
                                           </strong>
 
                                           <span>
                                             {
                                               service.endpoint ||
-                                              "Sin endpoint"
+                                              t(
+                                                "operations.history.noEndpoint",
+                                              )
                                             }
                                           </span>
                                         </div>
@@ -1584,10 +1618,7 @@ export default function OperationsPage() {
 
                                       <div className="operations-v2-history-service__transition">
                                         <span>
-                                          {serviceStatusLabel(
-                                            service
-                                              .previous_status,
-                                          )}
+                                          {serviceStatusLabel(service.previous_status, t)}
                                         </span>
 
                                         <b>
@@ -1595,9 +1626,7 @@ export default function OperationsPage() {
                                         </b>
 
                                         <strong>
-                                          {serviceStatusLabel(
-                                            service.status,
-                                          )}
+                                          {serviceStatusLabel(service.status, t)}
                                         </strong>
                                       </div>
 
@@ -1618,7 +1647,7 @@ export default function OperationsPage() {
 
                                       <div>
                                         <span className="operations-v2-history-service__label">
-                                          Latencia
+                                          {t("operations.history.latency")}
                                         </span>
 
                                         <strong>
@@ -1639,13 +1668,15 @@ export default function OperationsPage() {
 
                                       <div className="operations-v2-history-service__error">
                                         <span className="operations-v2-history-service__label">
-                                          Detalle
+                                          {t("operations.history.detail")}
                                         </span>
 
                                         <strong>
                                           {
                                             service.error ||
-                                            "Sin errores"
+                                            t(
+                                              "operations.history.noErrors",
+                                            )
                                           }
                                         </strong>
                                       </div>

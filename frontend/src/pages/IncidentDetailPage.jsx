@@ -1,31 +1,132 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import IncidentCorrelation from "../components/IncidentCorrelation";
 import "./IncidentDetailPage.css";
 
-const statuses = { open: "Abierto", investigating: "Investigando", resolved: "Resuelto", closed: "Cerrado" };
-const severities = { low: "Baja", medium: "Media", high: "Alta", critical: "Crítica" };
-const sources = { user: "Operador", checker: "Comprobador", automation: "Automatización", legacy: "Histórico" };
-const executionStatuses = { running: "En ejecución", success: "Correcta", failed: "Fallida", skipped: "Omitida" };
-const fields = { title: "Título", description: "Descripción", severity: "Severidad", status: "Estado", service_id: "Servicio" };
-const tabs = [["timeline", "Línea temporal"], ["correlation", "Correlación"], ["automations", "Automatizaciones"], ["logs", "Logs · Loki"], ["traces", "Trazas · Tempo"]];
+const statusKeys = new Set([
+  "open",
+  "investigating",
+  "resolved",
+  "closed",
+]);
 
-function date(value) {
-  if (!value) return "—";
-  // PostgreSQL sends an offset; SQLite historical fixtures may omit one.
-  const normalized = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`;
-  return new Date(normalized).toLocaleString();
+const severityKeys = new Set([
+  "low",
+  "medium",
+  "high",
+  "critical",
+]);
+
+const sourceKeys = new Set([
+  "user",
+  "checker",
+  "automation",
+  "legacy",
+]);
+
+const executionStatusKeys = new Set([
+  "running",
+  "success",
+  "failed",
+  "skipped",
+]);
+
+const fieldKeys = new Set([
+  "title",
+  "description",
+  "severity",
+  "status",
+  "service_id",
+]);
+
+const tabKeys = [
+  "timeline",
+  "correlation",
+  "automations",
+  "logs",
+  "traces",
+];
+
+function statusLabel(value, t) {
+  return statusKeys.has(value)
+    ? t(`incidentDetail.status.${value}`)
+    : value;
 }
 
-function changeValue(field, value) {
-  if (value == null) return "Sin asignar";
-  if (field === "status") return statuses[value] || value;
-  if (field === "severity") return severities[value] || value;
+function severityLabel(value, t) {
+  return severityKeys.has(value)
+    ? t(`incidentDetail.severity.${value}`)
+    : value;
+}
+
+function sourceLabel(value, t) {
+  return sourceKeys.has(value)
+    ? t(`incidentDetail.source.${value}`)
+    : value;
+}
+
+function executionStatusLabel(value, t) {
+  return executionStatusKeys.has(value)
+    ? t(`incidentDetail.executionStatus.${value}`)
+    : value;
+}
+
+function fieldLabel(value, t) {
+  return fieldKeys.has(value)
+    ? t(`incidentDetail.fields.${value}`)
+    : value;
+}
+
+function tabLabel(value, t) {
+  return tabKeys.includes(value)
+    ? t(`incidentDetail.tabs.${value}`)
+    : value;
+}
+
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
+}
+
+function date(value, language) {
+  if (!value) return "—";
+
+  // PostgreSQL sends an offset; SQLite historical fixtures may omit one.
+  const normalized =
+    /(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
+      ? value
+      : `${value}Z`;
+
+  return new Date(normalized).toLocaleString(
+    language
+      ? localeForLanguage(language)
+      : undefined,
+  );
+}
+
+function changeValue(field, value, t) {
+  if (value == null) {
+    return t("incidentDetail.common.unassigned");
+  }
+
+  if (field === "status") {
+    return statusLabel(value, t);
+  }
+
+  if (field === "severity") {
+    return severityLabel(value, t);
+  }
+
   return String(value);
 }
 
 function TraceDetail({ traceId }) {
+  const { t } = useTranslation();
   const [state, setState] = useState({ loading: true });
   const [revision, setRevision] = useState(0);
 
@@ -43,7 +144,7 @@ function TraceDetail({ traceId }) {
           setState({
             error:
               error.status === 404
-                ? "Esta traza ya no está disponible en Tempo o aún no se ha indexado."
+                ? t("incidentDetail.traceDetail.unavailable")
                 : error.message,
           });
         }
@@ -53,9 +154,9 @@ function TraceDetail({ traceId }) {
     return () => {
       active = false;
     };
-  }, [traceId, revision]);
+  }, [traceId, revision, t]);
   return <section className="incident-trace-detail" aria-live="polite">
-    <h3>Detalle de traza</h3><code>{traceId}</code>
+    <h3>{t("incidentDetail.traceDetail.title")}</h3><code>{traceId}</code>
     {/* V2_INCIDENT_TELEMETRY_STATES */}
 
     {state.loading && (
@@ -64,7 +165,7 @@ function TraceDetail({ traceId }) {
         role="status"
         aria-live="polite"
       >
-        Consultando traza en Tempo…
+        {t("incidentDetail.traceDetail.loading")}
       </div>
     )}
 
@@ -74,7 +175,7 @@ function TraceDetail({ traceId }) {
         role="alert"
       >
         <strong>
-          No se pudo cargar la traza
+          {t("incidentDetail.traceDetail.loadError")}
         </strong>
 
         <span>{state.error}</span>
@@ -89,7 +190,7 @@ function TraceDetail({ traceId }) {
               )
             }
           >
-            Reintentar
+            {t("incidentDetail.common.retry")}
           </button>
         </div>
       </div>
@@ -104,6 +205,10 @@ function TraceDetail({ traceId }) {
 }
 
 function Telemetry({ incidentId, kind, initialTraceId, onTrace, refreshToken }) {
+  const { t, i18n } = useTranslation();
+  const language =
+    i18n.resolvedLanguage || i18n.language;
+
   const [input, setInput] = useState("");
   const [filter, setFilter] = useState("");
   const [revision, setRevision] = useState(0);
@@ -124,20 +229,48 @@ function Telemetry({ incidentId, kind, initialTraceId, onTrace, refreshToken }) 
     <form className="incident-telemetry-form" onSubmit={(event) => {
       event.preventDefault(); setFilter(input.trim()); setRevision((value) => value + 1);
     }}>
-      <label htmlFor={`incident-${kind}-service`}>{kind === "logs" ? "Contexto del servicio · etiqueta Loki service_name" : "Contexto del servicio · nombre Tempo service.name"}
+      <label htmlFor={`incident-${kind}-service`}>
+        {kind === "logs"
+          ? t("incidentDetail.telemetry.serviceContextLogs")
+          : t("incidentDetail.telemetry.serviceContextTraces")}
         <input id={`incident-${kind}-service`} value={input} maxLength={100}
           pattern={kind === "traces" ? "[A-Za-z0-9._-]+" : undefined}
-          placeholder={kind === "logs" ? "Opcional, por ejemplo backend" : "Opcional: nombre exacto de la instrumentación"}
+          placeholder={
+            kind === "logs"
+              ? t("incidentDetail.telemetry.placeholderLogs")
+              : t("incidentDetail.telemetry.placeholderTraces")
+          }
           onChange={(event) => setInput(event.target.value)} />
       </label>
-      <button className="secondary-button" disabled={state.loading}>Consultar</button>
-      {filter && <button type="button" className="secondary-button" onClick={() => { setInput(""); setFilter(""); }}>Solo este incidente</button>}
+      <button
+        className="secondary-button"
+        disabled={state.loading}
+      >
+        {t("incidentDetail.telemetry.query")}
+      </button>
+      {filter && (
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => {
+            setInput("");
+            setFilter("");
+          }}
+        >
+          {t("incidentDetail.telemetry.incidentOnly")}
+        </button>
+      )}
     </form>
-    <p className="incident-hint">{filter
-      ? `Contexto de «${filter}» durante la ventana del incidente. Puede incluir actividad que no pertenece a este incidente.`
-      : kind === "logs"
-        ? "Eventos de la aplicación identificados con este incidente. Puedes consultar también el contexto de un servicio indicando su etiqueta exacta."
-        : "Trazas capturadas en los eventos de este incidente. El nombre de un servicio monitorizado puede diferir de su nombre en Tempo."}</p>
+    <p className="incident-hint">
+      {filter
+        ? t(
+            "incidentDetail.telemetry.filteredHint",
+            { filter },
+          )
+        : kind === "logs"
+          ? t("incidentDetail.telemetry.logsHint")
+          : t("incidentDetail.telemetry.tracesHint")}
+    </p>
     {state.loading && (
       <div
         className="incident-telemetry-state"
@@ -145,8 +278,8 @@ function Telemetry({ incidentId, kind, initialTraceId, onTrace, refreshToken }) 
         aria-live="polite"
       >
         {kind === "logs"
-          ? "Consultando logs en Loki…"
-          : "Consultando trazas en Tempo…"}
+          ? t("incidentDetail.telemetry.loadingLogs")
+          : t("incidentDetail.telemetry.loadingTraces")}
       </div>
     )}
     {state.error && (
@@ -156,8 +289,8 @@ function Telemetry({ incidentId, kind, initialTraceId, onTrace, refreshToken }) 
       >
         <strong>
           {kind === "logs"
-            ? "No se pudieron consultar los logs"
-            : "No se pudieron consultar las trazas"}
+            ? t("incidentDetail.telemetry.errorLogs")
+            : t("incidentDetail.telemetry.errorTraces")}
         </strong>
 
         <span>{state.error}</span>
@@ -173,27 +306,62 @@ function Telemetry({ incidentId, kind, initialTraceId, onTrace, refreshToken }) 
               )
             }
           >
-            Reintentar
+            {t("incidentDetail.common.retry")}
           </button>
         </div>
       </div>
     )}
     {state.data && <>
-      {(kind === "logs" || filter) && <p className="incident-hint">Ventana de contexto: {date(state.data.window.start_at)} — {date(state.data.window.end_at)}.{state.data.window.truncated ? " Limitada a los últimos 7 días de la ventana del incidente." : " Incluye hasta 5 minutos antes de la creación y después de la resolución."}</p>}
-      <p className="incident-hint">{items.length} resultados · Máximo {kind === "logs" ? 100 : 50}</p>
-      {!items.length && <div className="incident-empty">{kind === "logs"
-        ? "No hay logs disponibles para esta consulta. Los eventos antiguos pueden quedar fuera de la retención de Loki."
-        : "No hay trazas para esta consulta. Se necesita instrumentación activa y datos conservados en Tempo."}</div>}
+      {(kind === "logs" || filter) && (
+        <p className="incident-hint">
+          {t(
+            "incidentDetail.telemetry.contextWindow",
+            {
+              start: date(
+                state.data.window.start_at,
+                language,
+              ),
+              end: date(
+                state.data.window.end_at,
+                language,
+              ),
+            },
+          )}
+          {state.data.window.truncated
+            ? t(
+                "incidentDetail.telemetry.windowTruncated",
+              )
+            : t(
+                "incidentDetail.telemetry.windowExtended",
+              )}
+        </p>
+      )}
+      <p className="incident-hint">
+        {t(
+          "incidentDetail.telemetry.resultSummary",
+          {
+            count: items.length,
+            max: kind === "logs" ? 100 : 50,
+          },
+        )}
+      </p>
+      {!items.length && (
+        <div className="incident-empty">
+          {kind === "logs"
+            ? t("incidentDetail.telemetry.emptyLogs")
+            : t("incidentDetail.telemetry.emptyTraces")}
+        </div>
+      )}
       <div className="incident-telemetry-list">{items.map((item, index) => kind === "logs"
         ? <article key={`${item.timestamp}-${index}`}>
-          <div className="incident-event-meta"><time>{date(item.timestamp)}</time><span>{item.service} · {item.level}</span></div>
+          <div className="incident-event-meta"><time>{date(item.timestamp, language)}</time><span>{item.service} · {item.level}</span></div>
           <pre>{item.message}</pre>
-          {item.trace_id && /^[a-f0-9]{32}$/i.test(item.trace_id) && !/^0+$/.test(item.trace_id) && <button type="button" className="secondary-button" onClick={() => onTrace(item.trace_id)}>Abrir traza</button>}
+          {item.trace_id && /^[a-f0-9]{32}$/i.test(item.trace_id) && !/^0+$/.test(item.trace_id) && <button type="button" className="secondary-button" onClick={() => onTrace(item.trace_id)}>{t("incidentDetail.common.openTrace")}</button>}
         </article>
         : <button type="button" className="incident-trace-row" key={item.trace_id}
           aria-pressed={selectedTrace === item.trace_id} onClick={() => setSelectedTrace(item.trace_id)}>
           <strong>{item.operation}</strong><code>{item.trace_id}</code>
-          <span>{date(item.started_at)}{item.service ? ` · ${item.service}` : ""}{item.duration_ms != null ? ` · ${item.duration_ms} ms` : ""}</span>
+          <span>{date(item.started_at, language)}{item.service ? ` · ${item.service}` : ""}{item.duration_ms != null ? ` · ${item.duration_ms} ms` : ""}</span>
         </button>)}</div>
     </>}
     {kind === "traces" && selectedTrace && <TraceDetail traceId={selectedTrace} />}
@@ -202,6 +370,9 @@ function Telemetry({ incidentId, kind, initialTraceId, onTrace, refreshToken }) 
 
 export default function IncidentDetailPage() {
   const { incidentId } = useParams();
+  const { t, i18n } = useTranslation();
+  const language =
+    i18n.resolvedLanguage || i18n.language;
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -218,11 +389,15 @@ export default function IncidentDetailPage() {
       const result = await api.getIncidentDetails(incidentId);
       if (version === requestVersion.current) setData(result);
     } catch (requestError) {
-      if (version === requestVersion.current) setError(requestError.status === 404 ? "Este incidente no existe o ha sido eliminado." : requestError.message);
+      if (version === requestVersion.current) setError(
+          requestError.status === 404
+            ? t("incidentDetail.page.notFound")
+            : requestError.message,
+        );
     } finally {
       if (version === requestVersion.current) setLoading(false);
     }
-  }, [incidentId]);
+  }, [incidentId, t]);
   useEffect(() => {
     setData(null); setTab("timeline"); setNote(""); setTraceId(""); setBusy(false);
     reload();
@@ -272,7 +447,7 @@ export default function IncidentDetailPage() {
       to="/incidentes"
       className="incident-back-link"
     >
-      ← Todos los incidentes
+      {t("incidentDetail.page.back")}
     </Link>
 
     {/* V2_INCIDENT_DETAIL_INITIAL_STATE */}
@@ -284,8 +459,8 @@ export default function IncidentDetailPage() {
       >
         <strong>
           {!data
-            ? "No se pudo cargar el incidente"
-            : "No se pudo completar la operación"}
+            ? t("incidentDetail.page.loadError")
+            : t("incidentDetail.page.operationError")}
         </strong>
 
         <span>{error}</span>
@@ -298,7 +473,7 @@ export default function IncidentDetailPage() {
               disabled={loading}
               onClick={reload}
             >
-              Reintentar
+              {t("incidentDetail.common.retry")}
             </button>
           </div>
         )}
@@ -313,64 +488,68 @@ export default function IncidentDetailPage() {
         aria-busy="true"
       >
         <strong>
-          Cargando incidente
+          {t("incidentDetail.page.loadingTitle")}
         </strong>
 
         <span>
-          Recuperando contexto, línea temporal y automatizaciones…
+          {t("incidentDetail.page.loadingDescription")}
         </span>
       </section>
     )}
 
     {incident && <>
       <header className="topbar incident-detail-header">
-        <div><p className="eyebrow">OPERACIONES / INCIDENTE #{incident.id}</p><h1>{incident.title}</h1>
-          <div className="incident-detail-badges"><span className={`status-badge status-badge--${incident.status}`}>{statuses[incident.status] || incident.status}</span>
-            <span className={`severity-badge severity-badge--${incident.severity}`}>{severities[incident.severity] || incident.severity}</span></div>
+        <div><p className="eyebrow">{t("incidentDetail.page.eyebrow", { id: incident.id })}</p><h1>{incident.title}</h1>
+          <div className="incident-detail-badges"><span className={`status-badge status-badge--${incident.status}`}>{statusLabel(incident.status, t)}</span>
+            <span className={`severity-badge severity-badge--${incident.severity}`}>{severityLabel(incident.severity, t)}</span></div>
         </div>
-        <button className="refresh-button" onClick={reload} disabled={loading || busy}>{loading ? "Actualizando…" : "Actualizar"}</button>
+        <button className="refresh-button" onClick={reload} disabled={loading || busy}>{loading ? t("incidentDetail.page.refreshing") : t("incidentDetail.page.refresh")}</button>
       </header>
       <section className="panel incident-context">
-        <div><p className="eyebrow">SERVICIO AFECTADO</p>{data.service
-          ? <><Link className="incident-service-link" to={`/servicios/${data.service.id}`}>{data.service.name} ↗</Link><p>{data.service.type} · Estado actual: {data.service.status}</p></>
-          : <><strong>Servicio eliminado o sin asignar</strong><p>El historial del incidente se conserva.</p></>}
+        <div><p className="eyebrow">{t("incidentDetail.page.affectedService")}</p>{data.service
+          ? <><Link className="incident-service-link" to={`/servicios/${data.service.id}`}>{data.service.name} ↗</Link><p>{data.service.type} · {t("incidentDetail.page.currentStatus", { status: data.service.status })}</p></>
+          : <><strong>{t("incidentDetail.page.missingService")}</strong><p>{t("incidentDetail.page.historyPreserved")}</p></>}
         </div>
-        <div><span>Creado</span><strong>{date(incident.created_at)}</strong></div>
-        <div><span>Resolución</span><strong>{incident.resolved_at ? date(incident.resolved_at) : "En curso"}</strong></div>
+        <div><span>{t("incidentDetail.page.created")}</span><strong>{date(incident.created_at, language)}</strong></div>
+        <div><span>{t("incidentDetail.page.resolution")}</span><strong>{incident.resolved_at
+  ? date(incident.resolved_at, language)
+  : t("incidentDetail.common.ongoing")}</strong></div>
       </section>
-      <section className="panel incident-description"><h2>Descripción</h2><p>{incident.description}</p>
+      <section className="panel incident-description"><h2>{t("incidentDetail.page.description")}</h2><p>{incident.description}</p>
         <div className="table-actions">
-          {incident.status === "open" && <button className="secondary-button" disabled={busy || loading} onClick={() => changeStatus("investigating")}>Investigar</button>}
-          {["open", "investigating"].includes(incident.status) && <button className="primary-button" disabled={busy || loading} onClick={() => changeStatus("resolved")}>Resolver</button>}
-          {incident.status === "resolved" && <button className="secondary-button" disabled={busy || loading} onClick={() => changeStatus("closed")}>Cerrar</button>}
-          {["resolved", "closed"].includes(incident.status) && <button className="secondary-button" disabled={busy || loading} onClick={() => changeStatus("open")}>Reabrir</button>}
+          {incident.status === "open" && <button className="secondary-button" disabled={busy || loading} onClick={() => changeStatus("investigating")}>{t("incidentDetail.page.investigate")}</button>}
+          {["open", "investigating"].includes(incident.status) && <button className="primary-button" disabled={busy || loading} onClick={() => changeStatus("resolved")}>{t("incidentDetail.page.resolve")}</button>}
+          {incident.status === "resolved" && <button className="secondary-button" disabled={busy || loading} onClick={() => changeStatus("closed")}>{t("incidentDetail.page.close")}</button>}
+          {["resolved", "closed"].includes(incident.status) && <button className="secondary-button" disabled={busy || loading} onClick={() => changeStatus("open")}>{t("incidentDetail.page.reopen")}</button>}
         </div>
       </section>
       <section className="panel incident-investigation">
-        <nav className="incident-tabs" aria-label="Información del incidente">{tabs.map(([key, label]) => <button key={key} type="button"
+        <nav className="incident-tabs" aria-label={t("incidentDetail.page.navigationAria")}>{tabKeys.map((key) => <button key={key} type="button"
           aria-pressed={tab === key} onClick={() => { setTab(key); setTraceId(""); }}>
-          {label}{key === "timeline" ? ` · ${data.timeline.total}` : key === "automations" ? ` · ${data.automations_total}` : ""}
+          {tabLabel(key, t)}{key === "timeline" ? ` · ${data.timeline.total}` : key === "automations" ? ` · ${data.automations_total}` : ""}
         </button>)}</nav>
         <div className="incident-tab-content">
           {tab === "timeline" && <>
-            <div className="incident-section-heading"><h2>Línea temporal</h2><span>Más reciente primero</span></div>
-            <form className="incident-note-form" onSubmit={addNote}><label htmlFor="incident-note">Nota de investigación</label>
-              <textarea id="incident-note" value={note} onChange={(event) => setNote(event.target.value)} maxLength={4000} rows={3} placeholder="Qué has observado y qué has comprobado…" required />
-              <button className="secondary-button" disabled={busy || loading || !note.trim()}>{busy ? "Guardando…" : "Añadir nota"}</button>
+            <div className="incident-section-heading"><h2>{t("incidentDetail.timeline.title")}</h2><span>{t("incidentDetail.timeline.newestFirst")}</span></div>
+            <form className="incident-note-form" onSubmit={addNote}><label htmlFor="incident-note">{t("incidentDetail.timeline.noteLabel")}</label>
+              <textarea id="incident-note" value={note} onChange={(event) => setNote(event.target.value)} maxLength={4000} rows={3} placeholder={t("incidentDetail.timeline.notePlaceholder")} required />
+              <button className="secondary-button" disabled={busy || loading || !note.trim()}>{busy
+  ? t("incidentDetail.timeline.saving")
+  : t("incidentDetail.timeline.addNote")}</button>
             </form>
-            {!data.timeline.events.length && <p className="incident-empty">Todavía no hay eventos registrados.</p>}
+            {!data.timeline.events.length && <p className="incident-empty">{t("incidentDetail.timeline.empty")}</p>}
             <ol className="incident-timeline">{data.timeline.events.map((event) => <li key={event.id}>
-              <div className="incident-event-meta"><time>{date(event.occurred_at)}</time><span>{event.actor_username || sources[event.source] || event.source}</span></div>
+              <div className="incident-event-meta"><time>{date(event.occurred_at, language)}</time><span>{event.actor_username || sourceLabel(event.source, t)}</span></div>
               <h3>{event.summary}</h3>
-              {event.source === "legacy" && <p className="incident-hint">Fecha conservada del registro anterior; el autor y los pasos intermedios no constan.</p>}
+              {event.source === "legacy" && <p className="incident-hint">{t("incidentDetail.timeline.legacyHint")}</p>}
               {event.changes?.text && <p className="incident-note-text">{event.changes.text}</p>}
               {Object.entries(event.changes || {}).filter(([, value]) => value && typeof value === "object" && "before" in value).map(([field, value]) => <details className="incident-change" key={field}>
-                <summary>{fields[field] || field}</summary><div><del>{changeValue(field, value.before)}</del><span>→</span><strong>{changeValue(field, value.after)}</strong></div>
+                <summary>{fieldLabel(field, t)}</summary><div><del>{changeValue(field, value.before, t)}</del><span>→</span><strong>{changeValue(field, value.after, t)}</strong></div>
               </details>)}
-              <div className="incident-event-actions">{event.automation_execution_id && <button className="secondary-button" onClick={() => setTab("automations")}>Ejecución #{event.automation_execution_id}</button>}
-                {event.trace_id && <button className="secondary-button" onClick={() => openTrace(event.trace_id)}>Ver traza</button>}</div>
+              <div className="incident-event-actions">{event.automation_execution_id && <button className="secondary-button" onClick={() => setTab("automations")}>{t("incidentDetail.timeline.execution", { id: event.automation_execution_id })}</button>}
+                {event.trace_id && <button className="secondary-button" onClick={() => openTrace(event.trace_id)}>{t("incidentDetail.timeline.viewTrace")}</button>}</div>
             </li>)}</ol>
-            {data.timeline.events.length < data.timeline.total && <button className="secondary-button" disabled={busy || loading} onClick={() => loadMore("timeline")}>Cargar eventos anteriores</button>}
+            {data.timeline.events.length < data.timeline.total && <button className="secondary-button" disabled={busy || loading} onClick={() => loadMore("timeline")}>{t("incidentDetail.timeline.loadOlder")}</button>}
           </>}
           {tab === "correlation" && (
             <IncidentCorrelation
@@ -380,15 +559,15 @@ export default function IncidentDetailPage() {
             />
           )}
           {tab === "automations" && <>
-            <h2>Automatizaciones vinculadas</h2><p className="incident-hint">Ejecuciones asociadas al incidente por el disparador. Las ejecuciones antiguas sin vínculo explícito no se atribuyen automáticamente.</p>
-            {!data.automations.length && <div className="incident-empty">Este incidente no tiene automatizaciones vinculadas.</div>}
+            <h2>{t("incidentDetail.automations.title")}</h2><p className="incident-hint">{t("incidentDetail.automations.hint")}</p>
+            {!data.automations.length && <div className="incident-empty">{t("incidentDetail.automations.empty")}</div>}
             <div className="incident-automation-list">{data.automations.map((execution) => <article key={execution.id}>
-              <div className="incident-section-heading"><h3>#{execution.id} · {execution.rule_name}</h3><span className={`incident-execution-state incident-execution-state--${execution.status}`}>{executionStatuses[execution.status] || execution.status}</span></div>
-              <p>{date(execution.started_at)} · {execution.duration_ms != null ? `${execution.duration_ms.toFixed(2)} ms` : "En curso"}</p>
+              <div className="incident-section-heading"><h3>#{execution.id} · {execution.rule_name}</h3><span className={`incident-execution-state incident-execution-state--${execution.status}`}>{executionStatusLabel(execution.status, t)}</span></div>
+              <p>{date(execution.started_at, language)} · {execution.duration_ms != null ? `${execution.duration_ms.toFixed(2)} ms` : t("incidentDetail.common.ongoing")}</p>
               {execution.error && (
                 <details className="incident-change">
                   <summary>
-                    Error registrado en la ejecución
+                    {t("incidentDetail.automations.executionError")}
                   </summary>
 
                   <pre>
@@ -396,12 +575,16 @@ export default function IncidentDetailPage() {
                   </pre>
                 </details>
               )}
-              <details><summary>Disparador y resultado</summary><pre>{JSON.stringify({ trigger: execution.trigger_type, payload: execution.trigger_payload, result: execution.result }, null, 2)}</pre></details>
+              <details><summary>{t("incidentDetail.automations.triggerAndResult")}</summary><pre>{JSON.stringify({ trigger: execution.trigger_type, payload: execution.trigger_payload, result: execution.result }, null, 2)}</pre></details>
             </article>)}</div>
-            {data.automations.length < data.automations_total && <button className="secondary-button" disabled={busy || loading} onClick={() => loadMore("automations")}>Cargar más ejecuciones</button>}
+            {data.automations.length < data.automations_total && <button className="secondary-button" disabled={busy || loading} onClick={() => loadMore("automations")}>{t("incidentDetail.automations.loadMore")}</button>}
           </>}
           {["logs", "traces"].includes(tab) && <>
-            <h2>{tab === "logs" ? "Logs de Loki" : "Trazas de Tempo"}</h2>
+            <h2>
+              {tab === "logs"
+                ? t("incidentDetail.telemetry.logsTitle")
+                : t("incidentDetail.telemetry.tracesTitle")}
+            </h2>
             <Telemetry key={`${incidentId}-${tab}-${traceId}`} incidentId={incidentId} kind={tab} initialTraceId={traceId} onTrace={openTrace} refreshToken={data} />
           </>}
         </div>

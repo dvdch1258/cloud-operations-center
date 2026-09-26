@@ -12,6 +12,18 @@ export const servicesResources = {
       checkNow: "Check now",
       newService: "New service",
       error: "Error",
+      retry: "Retry",
+
+      errors: {
+        check:
+          "Unable to run the check.",
+        save:
+          "Unable to save the service.",
+        delete:
+          "Unable to delete the service.",
+        operation:
+          "Unable to complete the operation",
+      },
 
       status: {
         up: "Operational",
@@ -195,6 +207,18 @@ export const servicesResources = {
       checkNow: "Comprobar ahora",
       newService: "Nuevo servicio",
       error: "Error",
+      retry: "Reintentar",
+
+      errors: {
+        check:
+          "No se pudo ejecutar la comprobación.",
+        save:
+          "No se pudo guardar el servicio.",
+        delete:
+          "No se pudo eliminar el servicio.",
+        operation:
+          "No se pudo completar la operación",
+      },
 
       status: {
         up: "Operativo",

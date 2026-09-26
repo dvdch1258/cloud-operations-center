@@ -1,3 +1,10 @@
+import { useTranslation } from "react-i18next";
+import i18n from "../i18n/index.js";
+
+function obsT(key, options) {
+  return i18n.t(`observability.${key}`, options);
+}
+
 import {
   useCallback,
   useEffect,
@@ -31,17 +38,17 @@ function formatUptime(seconds) {
 
 function formatUpdatedAt(value) {
   if (!value) {
-    return "Pendiente";
+    return obsT("pending");
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Pendiente";
+    return obsT("pending");
   }
 
   return date.toLocaleTimeString(
-    "es-ES",
+    (i18n.resolvedLanguage || i18n.language),
     {
       hour: "2-digit",
       minute: "2-digit",
@@ -55,10 +62,11 @@ function SourceStatusChip({
   name,
   status,
 }) {
+  useTranslation();
   const labels = {
-    connected: "Conectado",
-    checking: "Comprobando",
-    unavailable: "No disponible",
+    connected: obsT("connected"),
+    checking: obsT("checking"),
+    unavailable: obsT("unavailable"),
   };
 
   return (
@@ -95,7 +103,7 @@ function formatLogTime(value) {
   }
 
   return date.toLocaleTimeString(
-    "es-ES",
+    (i18n.resolvedLanguage || i18n.language),
     {
       hour: "2-digit",
       minute: "2-digit",
@@ -194,6 +202,7 @@ function MultiTimeseriesChart({
   series,
   rangeHours,
 }) {
+  useTranslation();
   const width = 720;
   const height = 210;
   const padding = 18;
@@ -217,7 +226,7 @@ function MultiTimeseriesChart({
   if (!visibleSeries.length) {
     return (
       <div className="observability-chart-empty">
-        Sin datos para este periodo.
+        {obsT("noChartData")}
       </div>
     );
   }
@@ -339,9 +348,7 @@ function MultiTimeseriesChart({
         viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label={
-          `Serie temporal de ${
-            rangeLabel(rangeHours)
-          }`
+          obsT("chartAria", { period: rangeLabel(rangeHours) })
         }
         preserveAspectRatio="none"
       >
@@ -376,12 +383,12 @@ function MultiTimeseriesChart({
 
       <div className="observability-chart__footer">
         <span>
-          Hace {rangeLabel(rangeHours)}
+          {obsT("ago", { period: rangeLabel(rangeHours) })}
         </span>
 
         <span />
 
-        <span>Ahora</span>
+        <span>{obsT("now")}</span>
       </div>
     </div>
   );
@@ -409,15 +416,9 @@ const OBSERVABILITY_RANGES = [
 
 
 function rangeLabel(hours) {
-  if (hours === 168) {
-    return "7 días";
-  }
-
-  if (hours === 1) {
-    return "1 hora";
-  }
-
-  return `${hours} horas`;
+  return hours === 168
+    ? obsT("days", { count: 7 })
+    : obsT("hours", { count: hours });
 }
 
 
@@ -486,6 +487,7 @@ function getTraceServiceName(service) {
 
 
 export default function ObservabilityPage() {
+  useTranslation();
   const [summary, setSummary] = useState(null);
   const [timeseries, setTimeseries] = useState(null);
   const [services, setServices] = useState(null);
@@ -602,7 +604,7 @@ export default function ObservabilityPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-        "No se pudo cargar la observabilidad.",
+        obsT("loadError"),
       );
     } finally {
       setLoading(false);
@@ -632,7 +634,7 @@ export default function ObservabilityPage() {
       } catch (requestError) {
         setLogsError(
           requestError.message ||
-            "No se pudieron cargar los logs.",
+            obsT("logsError"),
         );
       } finally {
         setLogsLoading(false);
@@ -661,7 +663,7 @@ export default function ObservabilityPage() {
       } catch (requestError) {
         setTracesError(
           requestError.message ||
-            "No se pudieron cargar las trazas.",
+            obsT("tracesError"),
         );
       } finally {
         setTracesLoading(false);
@@ -688,7 +690,7 @@ export default function ObservabilityPage() {
 
         setTraceDetailError(
           requestError.message ||
-            "No se pudo cargar la traza.",
+            obsT("traceError"),
         );
       } finally {
         setTraceDetailLoading(false);
@@ -765,7 +767,7 @@ export default function ObservabilityPage() {
 
         setServiceDetailError(
           requestError.message ||
-            "No se pudo cargar el detalle del servicio.",
+            obsT("serviceError"),
         );
       } finally {
         if (!cancelled) {
@@ -822,7 +824,7 @@ export default function ObservabilityPage() {
 
     if (!telemetryService) {
       setServiceCheckMessage(
-        "Este servicio no tiene un nombre de logs asociado."
+        obsT("noLogName")
       );
       return;
     }
@@ -868,7 +870,7 @@ export default function ObservabilityPage() {
 
     if (!telemetryService) {
       setServiceCheckMessage(
-        "Este servicio no tiene un nombre de telemetría asociado."
+        obsT("noTelemetryName")
       );
       return;
     }
@@ -964,12 +966,12 @@ export default function ObservabilityPage() {
       setLastUpdatedAt(new Date());
 
       setServiceCheckMessage(
-        "Comprobación completada."
+        obsT("checkCompleted")
       );
     } catch (requestError) {
       setServiceCheckMessage(
         requestError.message ||
-          "No se pudo ejecutar la comprobación."
+          obsT("checkError")
       );
     } finally {
       setServiceCheckRunning(false);
@@ -1066,21 +1068,20 @@ export default function ObservabilityPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            PLATFORM TELEMETRY
+            {obsT("eyebrow")}
           </p>
 
-          <h1>Observabilidad</h1>
+          <h1>{obsT("title")}</h1>
 
           <p className="subtitle">
-            Rendimiento y telemetría en tiempo real
-            de Cloud Operations Center.
+            {obsT("subtitle")}
           </p>
         </div>
 
         <div className="observability-actions">
           <div
             className="observability-range-selector"
-            aria-label="Rango temporal"
+            aria-label={obsT("range")}
           >
             {OBSERVABILITY_RANGES.map(
               (range) => (
@@ -1115,8 +1116,8 @@ export default function ObservabilityPage() {
             onClick={handleRefresh}
           >
             {refreshLoading
-              ? "Actualizando..."
-              : "Actualizar"}
+              ? obsT("refreshing")
+              : obsT("refresh")}
           </button>
 
           <a
@@ -1125,7 +1126,7 @@ export default function ObservabilityPage() {
             target="_blank"
             rel="noreferrer"
           >
-            Abrir Grafana ↗
+            {obsT("grafana")}
           </a>
         </div>
       </header>
@@ -1133,7 +1134,7 @@ export default function ObservabilityPage() {
       {error && (
         <div className="alert alert--error">
           <strong>
-            Observability API no disponible
+            {obsT("apiUnavailable")}
           </strong>
           <span>{error}</span>
         </div>
@@ -1151,7 +1152,7 @@ export default function ObservabilityPage() {
       >
         <div>
           <p className="eyebrow">
-            PLATFORM STATUS
+            {obsT("platformStatus")}
           </p>
 
           <div className="observability-health__status">
@@ -1168,22 +1169,21 @@ export default function ObservabilityPage() {
 
             <strong>
               {loading
-                ? "Evaluando..."
+                ? obsT("evaluating")
                 : healthy
-                  ? "Sistema saludable"
-                  : "Sistema degradado"}
+                  ? obsT("healthy")
+                  : obsT("degraded")}
             </strong>
           </div>
 
           <p>
-            Estado calculado a partir de latencia,
-            errores y telemetría del backend.
+            {obsT("statusDescription")}
           </p>
         </div>
 
         <div className="observability-health__meta">
           <div className="observability-last-update">
-            <span>Última actualización</span>
+            <span>{obsT("lastUpdate")}</span>
 
             <strong>
               {formatUpdatedAt(
@@ -1216,10 +1216,10 @@ export default function ObservabilityPage() {
       <section className="metrics-grid observability-metrics">
         <article className="metric-card observability-kpi-card">
           <div className="observability-kpi-card__header">
-            <span>Requests / s</span>
+            <span>{obsT("requests")}</span>
 
             <span className="observability-kpi-badge">
-              tráfico
+              {obsT("traffic")}
             </span>
           </div>
 
@@ -1233,11 +1233,11 @@ export default function ObservabilityPage() {
 
           <div className="observability-kpi-card__footer">
             <span>
-              Actividad actual del backend
+              {obsT("backendActivity")}
             </span>
 
             <small>
-              rate · ventana 5 min
+              {obsT("rateWindow")}
             </small>
           </div>
         </article>
@@ -1255,7 +1255,7 @@ export default function ObservabilityPage() {
           }
         >
           <div className="observability-kpi-card__header">
-            <span>Error rate</span>
+            <span>{obsT("errorRate")}</span>
 
             <span className="observability-kpi-badge">
               HTTP 5xx
@@ -1280,21 +1280,21 @@ export default function ObservabilityPage() {
               {Number(
                 summary?.error_rate_percent ?? 0
               ) >= 5
-                ? "Tasa elevada"
-                : "Dentro del umbral"}
+                ? obsT("highRate")
+                : obsT("withinThreshold")}
             </strong>
           </div>
 
           <div className="observability-kpi-card__footer">
             <small>
-              Umbral degradado · 5%
+              {obsT("degradedThreshold")}
             </small>
           </div>
         </article>
 
         <article className="metric-card observability-kpi-card observability-kpi-card--latency">
           <div className="observability-kpi-card__header">
-            <span>Latencia</span>
+            <span>{obsT("latency")}</span>
 
             <span className="observability-kpi-badge">
               p95
@@ -1311,7 +1311,7 @@ export default function ObservabilityPage() {
             </strong>
 
             <span>
-              percentil 95
+              {obsT("percentile95")}
             </span>
           </div>
 
@@ -1353,10 +1353,10 @@ export default function ObservabilityPage() {
 
         <article className="metric-card observability-kpi-card observability-kpi-card--uptime">
           <div className="observability-kpi-card__header">
-            <span>Backend uptime</span>
+            <span>{obsT("backendUptime")}</span>
 
             <span className="observability-kpi-badge">
-              runtime
+              {obsT("runtime")}
             </span>
           </div>
 
@@ -1374,18 +1374,16 @@ export default function ObservabilityPage() {
               aria-hidden="true"
             />
 
-            <strong>Proceso activo</strong>
+            <strong>{obsT("activeProcess")}</strong>
           </div>
 
           <div className="observability-kpi-card__footer">
             <span>
-              Periodo visible ·{" "}
-              {rangeLabel(selectedHours)}
+              {obsT("visiblePeriod", { period: rangeLabel(selectedHours) })}
             </span>
 
             <small>
-              Actualizado{" "}
-              {formatUpdatedAt(lastUpdatedAt)}
+              {obsT("updated", { time: formatUpdatedAt(lastUpdatedAt) })}
             </small>
           </div>
         </article>
@@ -1396,10 +1394,10 @@ export default function ObservabilityPage() {
           <div className="security-panel-header">
             <div>
               <p className="eyebrow">
-                TRAFFIC & ERRORS
+                {obsT("trafficEyebrow")}
               </p>
 
-              <h2>Tráfico y errores</h2>
+              <h2>{obsT("trafficTitle")}</h2>
             </div>
 
             <span>HTTP 5xx</span>
@@ -1410,7 +1408,7 @@ export default function ObservabilityPage() {
             series={[
               {
                 key: "requests",
-                label: "Requests/s",
+                label: obsT("requestsLegend"),
                 points:
                   timeseries
                     ?.requests_per_second,
@@ -1421,7 +1419,7 @@ export default function ObservabilityPage() {
               },
               {
                 key: "errors",
-                label: "Error rate",
+                label: obsT("errorRate"),
                 points:
                   timeseries
                     ?.error_rate_percent,
@@ -1438,10 +1436,10 @@ export default function ObservabilityPage() {
           <div className="security-panel-header">
             <div>
               <p className="eyebrow">
-                RESPONSE TIME
+                {obsT("responseTime")}
               </p>
 
-              <h2>Latencia</h2>
+              <h2>{obsT("latency")}</h2>
             </div>
 
             <span>p50 · p95 · p99</span>
@@ -1492,27 +1490,25 @@ export default function ObservabilityPage() {
         <div className="security-panel-header">
           <div>
             <p className="eyebrow">
-              SERVICE HEALTH
+              {obsT("serviceHealth")}
             </p>
 
-            <h2>Servicios</h2>
+            <h2>{obsT("services")}</h2>
 
             <p>
-              Estado, disponibilidad y latencia
-              durante las últimas{" "}
-              {rangeLabel(selectedHours)}.
+              {obsT("servicesDescription", { period: rangeLabel(selectedHours) })}
             </p>
           </div>
 
           <div className="observability-services-summary">
             <span>
               <strong>{services?.up ?? 0}</strong>
-              {" "}up
+              {" "}{obsT("upCount")}
             </span>
 
             <span>
               <strong>{services?.down ?? 0}</strong>
-              {" "}down
+              {" "}{obsT("downCount")}
             </span>
 
             <span>
@@ -1524,22 +1520,22 @@ export default function ObservabilityPage() {
 
         {loading ? (
           <div className="security-empty">
-            Cargando servicios...
+            {obsT("loadingServices")}
           </div>
         ) : !services?.services?.length ? (
           <div className="security-empty">
-            No hay servicios monitorizados.
+            {obsT("noServices")}
           </div>
         ) : (
           <div className="observability-services-table">
             <div className="observability-service-row observability-service-row--header">
-              <span>Servicio</span>
-              <span>Estado</span>
+              <span>{obsT("service")}</span>
+              <span>{obsT("status")}</span>
               <span>
                 Uptime{" "}
                 {rangeLabel(selectedHours)}
               </span>
-              <span>Latencia</span>
+              <span>{obsT("latency")}</span>
               <span>HTTP</span>
               <span aria-hidden="true" />
             </div>
@@ -1555,7 +1551,7 @@ export default function ObservabilityPage() {
                   role="button"
                   tabIndex={0}
                   aria-label={
-                    `Abrir detalles de ${service.name}`
+                    obsT("openService", { name: service.name })
                   }
                   onClick={() =>
                     setSelectedService(service)
@@ -1607,8 +1603,8 @@ export default function ObservabilityPage() {
                     }
                   >
                     {isUp
-                      ? "Healthy"
-                      : "Down"}
+                      ? obsT("serviceHealthy")
+                      : obsT("serviceDown")}
                   </span>
 
                   <strong>
@@ -1665,7 +1661,7 @@ export default function ObservabilityPage() {
             <div className="observability-service-drawer__header">
               <div>
                 <p className="eyebrow">
-                  SERVICE DETAILS
+                  {obsT("serviceDetails")}
                 </p>
 
                 <h2 id="service-detail-title">
@@ -1680,7 +1676,7 @@ export default function ObservabilityPage() {
               <button
                 type="button"
                 className="observability-service-drawer__close"
-                aria-label="Cerrar detalle"
+                aria-label={obsT("closeDetails")}
                 onClick={() =>
                   setSelectedService(null)
                 }
@@ -1703,13 +1699,12 @@ export default function ObservabilityPage() {
 
               <strong>
                 {selectedService.status === "up"
-                  ? "Healthy"
-                  : "Down"}
+                  ? obsT("serviceHealthy")
+                  : obsT("serviceDown")}
               </strong>
 
               <span>
-                · últimas{" "}
-                {rangeLabel(selectedHours)}
+                {obsT("lastPeriod", { period: rangeLabel(selectedHours) })}
               </span>
             </div>
 
@@ -1721,13 +1716,13 @@ export default function ObservabilityPage() {
 
             {serviceDetailLoading ? (
               <div className="security-empty">
-                Cargando detalle...
+                {obsT("loadingDetails")}
               </div>
             ) : (
               <>
                 <div className="observability-service-detail-grid">
                   <div>
-                    <span>Uptime</span>
+                    <span>{obsT("uptime")}</span>
 
                     <strong>
                       {selectedServiceUptime
@@ -1741,7 +1736,7 @@ export default function ObservabilityPage() {
                   </div>
 
                   <div>
-                    <span>Latencia media</span>
+                    <span>{obsT("averageLatency")}</span>
 
                     <strong>
                       {selectedServiceUptime
@@ -1755,7 +1750,7 @@ export default function ObservabilityPage() {
                   </div>
 
                   <div>
-                    <span>Última latencia</span>
+                    <span>{obsT("lastLatency")}</span>
 
                     <strong>
                       {selectedService
@@ -1769,7 +1764,7 @@ export default function ObservabilityPage() {
                   </div>
 
                   <div>
-                    <span>Checks</span>
+                    <span>{obsT("checks")}</span>
 
                     <strong>
                       {selectedServiceUptime
@@ -1787,7 +1782,7 @@ export default function ObservabilityPage() {
                   </div>
 
                   <div>
-                    <span>Checks DOWN</span>
+                    <span>{obsT("checksDown")}</span>
 
                     <strong>
                       {selectedServiceUptime
@@ -1797,11 +1792,11 @@ export default function ObservabilityPage() {
                 </div>
 
                 <div className="observability-service-detail-error">
-                  <span>Último error</span>
+                  <span>{obsT("lastError")}</span>
 
                   <strong>
                     {selectedService.last_error ||
-                      "Ninguno"}
+                      obsT("none")}
                   </strong>
                 </div>
 
@@ -1809,11 +1804,11 @@ export default function ObservabilityPage() {
                   <div className="observability-service-checks__header">
                     <div>
                       <p className="eyebrow">
-                        RECENT CHECKS
+                        {obsT("recentChecksEyebrow")}
                       </p>
 
                       <h3>
-                        Comprobaciones recientes
+                        {obsT("recentChecks")}
                       </h3>
                     </div>
 
@@ -1824,7 +1819,7 @@ export default function ObservabilityPage() {
 
                   {!selectedServiceChecks.length ? (
                     <div className="security-empty">
-                      No hay comprobaciones.
+                      {obsT("noChecks")}
                     </div>
                   ) : (
                     <div className="observability-service-check-list">
@@ -1855,8 +1850,8 @@ export default function ObservabilityPage() {
                                 }
                               >
                                 {checkUp
-                                  ? "UP"
-                                  : "DOWN"}
+                                  ? obsT("checkUp")
+                                  : obsT("checkDown")}
                               </span>
 
                               <strong>
@@ -1884,11 +1879,11 @@ export default function ObservabilityPage() {
                   <div className="observability-service-correlation__header">
                     <div>
                       <p className="eyebrow">
-                        CORRELATION
+                        {obsT("correlation")}
                       </p>
 
                       <h3>
-                        Telemetría del servicio
+                        {obsT("serviceTelemetry")}
                       </h3>
                     </div>
                   </div>
@@ -1902,7 +1897,7 @@ export default function ObservabilityPage() {
                       <strong>
                         {getLogServiceName(
                           selectedService
-                        ) || "Sin mapeo"}
+                        ) || obsT("noMapping")}
                       </strong>
                     </div>
 
@@ -1921,7 +1916,7 @@ export default function ObservabilityPage() {
                       <strong>
                         {getTraceServiceName(
                           selectedService
-                        ) || "Sin mapeo"}
+                        ) || obsT("noMapping")}
                       </strong>
                     </div>
                   </div>
@@ -1943,7 +1938,7 @@ export default function ObservabilityPage() {
                     }
                     onClick={handleServiceLogs}
                   >
-                    Ver logs
+                    {obsT("viewLogs")}
                   </button>
 
                   <button
@@ -1957,7 +1952,7 @@ export default function ObservabilityPage() {
                       handleServiceTraces
                     }
                   >
-                    Ver trazas
+                    {obsT("viewTraces")}
                   </button>
 
                   <button
@@ -1969,8 +1964,8 @@ export default function ObservabilityPage() {
                     }
                   >
                     {serviceCheckRunning
-                      ? "Comprobando..."
-                      : "↻ Comprobar ahora"}
+                      ? obsT("checkingNow")
+                      : obsT("checkNow")}
                   </button>
                 </div>
               </>
@@ -1986,14 +1981,13 @@ export default function ObservabilityPage() {
         <div className="security-panel-header">
           <div>
             <p className="eyebrow">
-              DISTRIBUTED TRACING
+              {obsT("tracingEyebrow")}
             </p>
 
-            <h2>Traces</h2>
+            <h2>{obsT("traces")}</h2>
 
             <p>
-              Trazas recientes y spans recopilados
-              mediante OpenTelemetry y Tempo.
+              {obsT("tracesDescription")}
             </p>
           </div>
 
@@ -2002,7 +1996,7 @@ export default function ObservabilityPage() {
               <button
                 type="button"
                 className="observability-trace-filter"
-                title="Quitar filtro de servicio"
+                title={obsT("removeServiceFilter")}
                 onClick={async () => {
                   setTraceServiceFilter("");
                   setSelectedTrace(null);
@@ -2012,8 +2006,7 @@ export default function ObservabilityPage() {
                   });
                 }}
               >
-                Servicio ·{" "}
-                {traceServiceFilter}
+                {obsT("serviceFilter", { name: traceServiceFilter })}
                 <span aria-hidden="true">
                   ×
                 </span>
@@ -2024,7 +2017,7 @@ export default function ObservabilityPage() {
               <strong>
                 {traces?.total ?? 0}
               </strong>
-              {" "}traces
+              {" "}{obsT("traceCount")}
             </span>
 
             <button
@@ -2041,15 +2034,15 @@ export default function ObservabilityPage() {
               }
             >
               {tracesLoading
-                ? "Actualizando..."
-                : "Actualizar"}
+                ? obsT("refreshing")
+                : obsT("refresh")}
             </button>
           </div>
         </div>
 
         {tracesError && (
           <div className="alert alert--error">
-            <strong>Tempo no disponible</strong>
+            <strong>{obsT("tempoUnavailable")}</strong>
             <span>{tracesError}</span>
           </div>
         )}
@@ -2057,20 +2050,20 @@ export default function ObservabilityPage() {
         <div className="observability-traces-layout">
           <div className="observability-trace-list">
             <div className="observability-trace-list__header">
-              <span>Operación</span>
-              <span>Servicio</span>
-              <span>Hora</span>
-              <span>Duración</span>
+              <span>{obsT("operation")}</span>
+              <span>{obsT("service")}</span>
+              <span>{obsT("time")}</span>
+              <span>{obsT("duration")}</span>
               <span>Trace ID</span>
             </div>
 
             {tracesLoading && !traces ? (
               <div className="security-empty">
-                Cargando trazas...
+                {obsT("loadingTraces")}
               </div>
             ) : !traces?.traces?.length ? (
               <div className="security-empty">
-                No hay trazas para este periodo.
+                {obsT("noTraces")}
               </div>
             ) : (
               traces.traces.map((trace) => (
@@ -2127,12 +2120,12 @@ export default function ObservabilityPage() {
           <div className="observability-trace-detail">
             {traceDetailLoading ? (
               <div className="security-empty">
-                Cargando detalle de traza...
+                {obsT("loadingTrace")}
               </div>
             ) : traceDetailError ? (
               <div className="alert alert--error">
                 <strong>
-                  Traza no disponible
+                  {obsT("traceUnavailable")}
                 </strong>
 
                 <span>
@@ -2141,15 +2134,14 @@ export default function ObservabilityPage() {
               </div>
             ) : !selectedTrace ? (
               <div className="security-empty">
-                Selecciona una traza para
-                inspeccionar sus spans.
+                {obsT("selectTrace")}
               </div>
             ) : (
               <>
                 <div className="observability-trace-detail__header">
                   <div>
                     <p className="eyebrow">
-                      TRACE DETAIL
+                      {obsT("traceDetail")}
                     </p>
 
                     <h3>
@@ -2173,14 +2165,14 @@ export default function ObservabilityPage() {
 
                 <div className="observability-trace-summary">
                   <span>
-                    <small>Servicio</small>
+                    <small>{obsT("service")}</small>
                     <strong>
                       {selectedTrace.service}
                     </strong>
                   </span>
 
                   <span>
-                    <small>Duración</small>
+                    <small>{obsT("duration")}</small>
                     <strong>
                       {Number(
                         selectedTrace.duration_ms ?? 0,
@@ -2196,7 +2188,7 @@ export default function ObservabilityPage() {
                   </span>
 
                   <span>
-                    <small>Inicio</small>
+                    <small>{obsT("start")}</small>
                     <strong>
                       {formatLogTime(
                         selectedTrace.started_at,
@@ -2319,14 +2311,13 @@ export default function ObservabilityPage() {
         <div className="security-panel-header">
           <div>
             <p className="eyebrow">
-              LIVE LOGS
+              {obsT("logsEyebrow")}
             </p>
 
             <h2>Logs</h2>
 
             <p>
-              Eventos recientes recopilados desde
-              Kubernetes mediante Loki.
+              {obsT("logsDescription")}
             </p>
           </div>
 
@@ -2341,7 +2332,7 @@ export default function ObservabilityPage() {
           onSubmit={handleLogSubmit}
         >
           <label>
-            <span>Servicio</span>
+            <span>{obsT("service")}</span>
 
             <select
               name="service"
@@ -2349,7 +2340,7 @@ export default function ObservabilityPage() {
               onChange={handleLogFilterChange}
             >
               <option value="">
-                Todos
+                {obsT("all")}
               </option>
 
               <option value="backend">
@@ -2379,7 +2370,7 @@ export default function ObservabilityPage() {
           </label>
 
           <label>
-            <span>Nivel</span>
+            <span>{obsT("level")}</span>
 
             <select
               name="level"
@@ -2387,7 +2378,7 @@ export default function ObservabilityPage() {
               onChange={handleLogFilterChange}
             >
               <option value="">
-                Todos
+                {obsT("all")}
               </option>
 
               <option value="debug">
@@ -2413,7 +2404,7 @@ export default function ObservabilityPage() {
           </label>
 
           <label>
-            <span>Periodo</span>
+            <span>{obsT("period")}</span>
 
             <select
               name="hours"
@@ -2421,29 +2412,29 @@ export default function ObservabilityPage() {
               onChange={handleLogFilterChange}
             >
               <option value="1">
-                Última hora
+                {obsT("lastHour")}
               </option>
 
               <option value="6">
-                Últimas 6 horas
+                {obsT("last6Hours")}
               </option>
 
               <option value="24">
-                Últimas 24 horas
+                {obsT("last24Hours")}
               </option>
 
               <option value="72">
-                Últimos 3 días
+                {obsT("last3Days")}
               </option>
 
               <option value="168">
-                Últimos 7 días
+                {obsT("last7Days")}
               </option>
             </select>
           </label>
 
           <label className="observability-log-search">
-            <span>Buscar</span>
+            <span>{obsT("search")}</span>
 
             <input
               type="search"
@@ -2460,15 +2451,15 @@ export default function ObservabilityPage() {
             disabled={logsLoading}
           >
             {logsLoading
-              ? "Buscando..."
-              : "Aplicar"}
+              ? obsT("searching")
+              : obsT("apply")}
           </button>
         </form>
 
         {logsError && (
           <div className="alert alert--error">
             <strong>
-              Loki no disponible
+              {obsT("lokiUnavailable")}
             </strong>
 
             <span>{logsError}</span>
@@ -2477,12 +2468,11 @@ export default function ObservabilityPage() {
 
         {logsLoading ? (
           <div className="security-empty">
-            Consultando Loki...
+            {obsT("queryingLoki")}
           </div>
         ) : !logs?.logs?.length ? (
           <div className="security-empty">
-            No se encontraron logs para estos
-            filtros.
+            {obsT("noLogs")}
           </div>
         ) : (
           <div className="observability-log-list">
@@ -2543,7 +2533,7 @@ export default function ObservabilityPage() {
                             )
                           }
                         >
-                          Ver traza
+                          {obsT("viewTrace")}
                         </button>
                       </span>
                     )}

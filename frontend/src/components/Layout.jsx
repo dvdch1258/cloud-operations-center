@@ -564,7 +564,7 @@ export default function Layout() {
 
       <nav
         className="mobile-bottom-nav"
-        aria-label="Navegación principal móvil"
+        aria-label={t("nav.mobileNavigationAria")}
       >
         <NavLink
           to="/"
@@ -620,7 +620,7 @@ export default function Layout() {
           className={`mobile-bottom-nav__item mobile-bottom-nav__more ${
             menuOpen ? "mobile-bottom-nav__item--active" : ""
           }`}
-          aria-label="Abrir más secciones"
+          aria-label={t("nav.openMoreSectionsAria")}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen(true)}
         >
