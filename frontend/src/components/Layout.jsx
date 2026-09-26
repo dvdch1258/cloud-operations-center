@@ -507,7 +507,7 @@ export default function Layout() {
               <span className="account-menu__avatar">{initial}</span>
 
               <span className="account-menu__identity">
-                <small>Sesión iniciada</small>
+                <small>{t("common.signedIn")}</small>
                 <strong>{username}</strong>
               </span>
 

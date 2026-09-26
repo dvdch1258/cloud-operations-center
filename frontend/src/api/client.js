@@ -1,3 +1,5 @@
+import i18n from "../i18n/index.js";
+
 const API_URL =
   import.meta.env.VITE_API_URL || "/api";
 
@@ -9,38 +11,33 @@ function apiErrorMessage(status, path) {
     status === 401 &&
     path === "/auth/login"
   ) {
-    return "Usuario o contraseña incorrectos.";
+    return i18n.t(
+      "apiErrors.invalidCredentials",
+    );
   }
 
-  switch (status) {
-    case 400:
-      return "La solicitud no se pudo procesar.";
+  const errorKeys = {
+    400: "apiErrors.badRequest",
+    401: "apiErrors.unauthorized",
+    403: "apiErrors.forbidden",
+    404: "apiErrors.notFound",
+    409: "apiErrors.conflict",
+    422: "apiErrors.validation",
+    429: "apiErrors.rateLimit",
+  };
 
-    case 401:
-      return "Tu sesión ha caducado.";
-
-    case 403:
-      return "No tienes permisos para realizar esta acción.";
-
-    case 404:
-      return "El recurso solicitado no está disponible.";
-
-    case 409:
-      return "La operación no pudo completarse por un conflicto.";
-
-    case 422:
-      return "Algunos datos enviados no son válidos.";
-
-    case 429:
-      return "Se han realizado demasiadas solicitudes. Inténtalo de nuevo en unos instantes.";
-
-    default:
-      if (status >= 500) {
-        return "El servidor no pudo completar la solicitud.";
-      }
-
-      return `No se pudo completar la solicitud (${status}).`;
+  if (errorKeys[status]) {
+    return i18n.t(errorKeys[status]);
   }
+
+  if (status >= 500) {
+    return i18n.t("apiErrors.server");
+  }
+
+  return i18n.t(
+    "apiErrors.generic",
+    { status },
+  );
 }
 
 
@@ -63,7 +60,7 @@ async function request(path, options = {}) {
     );
   } catch (cause) {
     const error = new Error(
-      "No se pudo conectar con el servidor.",
+      i18n.t("apiErrors.network"),
     );
 
     error.status = 0;

@@ -32,6 +32,32 @@ const resources = {
         platform: "Platform",
         noDate: "No date",
         waitingForData: "Waiting for data",
+        signedIn: "Signed in",
+      },
+
+      apiErrors: {
+        invalidCredentials:
+          "Incorrect username or password.",
+        badRequest:
+          "The request could not be processed.",
+        unauthorized:
+          "Your session has expired.",
+        forbidden:
+          "You do not have permission to perform this action.",
+        notFound:
+          "The requested resource is not available.",
+        conflict:
+          "The operation could not be completed because of a conflict.",
+        validation:
+          "Some submitted data is not valid.",
+        rateLimit:
+          "Too many requests were made. Please try again in a moment.",
+        server:
+          "The server could not complete the request.",
+        generic:
+          "The request could not be completed ({{status}}).",
+        network:
+          "Could not connect to the server.",
       },
 
       status: {
@@ -430,6 +456,32 @@ const resources = {
         platform: "Plataforma",
         noDate: "Sin fecha",
         waitingForData: "Esperando datos",
+        signedIn: "Sesión iniciada",
+      },
+
+      apiErrors: {
+        invalidCredentials:
+          "Usuario o contraseña incorrectos.",
+        badRequest:
+          "La solicitud no se pudo procesar.",
+        unauthorized:
+          "Tu sesión ha caducado.",
+        forbidden:
+          "No tienes permisos para realizar esta acción.",
+        notFound:
+          "El recurso solicitado no está disponible.",
+        conflict:
+          "La operación no pudo completarse por un conflicto.",
+        validation:
+          "Algunos datos enviados no son válidos.",
+        rateLimit:
+          "Se han realizado demasiadas solicitudes. Inténtalo de nuevo en unos instantes.",
+        server:
+          "El servidor no pudo completar la solicitud.",
+        generic:
+          "No se pudo completar la solicitud ({{status}}).",
+        network:
+          "No se pudo conectar con el servidor.",
       },
 
       status: {
