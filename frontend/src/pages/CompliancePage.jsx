@@ -4,22 +4,48 @@ import {
   useState,
 } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { api } from "../api/client";
+import { controlText } from "../i18n/securityContent";
 
 
-const STATUS_LABELS = {
-  passed: "Superado",
-  failed: "Fallido",
-};
+const statusKeys = new Set([
+  "passed",
+  "failed",
+]);
 
-const CATEGORY_LABELS = {
-  authentication: "Autenticación",
-  secrets: "Secretos",
-  vulnerabilities: "Vulnerabilidades",
-};
+const categoryKeys = new Set([
+  "authentication",
+  "secrets",
+  "vulnerabilities",
+]);
 
 
-function formatDate(value) {
+function statusLabel(value, t) {
+  return statusKeys.has(value)
+    ? t(`compliance.status.${value}`)
+    : value;
+}
+
+
+function categoryLabel(value, t) {
+  return categoryKeys.has(value)
+    ? t(`compliance.category.${value}`)
+    : value;
+}
+
+
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
+}
+
+
+function formatDate(value, language) {
   if (!value) {
     return "—";
   }
@@ -30,17 +56,24 @@ function formatDate(value) {
     return "—";
   }
 
-  return date.toLocaleString("es-ES", {
+  return date.toLocaleString(
+    localeForLanguage(language),
+    {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit",
-  });
+      minute: "2-digit",
+    },
+  );
 }
 
 
 export default function CompliancePage() {
+  const { t, i18n } = useTranslation();
+  const language =
+    i18n.resolvedLanguage || i18n.language;
+
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -58,12 +91,12 @@ export default function CompliancePage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-        "No se pudo evaluar el cumplimiento.",
+        t("compliance.errors.load"),
       );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
 
   useEffect(() => {
@@ -78,14 +111,13 @@ export default function CompliancePage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            SECURITY GOVERNANCE
+            {t("compliance.eyebrow")}
           </p>
 
-          <h1>Compliance</h1>
+          <h1>{t("compliance.title")}</h1>
 
           <p className="subtitle">
-            Evaluación automática de controles
-            técnicos de seguridad de la plataforma.
+            {t("compliance.subtitle")}
           </p>
         </div>
 
@@ -96,15 +128,15 @@ export default function CompliancePage() {
           onClick={loadCompliance}
         >
           {loading
-            ? "Evaluando..."
-            : "Reevaluar"}
+            ? t("compliance.evaluating")
+            : t("compliance.reevaluate")}
         </button>
       </header>
 
       {error && (
         <div className="alert alert--error">
           <strong>
-            No se pudo evaluar Compliance
+            {t("compliance.errors.heading")}
           </strong>
           <span>{error}</span>
         </div>
@@ -113,7 +145,7 @@ export default function CompliancePage() {
       <section className="compliance-overview">
         <article className="panel compliance-score-card">
           <p className="eyebrow">
-            SECURITY BASELINE
+            {t("compliance.score.eyebrow")}
           </p>
 
           <div className="compliance-score">
@@ -122,7 +154,7 @@ export default function CompliancePage() {
             </strong>
 
             <span>
-              puntuación de cumplimiento
+              {t("compliance.score.label")}
             </span>
           </div>
 
@@ -137,36 +169,39 @@ export default function CompliancePage() {
           </div>
 
           <p className="compliance-evaluated">
-            Evaluado:{" "}
+            {t("compliance.score.evaluated")}{" "}
             <strong>
-              {formatDate(summary?.evaluated_at)}
+              {formatDate(
+                summary?.evaluated_at,
+                language,
+              )}
             </strong>
           </p>
         </article>
 
         <div className="metrics-grid compliance-metrics">
           <article className="metric-card">
-            <span>Controles</span>
+            <span>{t("compliance.kpi.controls")}</span>
             <strong className="metric-card__value">
               {loading ? "—" : summary?.total ?? 0}
             </strong>
-            <p>Controles evaluados</p>
+            <p>{t("compliance.kpi.controlsDescription")}</p>
           </article>
 
           <article className="metric-card">
-            <span>Superados</span>
+            <span>{t("compliance.kpi.passed")}</span>
             <strong className="metric-card__value">
               {loading ? "—" : summary?.passed ?? 0}
             </strong>
-            <p>Configuración conforme</p>
+            <p>{t("compliance.kpi.passedDescription")}</p>
           </article>
 
           <article className="metric-card metric-card--danger">
-            <span>Fallidos</span>
+            <span>{t("compliance.kpi.failed")}</span>
             <strong className="metric-card__value">
               {loading ? "—" : summary?.failed ?? 0}
             </strong>
-            <p>Requieren actuación</p>
+            <p>{t("compliance.kpi.failedDescription")}</p>
           </article>
         </div>
       </section>
@@ -175,30 +210,35 @@ export default function CompliancePage() {
         <div className="security-panel-header">
           <div>
             <p className="eyebrow">
-              CONTROLES TÉCNICOS
+              {t("compliance.controls.eyebrow")}
             </p>
 
-            <h2>Estado de cumplimiento</h2>
+            <h2>{t("compliance.controls.title")}</h2>
 
             <p>
-              Evidencia y recomendación para cada
-              control evaluado automáticamente.
+              {t("compliance.controls.description")}
             </p>
           </div>
 
           <span className="security-event-count">
-            {summary?.controls?.length ?? 0} controles
+            {t(
+              "compliance.controls.count",
+              {
+                count:
+                  summary?.controls?.length ?? 0,
+              },
+            )}
           </span>
         </div>
 
         {loading ? (
           <div className="security-empty">
-            Evaluando controles...
+            {t("compliance.controls.loading")}
           </div>
         ) : !summary?.controls?.length ? (
           <div className="security-empty">
             <strong>
-              No hay controles disponibles
+              {t("compliance.controls.empty")}
             </strong>
           </div>
         ) : (
@@ -218,8 +258,10 @@ export default function CompliancePage() {
                     </span>
 
                     <span className="compliance-control__category">
-                      {CATEGORY_LABELS[control.category] ||
-                        control.category}
+                      {categoryLabel(
+                        control.category,
+                        t,
+                      )}
                     </span>
                   </div>
 
@@ -229,21 +271,27 @@ export default function CompliancePage() {
                       `compliance-status--${control.status}`
                     }
                   >
-                    {STATUS_LABELS[control.status] ||
-                      control.status}
+                    {statusLabel(
+                      control.status,
+                      t,
+                    )}
                   </span>
                 </div>
 
-                <h3>{control.title}</h3>
+                <h3>{controlText(control, "title", language)}</h3>
 
                 <div className="compliance-control__detail">
-                  <strong>Evidencia</strong>
-                  <p>{control.evidence}</p>
+                  <strong>
+                    {t("compliance.controls.evidence")}
+                  </strong>
+                  <p>{controlText(control, "evidence", language)}</p>
                 </div>
 
                 <div className="compliance-control__detail">
-                  <strong>Recomendación</strong>
-                  <p>{control.recommendation}</p>
+                  <strong>
+                    {t("compliance.controls.recommendation")}
+                  </strong>
+                  <p>{controlText(control, "recommendation", language)}</p>
                 </div>
               </article>
             ))}

@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { api } from "../api/client";
 
@@ -19,20 +20,41 @@ const emptyForm = {
 };
 
 
-const severityLabels = {
-  low: "Baja",
-  medium: "Media",
-  high: "Alta",
-  critical: "Crítica",
-};
+function severityLabel(severity, t) {
+  const known = new Set([
+    "low",
+    "medium",
+    "high",
+    "critical",
+  ]);
+
+  return known.has(severity)
+    ? t(`incidents.severity.${severity}`)
+    : severity;
+}
 
 
-const statusLabels = {
-  open: "Abierto",
-  investigating: "Investigando",
-  resolved: "Resuelto",
-  closed: "Cerrado",
-};
+function statusLabel(status, t) {
+  const known = new Set([
+    "open",
+    "investigating",
+    "resolved",
+    "closed",
+  ]);
+
+  return known.has(status)
+    ? t(`incidents.status.${status}`)
+    : status;
+}
+
+
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
+}
 
 
 const activeStatuses = new Set([
@@ -41,7 +63,7 @@ const activeStatuses = new Set([
 ]);
 
 
-function formatDateTime(value) {
+function formatDateTime(value, language) {
   if (!value) {
     return "—";
   }
@@ -52,26 +74,32 @@ function formatDateTime(value) {
     return "—";
   }
 
-  return date.toLocaleString("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return date.toLocaleString(
+    localeForLanguage(language),
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
 }
 
 
-function formatTime(value) {
+function formatTime(value, language) {
   if (!value) {
-    return "Esperando datos";
+    return "—";
   }
 
-  return value.toLocaleTimeString("es-ES", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  return value.toLocaleTimeString(
+    localeForLanguage(language),
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    },
+  );
 }
 
 
@@ -151,6 +179,12 @@ function IncidentKpi({
 
 
 export default function IncidentsPage() {
+  const { t, i18n } = useTranslation();
+
+  const language =
+    i18n.resolvedLanguage ||
+    i18n.language;
+
   const [incidents, setIncidents] =
     useState([]);
 
@@ -252,14 +286,14 @@ export default function IncidentsPage() {
       } catch (requestError) {
         setError(
           requestError.message ||
-            "No se pudieron cargar los incidentes.",
+            t("incidents.errors.load"),
         );
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [],
+    [t],
   );
 
 
@@ -543,7 +577,7 @@ export default function IncidentsPage() {
       !editingId
     ) {
       setError(
-        "Selecciona un servicio.",
+        t("incidents.errors.selectService"),
       );
 
       return;
@@ -585,7 +619,7 @@ export default function IncidentsPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-          "No se pudo guardar el incidente.",
+          t("incidents.errors.save"),
       );
     } finally {
       setSaving(false);
@@ -598,7 +632,9 @@ export default function IncidentsPage() {
   ) {
     const confirmed =
       window.confirm(
-        `¿Seguro que quieres eliminar "${incident.title}"?`,
+        t("incidents.confirmDelete", {
+          title: incident.title,
+        }),
       );
 
     if (!confirmed) {
@@ -616,7 +652,7 @@ export default function IncidentsPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-          "No se pudo eliminar el incidente.",
+          t("incidents.errors.delete"),
       );
     }
   }
@@ -648,7 +684,7 @@ export default function IncidentsPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-          "No se pudo cambiar el estado.",
+          t("incidents.errors.changeStatus"),
       );
     } finally {
       setUpdatingId(null);
@@ -661,25 +697,26 @@ export default function IncidentsPage() {
       <header className="topbar incidents-v2__topbar">
         <div>
           <p className="eyebrow">
-            INCIDENT MANAGEMENT
+            {t("incidents.eyebrow")}
           </p>
 
-          <h1>Incidentes</h1>
+          <h1>{t("incidents.title")}</h1>
 
           <p className="subtitle">
-            Detección, investigación y
-            resolución de incidencias
-            operativas.
+            {t("incidents.subtitle")}
           </p>
         </div>
 
         <div className="incidents-v2__header-actions">
           <span className="incidents-v2__updated">
             {lastUpdatedAt
-              ? `Actualizado ${formatTime(
-                  lastUpdatedAt,
-                )}`
-              : "Esperando datos"}
+              ? t("incidents.updated", {
+                  time: formatTime(
+                    lastUpdatedAt,
+                    language,
+                  ),
+                })
+              : t("incidents.waitingForData")}
           </span>
 
           <button
@@ -693,8 +730,8 @@ export default function IncidentsPage() {
             }
           >
             {refreshing
-              ? "Actualizando..."
-              : "Actualizar"}
+              ? t("common.refreshing")
+              : t("common.refresh")}
           </button>
 
           <button
@@ -735,9 +772,9 @@ export default function IncidentsPage() {
 
             {formOpen
               ? editingId
-                ? "Cancelar edición"
-                : "Cancelar creación"
-              : "Nuevo incidente"}
+                ? t("incidents.headerActions.cancelEdit")
+                : t("incidents.headerActions.cancelCreate")
+              : t("incidents.headerActions.newIncident")}
           </button>
         </div>
       </header>
@@ -746,23 +783,38 @@ export default function IncidentsPage() {
       {error && (
         <section className="alert alert--error">
           <strong>
-            No se pudo completar la operación
+            {t("incidents.refreshError")}
           </strong>
 
           <span>{error}</span>
+
+          <div className="v2-error-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={loading || refreshing}
+              onClick={() =>
+                loadData({
+                  refresh: true,
+                })
+              }
+            >
+              {t("incidents.retry")}
+            </button>
+          </div>
         </section>
       )}
 
 
       <section className="incidents-v2-kpis">
         <IncidentKpi
-          label="Activos"
+          label={t("incidents.kpi.active")}
           value={
             loading
               ? "—"
               : stats.active
           }
-          description="Requieren atención"
+          description={t("incidents.kpi.activeDescription")}
           tone={
             stats.active > 0
               ? "warning"
@@ -771,13 +823,13 @@ export default function IncidentsPage() {
         />
 
         <IncidentKpi
-          label="Investigando"
+          label={t("incidents.kpi.investigating")}
           value={
             loading
               ? "—"
               : stats.investigating
           }
-          description="Actualmente en análisis"
+          description={t("incidents.kpi.investigatingDescription")}
           tone={
             stats.investigating > 0
               ? "warning"
@@ -786,13 +838,13 @@ export default function IncidentsPage() {
         />
 
         <IncidentKpi
-          label="Críticos activos"
+          label={t("incidents.kpi.critical")}
           value={
             loading
               ? "—"
               : stats.criticalActive
           }
-          description="Prioridad máxima"
+          description={t("incidents.kpi.criticalDescription")}
           tone={
             stats.criticalActive > 0
               ? "danger"
@@ -801,13 +853,13 @@ export default function IncidentsPage() {
         />
 
         <IncidentKpi
-          label="Finalizados"
+          label={t("incidents.kpi.finalized")}
           value={
             loading
               ? "—"
               : stats.finalized
           }
-          description="Resueltos o cerrados"
+          description={t("incidents.kpi.finalizedDescription")}
           tone="success"
         />
       </section>
@@ -825,27 +877,27 @@ export default function IncidentsPage() {
             <div>
               <span>
                 {editingId
-                  ? "EDICIÓN"
-                  : "NUEVA INCIDENCIA"}
+                  ? t("incidents.form.editEyebrow")
+                  : t("incidents.form.createEyebrow")}
               </span>
 
               <h2 id="incident-form-title">
                 {editingId
-                  ? "Editar incidente"
-                  : "Nuevo incidente"}
+                  ? t("incidents.form.editTitle")
+                  : t("incidents.form.createTitle")}
               </h2>
 
               <p>
                 {editingId
-                  ? "Actualiza la información y el estado del incidente."
-                  : "Registra una incidencia vinculada a uno de los servicios monitorizados."}
+                  ? t("incidents.form.editDescription")
+                  : t("incidents.form.createDescription")}
               </p>
             </div>
 
             <button
               type="button"
               className="incidents-v2-form-panel__close"
-              aria-label="Cerrar formulario"
+              aria-label={t("incidents.form.close")}
               onClick={closeForm}
             >
               ×
@@ -857,20 +909,20 @@ export default function IncidentsPage() {
             onSubmit={submitIncident}
           >
             <label className="incidents-v2-form__title">
-              <span>Título</span>
+              <span>{t("incidents.form.title")}</span>
 
               <input
                 name="title"
                 value={form.title}
                 onChange={updateField}
-                placeholder="Caída del backend principal"
+                placeholder={t("incidents.form.titlePlaceholder")}
                 autoFocus
                 required
               />
             </label>
 
             <label>
-              <span>Severidad</span>
+              <span>{t("incidents.form.severity")}</span>
 
               <select
                 name="severity"
@@ -878,25 +930,25 @@ export default function IncidentsPage() {
                 onChange={updateField}
               >
                 <option value="low">
-                  Baja
+                  {t("incidents.severity.low")}
                 </option>
 
                 <option value="medium">
-                  Media
+                  {t("incidents.severity.medium")}
                 </option>
 
                 <option value="high">
-                  Alta
+                  {t("incidents.severity.high")}
                 </option>
 
                 <option value="critical">
-                  Crítica
+                  {t("incidents.severity.critical")}
                 </option>
               </select>
             </label>
 
             <label>
-              <span>Servicio afectado</span>
+              <span>{t("incidents.form.service")}</span>
 
               <select
                 name="service_id"
@@ -905,7 +957,7 @@ export default function IncidentsPage() {
                 required={!editingId}
               >
                 <option value="">
-                  Sin asignar
+                  {t("incidents.form.unassigned")}
                 </option>
 
                 {services.map(
@@ -925,7 +977,7 @@ export default function IncidentsPage() {
 
             {editingId && (
               <label>
-                <span>Estado</span>
+                <span>{t("incidents.form.status")}</span>
 
                 <select
                   name="status"
@@ -933,33 +985,33 @@ export default function IncidentsPage() {
                   onChange={updateField}
                 >
                   <option value="open">
-                    Abierto
+                    {t("incidents.status.open")}
                   </option>
 
                   <option value="investigating">
-                    Investigando
+                    {t("incidents.status.investigating")}
                   </option>
 
                   <option value="resolved">
-                    Resuelto
+                    {t("incidents.status.resolved")}
                   </option>
 
                   <option value="closed">
-                    Cerrado
+                    {t("incidents.status.closed")}
                   </option>
                 </select>
               </label>
             )}
 
             <label className="incidents-v2-form__description">
-              <span>Descripción</span>
+              <span>{t("incidents.form.description")}</span>
 
               <textarea
                 name="description"
                 value={form.description}
                 onChange={updateField}
                 rows={4}
-                placeholder="Describe el impacto, síntomas y contexto observado..."
+                placeholder={t("incidents.form.descriptionPlaceholder")}
                 required
               />
             </label>
@@ -970,7 +1022,7 @@ export default function IncidentsPage() {
                 className="secondary-button incidents-v2-form__cancel"
                 onClick={closeForm}
               >
-                Cancelar
+                {t("incidents.form.cancel")}
               </button>
 
               <button
@@ -979,10 +1031,10 @@ export default function IncidentsPage() {
                 disabled={saving}
               >
                 {saving
-                  ? "Guardando..."
+                  ? t("incidents.form.saving")
                   : editingId
-                    ? "Guardar cambios"
-                    : "Crear incidente"}
+                    ? t("incidents.form.save")
+                    : t("incidents.form.create")}
               </button>
             </div>
           </form>
@@ -994,7 +1046,7 @@ export default function IncidentsPage() {
       <section className="incidents-v2-filters">
         <div className="incidents-v2-filters__heading">
           <div>
-            <span>FILTROS</span>
+            <span>{t("incidents.filters.eyebrow")}</span>
 
             <strong>
               {filteredIncidents.length}
@@ -1008,25 +1060,25 @@ export default function IncidentsPage() {
               type="button"
               onClick={clearFilters}
             >
-              Limpiar filtros
+              {t("incidents.filters.clear")}
             </button>
           )}
         </div>
 
         <div className="incidents-v2-filters__grid">
           <label className="incidents-v2-filters__search">
-            <span>Buscar</span>
+            <span>{t("incidents.filters.search")}</span>
 
             <input
               name="search"
               value={filters.search}
               onChange={updateFilter}
-              placeholder="Título, descripción o servicio..."
+              placeholder={t("incidents.filters.searchPlaceholder")}
             />
           </label>
 
           <label>
-            <span>Estado</span>
+            <span>{t("incidents.filters.status")}</span>
 
             <select
               name="status"
@@ -1034,29 +1086,29 @@ export default function IncidentsPage() {
               onChange={updateFilter}
             >
               <option value="all">
-                Todos
+                {t("incidents.filters.allStatuses")}
               </option>
 
               <option value="open">
-                Abiertos
+                {t("incidents.filters.open")}
               </option>
 
               <option value="investigating">
-                Investigando
+                {t("incidents.filters.investigating")}
               </option>
 
               <option value="resolved">
-                Resueltos
+                {t("incidents.filters.resolved")}
               </option>
 
               <option value="closed">
-                Cerrados
+                {t("incidents.filters.closed")}
               </option>
             </select>
           </label>
 
           <label>
-            <span>Severidad</span>
+            <span>{t("incidents.filters.severity")}</span>
 
             <select
               name="severity"
@@ -1064,29 +1116,29 @@ export default function IncidentsPage() {
               onChange={updateFilter}
             >
               <option value="all">
-                Todas
+                {t("incidents.filters.allSeverities")}
               </option>
 
               <option value="low">
-                Baja
+                {t("incidents.severity.low")}
               </option>
 
               <option value="medium">
-                Media
+                {t("incidents.severity.medium")}
               </option>
 
               <option value="high">
-                Alta
+                {t("incidents.severity.high")}
               </option>
 
               <option value="critical">
-                Crítica
+                {t("incidents.severity.critical")}
               </option>
             </select>
           </label>
 
           <label>
-            <span>Servicio</span>
+            <span>{t("incidents.filters.service")}</span>
 
             <select
               name="service"
@@ -1094,7 +1146,7 @@ export default function IncidentsPage() {
               onChange={updateFilter}
             >
               <option value="all">
-                Todos
+                {t("incidents.filters.allServices")}
               </option>
 
               {services.map(
@@ -1119,16 +1171,15 @@ export default function IncidentsPage() {
         <div className="incidents-v2-inventory__header">
           <div>
             <span>
-              COLA OPERATIVA
+              {t("incidents.inventory.eyebrow")}
             </span>
 
             <h2>
-              Incidentes registrados
+              {t("incidents.inventory.title")}
             </h2>
 
             <p>
-              Seguimiento y resolución de
-              incidencias de la plataforma.
+              {t("incidents.inventory.description")}
             </p>
           </div>
 
@@ -1138,7 +1189,7 @@ export default function IncidentsPage() {
             </strong>
 
             <span>
-              visibles
+              {t("incidents.inventory.visible")}
             </span>
           </div>
         </div>
@@ -1147,7 +1198,7 @@ export default function IncidentsPage() {
         {loading &&
           incidents.length === 0 && (
             <div className="incidents-v2-empty">
-              Cargando incidentes...
+              {t("incidents.inventory.loading")}
             </div>
           )}
 
@@ -1161,14 +1212,14 @@ export default function IncidentsPage() {
 
               <strong>
                 {hasFilters
-                  ? "No hay coincidencias"
-                  : "Sin incidentes registrados"}
+                  ? t("incidents.inventory.noMatchesTitle")
+                  : t("incidents.inventory.emptyTitle")}
               </strong>
 
               <p>
                 {hasFilters
-                  ? "Prueba a modificar o limpiar los filtros."
-                  : "No hay incidencias que requieran seguimiento."}
+                  ? t("incidents.inventory.noMatchesDescription")
+                  : t("incidents.inventory.emptyDescription")}
               </p>
             </div>
           )}
@@ -1177,12 +1228,12 @@ export default function IncidentsPage() {
         {filteredIncidents.length > 0 && (
           <div className="incidents-v2-list">
             <div className="incidents-v2-row incidents-v2-row--header">
-              <span>Incidente</span>
-              <span>Estado</span>
-              <span>Servicio</span>
-              <span>Duración</span>
-              <span>Creado</span>
-              <span>Acciones</span>
+              <span>{t("incidents.inventory.columns.incident")}</span>
+              <span>{t("incidents.inventory.columns.status")}</span>
+              <span>{t("incidents.inventory.columns.service")}</span>
+              <span>{t("incidents.inventory.columns.duration")}</span>
+              <span>{t("incidents.inventory.columns.created")}</span>
+              <span>{t("incidents.inventory.columns.actions")}</span>
             </div>
 
             {filteredIncidents.map(
@@ -1215,10 +1266,10 @@ export default function IncidentsPage() {
                           <span
                             className={`incidents-v2-severity incidents-v2-severity--${incident.severity}`}
                           >
-                            {severityLabels[
-                              incident.severity
-                            ] ||
-                              incident.severity}
+                            {severityLabel(
+                              incident.severity,
+                              t,
+                            )}
                           </span>
 
                           <span className="incidents-v2-incident__id">
@@ -1235,7 +1286,7 @@ export default function IncidentsPage() {
 
                         <p>
                           {incident.description ||
-                            "Sin descripción"}
+                            t("incidents.inventory.noDescription")}
                         </p>
                       </div>
                     </div>
@@ -1243,41 +1294,47 @@ export default function IncidentsPage() {
 
                     <div
                       className="incidents-v2-row__metric"
-                      data-label="Estado"
+                      data-label={t(
+                        "incidents.inventory.columns.status",
+                      )}
                     >
                       <span
                         className={`incidents-v2-status incidents-v2-status--${incident.status}`}
                       >
                         <span />
 
-                        {statusLabels[
-                          incident.status
-                        ] ||
-                          incident.status}
+                        {statusLabel(
+                          incident.status,
+                          t,
+                        )}
                       </span>
                     </div>
 
 
                     <div
                       className="incidents-v2-row__metric"
-                      data-label="Servicio"
+                      data-label={t(
+                        "incidents.inventory.columns.service",
+                      )}
                     >
                       <strong>
                         {serviceMap.get(
                           incident.service_id,
                         ) ||
-                          "Sin asignar"}
+                          t("incidents.inventory.unassigned")}
                       </strong>
 
                       <span>
-                        Servicio afectado
+                        {t("incidents.inventory.affectedService")}
                       </span>
                     </div>
 
 
                     <div
                       className="incidents-v2-row__metric"
-                      data-label="Duración"
+                      data-label={t(
+                        "incidents.inventory.columns.duration",
+                      )}
                     >
                       <strong>
                         {formatDuration(
@@ -1288,28 +1345,34 @@ export default function IncidentsPage() {
 
                       <span>
                         {incident.resolved_at
-                          ? "Finalizado"
-                          : "En curso"}
+                          ? t("incidents.inventory.finalized")
+                          : t("incidents.inventory.inProgress")}
                       </span>
                     </div>
 
 
                     <div
                       className="incidents-v2-row__metric"
-                      data-label="Creado"
+                      data-label={t(
+                        "incidents.inventory.columns.created",
+                      )}
                     >
                       <strong>
                         {formatDateTime(
                           incident.created_at,
+                          language,
                         )}
                       </strong>
 
                       <span>
                         {incident.resolved_at
-                          ? `Resuelto ${formatDateTime(
-                              incident.resolved_at,
-                            )}`
-                          : "Sin resolución"}
+                          ? t("incidents.inventory.resolvedAt", {
+                              date: formatDateTime(
+                                incident.resolved_at,
+                                language,
+                              ),
+                            })
+                          : t("incidents.inventory.unresolved")}
                       </span>
                     </div>
 
@@ -1319,7 +1382,7 @@ export default function IncidentsPage() {
                         to={`/incidentes/${incident.id}`}
                         className="incidents-v2-action incidents-v2-action--primary"
                       >
-                        Detalle
+                        {t("incidents.inventory.detail")}
                       </Link>
 
                       {incident.status ===
@@ -1335,7 +1398,7 @@ export default function IncidentsPage() {
                             )
                           }
                         >
-                          Investigar
+                          {t("incidents.inventory.investigate")}
                         </button>
                       )}
 
@@ -1351,7 +1414,7 @@ export default function IncidentsPage() {
                             )
                           }
                         >
-                          Resolver
+                          {t("incidents.inventory.resolve")}
                         </button>
                       )}
 
@@ -1368,7 +1431,7 @@ export default function IncidentsPage() {
                             )
                           }
                         >
-                          Cerrar
+                          {t("incidents.inventory.close")}
                         </button>
                       )}
 
@@ -1382,7 +1445,7 @@ export default function IncidentsPage() {
                           )
                         }
                       >
-                        Editar
+                        {t("incidents.inventory.edit")}
                       </button>
 
                       <button
@@ -1395,7 +1458,7 @@ export default function IncidentsPage() {
                           )
                         }
                       >
-                        Eliminar
+                        {t("incidents.inventory.delete")}
                       </button>
                     </div>
                   </article>

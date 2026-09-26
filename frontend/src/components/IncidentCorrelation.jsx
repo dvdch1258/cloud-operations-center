@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 
-function formatDate(value) {
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
+}
+
+function formatDate(value, language) {
   if (!value) return "—";
 
   const normalized =
@@ -9,20 +18,37 @@ function formatDate(value) {
       ? value
       : `${value}Z`;
 
-  return new Date(normalized).toLocaleString();
+  return new Date(normalized).toLocaleString(
+    language
+      ? localeForLanguage(language)
+      : undefined,
+  );
 }
 
-const sourceLabels = {
-  available: "Disponible",
-  unavailable: "No disponible",
-  skipped: "No consultado",
-};
+const sourceStatusKeys = new Set([
+  "available",
+  "unavailable",
+  "skipped",
+]);
+
+function sourceStatusLabel(value, t) {
+  return sourceStatusKeys.has(value)
+    ? t(
+        `incidentDetail.correlation.sourceStatus.${value}`,
+      )
+    : value;
+}
 
 export default function IncidentCorrelation({
   incidentId,
   onTrace,
   refreshToken,
 }) {
+  const { t, i18n } = useTranslation();
+
+  const language =
+    i18n.resolvedLanguage || i18n.language;
+
   const [state, setState] = useState({
     loading: true,
   });
@@ -57,7 +83,7 @@ export default function IncidentCorrelation({
   if (state.loading) {
     return (
       <p role="status">
-        Correlacionando incidente con Loki y Tempo…
+        {t("incidentDetail.correlation.loading")}
       </p>
     );
   }
@@ -88,17 +114,16 @@ export default function IncidentCorrelation({
     <div className="incident-correlation">
       <div className="incident-section-heading">
         <div>
-          <h2>Correlación operativa</h2>
+          <h2>{t("incidentDetail.correlation.title")}</h2>
 
           <p className="incident-hint">
-            Contexto observado automáticamente durante
-            la ventana temporal del incidente.
+            {t("incidentDetail.correlation.description")}
           </p>
         </div>
 
         <div
           className="incident-correlation-sources"
-          aria-label="Estado de las fuentes"
+          aria-label={t("incidentDetail.correlation.sourcesAria")}
         >
           {["loki", "tempo"].map((source) => {
             const status =
@@ -116,7 +141,7 @@ export default function IncidentCorrelation({
                   ? "Loki"
                   : "Tempo"}
                 {" · "}
-                {sourceLabels[status] || status}
+                {sourceStatusLabel(status, t)}
               </span>
             );
           })}
@@ -124,40 +149,53 @@ export default function IncidentCorrelation({
       </div>
 
       <p className="incident-hint">
-        Ventana de correlación:{" "}
-        {formatDate(correlation.window.start_at)}
-        {" — "}
-        {formatDate(correlation.window.end_at)}.
+        {t(
+          "incidentDetail.correlation.window",
+          {
+            start: formatDate(
+              correlation.window.start_at,
+              language,
+            ),
+            end: formatDate(
+              correlation.window.end_at,
+              language,
+            ),
+          },
+        )}
         {correlation.window.truncated
-          ? " Limitada a los últimos 7 días."
-          : " Incluye hasta 5 minutos antes de la creación y después de la resolución."}
+          ? t(
+              "incidentDetail.correlation.windowTruncated",
+            )
+          : t(
+              "incidentDetail.correlation.windowExtended",
+            )}
       </p>
 
       <div className="incident-correlation-summary">
         <article>
-          <span>Logs</span>
+          <span>{t("incidentDetail.correlation.summary.logs")}</span>
           <strong>{summary.logs_total}</strong>
         </article>
 
         <article>
-          <span>Errores</span>
+          <span>{t("incidentDetail.correlation.summary.errors")}</span>
           <strong>{summary.errors_total}</strong>
         </article>
 
         <article>
-          <span>Trazas Tempo</span>
+          <span>{t("incidentDetail.correlation.summary.tempoTraces")}</span>
           <strong>{summary.traces_total}</strong>
         </article>
 
         <article>
-          <span>Trazas capturadas</span>
+          <span>{t("incidentDetail.correlation.summary.capturedTraces")}</span>
           <strong>
             {summary.captured_traces_total}
           </strong>
         </article>
 
           <article>
-            <span>Señales prioritarias</span>
+            <span>{t("incidentDetail.correlation.summary.prioritySignals")}</span>
             <strong>
               {summary.signals_total ??
                 rankedSignals.length}
@@ -168,23 +206,22 @@ export default function IncidentCorrelation({
         <section className="incident-correlation-section">
           <div className="incident-section-heading">
             <div>
-              <h3>Señales prioritarias</h3>
+              <h3>{t("incidentDetail.correlation.priority.title")}</h3>
               <p className="incident-hint">
-                Evidencia ordenada por relevancia para
-                investigar primero. El ranking no implica
-                causalidad.
+                {t("incidentDetail.correlation.priority.description")}
               </p>
             </div>
 
             <span>
-              {rankedSignals.length} resultados
+              {t("incidentDetail.common.results", {
+                count: rankedSignals.length,
+              })}
             </span>
           </div>
 
           {!rankedSignals.length && (
             <div className="incident-empty">
-              No se encontraron señales con relevancia
-              suficiente durante esta ventana.
+              {t("incidentDetail.correlation.priority.empty")}
             </div>
           )}
 
@@ -202,29 +239,41 @@ export default function IncidentCorrelation({
                   {
                     tempo: "Tempo",
                     loki: "Loki",
-                    incident: "Incidente",
+                    incident: t(
+                      "incidentDetail.correlation.priority.sourceIncident",
+                    ),
                   }[signal.source] ||
                   signal.source;
 
                 const kindLabel =
                   signal.kind === "trace"
-                    ? "Traza"
-                    : "Log";
+                    ? t(
+                        "incidentDetail.correlation.priority.kindTrace",
+                      )
+                    : t(
+                        "incidentDetail.correlation.priority.kindLog",
+                      );
 
                 const severityLabel =
                   {
-                    high: "Alta",
-                    medium: "Media",
-                    low: "Baja",
+                    high: t("incidentDetail.severity.high"),
+                    medium: t("incidentDetail.severity.medium"),
+                    low: t("incidentDetail.severity.low"),
                   }[signal.severity] ||
                   signal.severity;
 
                 const technicalDetails = [
                   signal.status
-                    ? `Estado ${signal.status}`
+                    ? t(
+                        "incidentDetail.correlation.priority.technicalStatus",
+                        { value: signal.status },
+                      )
                     : null,
                   signal.level
-                    ? `Nivel ${signal.level}`
+                    ? t(
+                        "incidentDetail.correlation.priority.technicalLevel",
+                        { value: signal.level },
+                      )
                     : null,
                   signal.http_status_codes?.length
                     ? `HTTP ${signal.http_status_codes.join(
@@ -235,7 +284,10 @@ export default function IncidentCorrelation({
                     ? `${signal.duration_ms} ms`
                     : null,
                   signal.spans_total != null
-                    ? `${signal.spans_total} spans`
+                    ? t(
+                        "incidentDetail.correlation.priority.spans",
+                        { count: signal.spans_total },
+                      )
                     : null,
                 ].filter(Boolean);
 
@@ -270,7 +322,10 @@ export default function IncidentCorrelation({
                       </div>
 
                       <strong className="incident-signal-score">
-                        Relevancia {signal.score}
+                        {t(
+                          "incidentDetail.correlation.priority.relevance",
+                          { score: signal.score },
+                        )}
                       </strong>
                     </div>
 
@@ -283,6 +338,7 @@ export default function IncidentCorrelation({
                         <time>
                           {formatDate(
                             signal.started_at,
+                            language,
                           )}
                         </time>
                       )}
@@ -334,7 +390,7 @@ export default function IncidentCorrelation({
                           onTrace(signal.trace_id)
                         }
                       >
-                        Abrir traza
+                        {t("incidentDetail.common.openTrace")}
                       </button>
                     )}
                   </article>
@@ -346,16 +402,22 @@ export default function IncidentCorrelation({
 
       <section className="incident-correlation-section">
         <div className="incident-section-heading">
-          <h3>Logs relacionados · Loki</h3>
-          <span>{logs.length} resultados</span>
+          <h3>
+            {t("incidentDetail.correlation.relatedLogs.title")}
+          </h3>
+          <span>
+            {t("incidentDetail.common.results", {
+              count: logs.length,
+            })}
+          </span>
         </div>
 
         {correlation.sources.loki ===
           "unavailable" && (
           <div className="incident-empty">
-            Loki no está disponible actualmente.
-            La correlación continúa con las demás
-            fuentes.
+            {t(
+              "incidentDetail.correlation.relatedLogs.unavailable",
+            )}
           </div>
         )}
 
@@ -363,8 +425,9 @@ export default function IncidentCorrelation({
           "available" &&
           !logs.length && (
           <div className="incident-empty">
-            No se encontraron logs relacionados
-            durante esta ventana.
+            {t(
+              "incidentDetail.correlation.relatedLogs.empty",
+            )}
           </div>
         )}
 
@@ -378,7 +441,10 @@ export default function IncidentCorrelation({
               >
                 <div className="incident-event-meta">
                   <time>
-                    {formatDate(item.timestamp)}
+                    {formatDate(
+                      item.timestamp,
+                      language,
+                    )}
                   </time>
 
                   <span>
@@ -407,7 +473,7 @@ export default function IncidentCorrelation({
                         onTrace(item.trace_id)
                       }
                     >
-                      Abrir traza
+                      {t("incidentDetail.common.openTrace")}
                     </button>
                   )}
               </article>
@@ -418,25 +484,31 @@ export default function IncidentCorrelation({
 
       <section className="incident-correlation-section">
         <div className="incident-section-heading">
-          <h3>Trazas relacionadas · Tempo</h3>
-          <span>{traces.length} resultados</span>
+          <h3>
+            {t("incidentDetail.correlation.relatedTraces.title")}
+          </h3>
+          <span>
+            {t("incidentDetail.common.results", {
+              count: traces.length,
+            })}
+          </span>
         </div>
 
         {correlation.sources.tempo ===
           "unavailable" && (
           <div className="incident-empty">
-            Tempo no está disponible actualmente.
-            Los logs y las trazas capturadas siguen
-            disponibles.
+            {t(
+              "incidentDetail.correlation.relatedTraces.unavailable",
+            )}
           </div>
         )}
 
         {correlation.sources.tempo ===
           "skipped" && (
           <div className="incident-empty">
-            Tempo no se ha consultado porque el
-            incidente no tiene actualmente un
-            servicio afectado.
+            {t(
+              "incidentDetail.correlation.relatedTraces.skipped",
+            )}
           </div>
         )}
 
@@ -444,8 +516,9 @@ export default function IncidentCorrelation({
           "available" &&
           !traces.length && (
           <div className="incident-empty">
-            No se encontraron trazas del servicio
-            durante esta ventana.
+            {t(
+              "incidentDetail.correlation.relatedTraces.empty",
+            )}
           </div>
         )}
 
@@ -466,7 +539,10 @@ export default function IncidentCorrelation({
                 <code>{item.trace_id}</code>
 
                 <span>
-                  {formatDate(item.started_at)}
+                  {formatDate(
+                    item.started_at,
+                    language,
+                  )}
                   {item.service
                     ? ` · ${item.service}`
                     : ""}
@@ -483,24 +559,29 @@ export default function IncidentCorrelation({
       <section className="incident-correlation-section">
         <div className="incident-section-heading">
           <h3>
-            Trazas capturadas por el incidente
+            {t(
+              "incidentDetail.correlation.capturedTraces.title",
+            )}
           </h3>
 
           <span>
-            {capturedTraces.length} resultados
+            {t("incidentDetail.common.results", {
+              count: capturedTraces.length,
+            })}
           </span>
         </div>
 
         <p className="incident-hint">
-          Trace IDs registrados directamente en
-          eventos del incidente, independientemente
-          de la búsqueda actual en Tempo.
+          {t(
+            "incidentDetail.correlation.capturedTraces.description",
+          )}
         </p>
 
         {!capturedTraces.length && (
           <div className="incident-empty">
-            Este incidente todavía no tiene trace IDs
-            capturados en su línea temporal.
+            {t(
+              "incidentDetail.correlation.capturedTraces.empty",
+            )}
           </div>
         )}
 
@@ -519,7 +600,10 @@ export default function IncidentCorrelation({
                 <code>{item.trace_id}</code>
 
                 <span>
-                  {formatDate(item.started_at)}
+                  {formatDate(
+                    item.started_at,
+                    language,
+                  )}
                 </span>
               </button>
             ))}

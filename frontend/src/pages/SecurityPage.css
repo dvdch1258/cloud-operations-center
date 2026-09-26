@@ -1405,3 +1405,502 @@
     transition: none;
   }
 }
+
+/* ============================================================
+   SECURITY MOBILE V2
+   Mobile Security Command Center.
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .security-v2 {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* ---------- Header ---------- */
+
+  .security-v2__topbar {
+    align-items: stretch;
+    flex-direction: column;
+
+    gap: 12px;
+
+    margin-bottom: 14px;
+  }
+
+  .security-v2__topbar .eyebrow {
+    margin-bottom: 5px;
+
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+  }
+
+  .security-v2__topbar h1 {
+    margin-bottom: 5px;
+
+    font-size: clamp(1.45rem, 7vw, 1.85rem);
+    line-height: 1.08;
+  }
+
+  .security-v2__topbar .subtitle {
+    margin-bottom: 0;
+
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .security-v2__actions {
+    display: grid;
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto;
+
+    width: 100%;
+
+    gap: 8px;
+  }
+
+  .security-v2__live {
+    min-width: 0;
+    min-height: 44px;
+
+    display: flex;
+    align-items: center;
+
+    padding: 0 11px;
+
+    font-size: 0.65rem;
+  }
+
+  .security-v2__actions .refresh-button {
+    min-width: 44px;
+    min-height: 44px;
+
+    padding: 8px 12px;
+  }
+
+  /* ---------- Current security state ---------- */
+
+  .security-v2__state {
+    align-items: stretch;
+    flex-direction: column;
+
+    gap: 15px;
+
+    margin-bottom: 14px;
+    padding: 16px;
+
+    border-radius: 14px;
+  }
+
+  .security-v2__state-main {
+    min-width: 0;
+
+    align-items: flex-start;
+
+    gap: 12px;
+  }
+
+  .security-v2__state-icon {
+    flex: 0 0 auto;
+  }
+
+  .security-v2__state-main > div {
+    min-width: 0;
+  }
+
+  .security-v2__state-main strong {
+    font-size: 1.05rem;
+    line-height: 1.25;
+  }
+
+  .security-v2__state-main p {
+    font-size: 0.7rem;
+    line-height: 1.45;
+  }
+
+  .security-v2__state-kicker {
+    font-size: 0.55rem;
+  }
+
+  .security-v2__state-meta {
+    display: grid;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    width: 100%;
+
+    gap: 8px;
+  }
+
+  .security-v2__state-meta > div,
+  .security-v2__state-meta > span {
+    min-width: 0;
+  }
+
+  .security-v2__state-meta > div {
+    padding: 9px;
+
+    border-radius: 10px;
+  }
+
+  .security-v2__state-meta .environment-badge {
+    grid-column: 1 / -1;
+
+    justify-self: start;
+  }
+
+  /* ---------- Posture + radar ---------- */
+
+  .security-v2__hero-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+
+    gap: 12px;
+
+    margin-bottom: 14px;
+  }
+
+  .security-v2__posture-card,
+  .security-v2__radar-card {
+    min-width: 0;
+
+    padding: 15px;
+
+    border-radius: 14px;
+  }
+
+  .security-v2__section-heading {
+    align-items: flex-start;
+
+    gap: 10px;
+
+    margin-bottom: 14px;
+  }
+
+  .security-v2__section-heading h2 {
+    font-size: 0.92rem;
+    line-height: 1.25;
+  }
+
+  .security-v2__section-heading .eyebrow {
+    font-size: 0.55rem;
+  }
+
+  .security-v2__micro-badge,
+  .security-v2__signal-status {
+    flex: 0 0 auto;
+
+    font-size: 0.55rem;
+
+    white-space: nowrap;
+  }
+
+  /* ---------- Compliance posture ---------- */
+
+  .security-v2__posture-body {
+    grid-template-columns: 1fr !important;
+
+    justify-items: center;
+
+    gap: 16px;
+  }
+
+  .security-v2__ring {
+    width: min(46vw, 158px);
+    height: min(46vw, 158px);
+
+    margin-inline: auto;
+  }
+
+  .security-v2__ring svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .security-v2__ring-value strong {
+    font-size: 1.45rem;
+  }
+
+  .security-v2__posture-stats {
+    display: grid;
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+
+    width: 100%;
+
+    gap: 7px;
+  }
+
+  .security-v2__posture-stats > div {
+    min-width: 0;
+
+    padding: 9px 6px;
+
+    text-align: center;
+  }
+
+  .security-v2__posture-stats strong {
+    font-size: 0.88rem;
+  }
+
+  .security-v2__posture-stats span {
+    font-size: 0.53rem;
+  }
+
+  .security-v2__posture-footer {
+    margin-top: 12px;
+
+    font-size: 0.6rem;
+    line-height: 1.4;
+  }
+
+  /* ---------- Radar ---------- */
+
+  .security-v2__radar-layout {
+    grid-template-columns: 1fr !important;
+
+    gap: 16px;
+  }
+
+  .security-v2__radar-layout > :first-child {
+    width: min(70vw, 230px);
+    max-width: 230px;
+    aspect-ratio: 1;
+
+    margin-inline: auto;
+  }
+
+  .security-v2__signal-list {
+    width: 100%;
+
+    gap: 7px;
+  }
+
+  .security-v2__signal-list > * {
+    min-width: 0;
+  }
+
+  /* ---------- Security metrics ---------- */
+
+  .security-v2__metrics {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+
+    gap: 9px;
+
+    margin-bottom: 14px;
+  }
+
+  .security-v2__metric {
+    min-width: 0;
+    min-height: 108px;
+
+    padding: 13px;
+
+    border-radius: 13px;
+  }
+
+  .security-v2__metric-top {
+    align-items: flex-start;
+
+    gap: 6px;
+
+    font-size: 0.57rem;
+    line-height: 1.25;
+  }
+
+  .security-v2__metric strong {
+    font-size: clamp(1.45rem, 8vw, 1.95rem);
+  }
+
+  .security-v2__metric p {
+    font-size: 0.6rem;
+    line-height: 1.35;
+  }
+
+  /* ---------- Main security workspace ---------- */
+
+  .security-v2__workspace {
+    grid-template-columns: minmax(0, 1fr) !important;
+
+    gap: 12px;
+
+    margin-bottom: 12px;
+  }
+
+  .security-v2__panel {
+    min-width: 0;
+
+    padding: 15px;
+
+    border-radius: 14px;
+  }
+
+  /* ---------- Exposure ---------- */
+
+  .security-v2__exposure-total {
+    display: grid;
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+
+    gap: 7px;
+  }
+
+  .security-v2__exposure-total > div {
+    min-width: 0;
+
+    padding: 9px 6px;
+  }
+
+  .security-v2__exposure-total strong {
+    font-size: 0.9rem;
+  }
+
+  .security-v2__exposure-total span {
+    font-size: 0.52rem;
+  }
+
+  .security-v2__severity-stack {
+    width: 100%;
+
+    margin-top: 13px;
+  }
+
+  .security-v2__severity-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+
+    gap: 7px;
+  }
+
+  .security-v2__severity-item {
+    min-width: 0;
+
+    padding: 9px;
+  }
+
+  .security-v2__scan-meta {
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 5px;
+
+    margin-top: 12px;
+
+    font-size: 0.58rem;
+  }
+
+  /* ---------- Governance ---------- */
+
+  .security-v2__control-grid {
+    grid-template-columns: 1fr !important;
+
+    gap: 8px;
+  }
+
+  .security-v2__control-card {
+    min-width: 0;
+    min-height: 68px;
+
+    padding: 11px;
+
+    border-radius: 11px;
+  }
+
+  .security-v2__control-card > div {
+    min-width: 0;
+  }
+
+  .security-v2__control-card strong {
+    font-size: 0.72rem;
+  }
+
+  .security-v2__control-card span {
+    font-size: 0.58rem;
+  }
+
+  .security-v2__control-preview {
+    margin-top: 12px;
+
+    padding: 11px;
+
+    border-radius: 11px;
+  }
+
+  .security-v2__control-preview-head {
+    align-items: flex-start;
+
+    gap: 8px;
+  }
+
+  /* ---------- Activity ---------- */
+
+  .security-v2__activity-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+
+    gap: 12px;
+  }
+
+  .security-v2__activity-grid
+  .security-v2__panel {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /*
+   * Event/alert rows can contain long usernames, IPs,
+   * descriptions and timestamps.
+   */
+  .security-v2__activity-grid * {
+    min-width: 0;
+  }
+
+  .security-v2__activity-grid strong,
+  .security-v2__activity-grid p,
+  .security-v2__activity-grid span {
+    overflow-wrap: anywhere;
+  }
+
+  .security-v2__text-link {
+    min-height: 32px;
+
+    display: inline-flex;
+    align-items: center;
+
+    font-size: 0.65rem;
+
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 390px) {
+  .security-v2__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .security-v2__state-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .security-v2__posture-stats {
+    gap: 5px;
+  }
+
+  .security-v2__metrics {
+    gap: 7px;
+  }
+
+  .security-v2__metric {
+    min-height: 104px;
+
+    padding: 11px;
+  }
+
+  .security-v2__exposure-total {
+    grid-template-columns: 1fr;
+  }
+
+  .security-v2__severity-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

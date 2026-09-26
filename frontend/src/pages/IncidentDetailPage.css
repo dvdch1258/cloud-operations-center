@@ -284,3 +284,56 @@
     flex-direction: column;
   }
 }
+
+
+/* ============================================================
+   V2 INCIDENT DETAIL — INITIAL STATE
+   ============================================================ */
+
+.incident-detail-state {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 18px 20px;
+}
+
+.incident-detail-state strong {
+  font-size: 0.9rem;
+}
+
+.incident-detail-state span {
+  font-size: 0.78rem;
+  opacity: 0.65;
+}
+
+
+/* ============================================================
+   V2 INCIDENT DETAIL — TELEMETRY STATES
+   ============================================================ */
+
+.incident-telemetry-state {
+  margin: 12px 0;
+  padding: 12px 14px;
+
+  border: 1px solid rgba(65, 96, 139, 0.24);
+  border-radius: 9px;
+
+  background: rgba(18, 38, 65, 0.35);
+
+  font-size: 0.78rem;
+  opacity: 0.78;
+}
+
+.incident-telemetry-error {
+  margin: 12px 0;
+}
+
+.incident-telemetry-error > strong,
+.incident-telemetry-error > span {
+  display: block;
+}
+
+.incident-telemetry-error > span {
+  margin-top: 4px;
+}

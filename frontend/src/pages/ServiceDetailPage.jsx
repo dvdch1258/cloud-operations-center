@@ -1,16 +1,20 @@
+/* SERVICE_DETAIL_I18N_FOUNDATION */
+/* SERVICE_DETAIL_I18N_VISIBLE */
 import {
   useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
+import i18n from "../i18n";
 
 const statusLabels = {
-  up: "Operativo",
-  down: "Caído",
-  unknown: "Desconocido",
+  up: "serviceDetail.status.up",
+  down: "serviceDetail.status.down",
+  unknown: "serviceDetail.status.unknown",
 };
 
 function formatLatency(value) {
@@ -23,10 +27,42 @@ function formatLatency(value) {
 
 function formatUptime(value) {
   if (value == null) {
-    return "Sin datos";
+    return i18n.t("serviceDetail.noData");
   }
 
   return `${Number(value).toFixed(2)} %`;
+}
+
+
+function formatTime(value) {
+  if (!value) {
+    return "—";
+  }
+
+  const date =
+    value instanceof Date
+      ? value
+      : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  const locale =
+    String(i18n.language || "")
+      .toLowerCase()
+      .startsWith("es")
+      ? "es-ES"
+      : "en-GB";
+
+  return date.toLocaleTimeString(
+    locale,
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    },
+  );
 }
 
 function LatencyChart({ checks }) {
@@ -42,8 +78,9 @@ function LatencyChart({ checks }) {
   if (points.length < 2) {
     return (
       <div className="chart-empty">
-        Aún no hay suficientes comprobaciones para mostrar
-        una tendencia.
+        {i18n.t(
+          "serviceDetail.chartEmpty",
+        )}
       </div>
     );
   }
@@ -97,7 +134,9 @@ function LatencyChart({ checks }) {
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label="Evolución de la latencia"
+        aria-label={i18n.t(
+          "serviceDetail.chartAria",
+        )}
       >
         <line
           className="latency-chart__grid"
@@ -141,6 +180,7 @@ function LatencyChart({ checks }) {
 }
 
 export default function ServiceDetailPage() {
+  const { t } = useTranslation();
   const { serviceId } = useParams();
 
   const [service, setService] = useState(null);
@@ -195,9 +235,7 @@ export default function ServiceDetailPage() {
 
   if (!service && loading) {
     return (
-      <section className="panel">
-        Cargando información del servicio...
-      </section>
+      <section className="panel">{t("serviceDetail.loading")}</section>
     );
   }
 
@@ -207,13 +245,23 @@ export default function ServiceDetailPage() {
         <Link
           className="back-link"
           to="/servicios"
-        >
-          ← Volver a servicios
-        </Link>
+        >{t("serviceDetail.backFull")}</Link>
 
         <section className="alert alert--error">
-          <strong>No se pudo cargar el servicio</strong>
+          <strong>{t("serviceDetail.loadError")}</strong>
+
           <span>{error}</span>
+
+          <div className="v2-error-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={loading}
+              onClick={loadData}
+            >
+              {t("common.refresh")}
+            </button>
+          </div>
         </section>
       </>
     );
@@ -226,11 +274,9 @@ export default function ServiceDetailPage() {
           <Link
             className="back-link"
             to="/servicios"
-          >
-            ← Servicios
-          </Link>
+          >{t("serviceDetail.back")}</Link>
 
-          <p className="eyebrow">DETALLE OPERATIVO</p>
+          <p className="eyebrow">{t("serviceDetail.eyebrow")}</p>
 
           <h1>{service.name}</h1>
 
@@ -239,21 +285,30 @@ export default function ServiceDetailPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="refresh-button"
-          onClick={loadData}
-          disabled={loading}
-        >
-          {loading
-            ? "Actualizando..."
-            : "Actualizar"}
-        </button>
+        <div className="service-detail__header-actions">
+          <Link
+            to="/operaciones"
+            className="service-detail__operations-link"
+          >
+            {t("nav.operations")}
+          </Link>
+
+          <button
+            type="button"
+            className="refresh-button"
+            onClick={loadData}
+            disabled={loading}
+          >
+            {loading
+              ? t("serviceDetail.refreshing")
+              : t("serviceDetail.refresh")}
+          </button>
+        </div>
       </header>
 
       {error && (
         <section className="alert alert--error">
-          <strong>Error de actualización</strong>
+          <strong>{t("serviceDetail.updateError")}</strong>
           <span>{error}</span>
         </section>
       )}
@@ -266,24 +321,46 @@ export default function ServiceDetailPage() {
               `status-badge--${service.status}`
             }
           >
-            {statusLabels[service.status] ||
-              service.status}
+            {statusLabels[service.status]
+              ? t(
+                  statusLabels[
+                    service.status
+                  ],
+                )
+              : service.status}
           </span>
 
-          <strong>{service.type}</strong>
+          <strong>
+            {t(
+              `services.types.${service.type}`,
+              {
+                defaultValue:
+                  service.type,
+              },
+            )}
+          </strong>
         </div>
 
         <span>
           {lastUpdatedAt
-            ? `Actualizado ${lastUpdatedAt.toLocaleTimeString()}`
-            : "Esperando datos"}
+            ? t(
+                "serviceDetail.updated",
+                {
+                  time: formatTime(
+                    lastUpdatedAt,
+                  ),
+                },
+              )
+            : t(
+                "serviceDetail.waiting",
+              )}
         </span>
       </section>
 
       <section className="service-detail-metrics">
         <article className="metric-card metric-card--success">
           <div className="metric-card__header">
-            <span>Uptime 1 hora</span>
+            <span>{t("serviceDetail.uptime1h")}</span>
             <span className="metric-card__indicator" />
           </div>
 
@@ -292,13 +369,20 @@ export default function ServiceDetailPage() {
           </strong>
 
           <p>
-            {uptime1h?.checks_total ?? 0} comprobaciones
+            {t(
+              "serviceDetail.checks",
+              {
+                count:
+                  uptime1h
+                    ?.checks_total ?? 0,
+              },
+            )}
           </p>
         </article>
 
         <article className="metric-card metric-card--neutral">
           <div className="metric-card__header">
-            <span>Uptime 24 horas</span>
+            <span>{t("serviceDetail.uptime24h")}</span>
             <span className="metric-card__indicator" />
           </div>
 
@@ -307,13 +391,20 @@ export default function ServiceDetailPage() {
           </strong>
 
           <p>
-            {uptime24h?.checks_total ?? 0} comprobaciones disponibles
+            {t(
+              "serviceDetail.availableChecks",
+              {
+                count:
+                  uptime24h
+                    ?.checks_total ?? 0,
+              },
+            )}
           </p>
         </article>
 
         <article className="metric-card metric-card--neutral">
           <div className="metric-card__header">
-            <span>Latencia media</span>
+            <span>{t("serviceDetail.averageLatency")}</span>
             <span className="metric-card__indicator" />
           </div>
 
@@ -323,43 +414,54 @@ export default function ServiceDetailPage() {
             )}
           </strong>
 
-          <p>Media durante la última hora</p>
+          <p>{t("serviceDetail.averageLastHour")}</p>
         </article>
 
         <article className="metric-card metric-card--neutral">
           <div className="metric-card__header">
-            <span>Último check</span>
+            <span>{t("serviceDetail.lastCheck")}</span>
             <span className="metric-card__indicator" />
           </div>
 
           <strong className="metric-card__value metric-card__value--time">
             {uptime1h?.last_checked_at
-              ? new Date(
-                  uptime1h.last_checked_at
-                ).toLocaleTimeString()
+              ? formatTime(
+                  uptime1h.last_checked_at,
+                )
               : "—"}
           </strong>
 
-          <p>Comprobación automática más reciente</p>
+          <p>{t("serviceDetail.latestAutomaticCheck")}</p>
         </article>
       </section>
 
       <section className="panel detail-chart-panel">
         <div className="panel__header">
           <div>
-            <h2>Evolución de latencia</h2>
+            <h2>{t("serviceDetail.latencyEvolution")}</h2>
 
             <span>
-              Últimas {checks.length} comprobaciones
+              {t(
+                "serviceDetail.lastChecks",
+                {
+                  count: checks.length,
+                },
+              )}
             </span>
           </div>
 
           <span>
             {checks[0]?.response_time_ms != null
-              ? `Actual: ${formatLatency(
-                  checks[0].response_time_ms
-                )}`
-              : "Sin datos"}
+              ? t(
+                  "serviceDetail.current",
+                  {
+                    value: formatLatency(
+                      checks[0]
+                        .response_time_ms,
+                    ),
+                  },
+                )
+              : t("serviceDetail.noData")}
           </span>
         </div>
 
@@ -369,8 +471,8 @@ export default function ServiceDetailPage() {
       <section className="panel">
         <div className="panel__header">
           <div>
-            <h2>Histórico reciente</h2>
-            <span>Últimas comprobaciones</span>
+            <h2>{t("serviceDetail.recentHistory")}</h2>
+            <span>{t("serviceDetail.latestChecks")}</span>
           </div>
         </div>
 
@@ -378,11 +480,11 @@ export default function ServiceDetailPage() {
           <table>
             <thead>
               <tr>
-                <th>Hora</th>
-                <th>Estado</th>
+                <th>{t("serviceDetail.table.time")}</th>
+                <th>{t("serviceDetail.table.status")}</th>
                 <th>HTTP</th>
-                <th>Latencia</th>
-                <th>Detalle</th>
+                <th>{t("serviceDetail.table.latency")}</th>
+                <th>{t("serviceDetail.table.detail")}</th>
               </tr>
             </thead>
 
@@ -390,9 +492,9 @@ export default function ServiceDetailPage() {
               {checks.slice(0, 15).map((check) => (
                 <tr key={check.id}>
                   <td>
-                    {new Date(
-                      check.checked_at
-                    ).toLocaleTimeString()}
+                    {formatTime(
+                      check.checked_at,
+                    )}
                   </td>
 
                   <td>
@@ -402,8 +504,13 @@ export default function ServiceDetailPage() {
                         `status-badge--${check.status}`
                       }
                     >
-                      {statusLabels[check.status] ||
-                        check.status}
+                      {statusLabels[check.status]
+                        ? t(
+                            statusLabels[
+                              check.status
+                            ],
+                          )
+                        : check.status}
                     </span>
                   </td>
 
@@ -418,16 +525,17 @@ export default function ServiceDetailPage() {
                   </td>
 
                   <td className="check-error-cell">
-                    {check.error || "Sin errores"}
+                    {check.error ||
+                      t(
+                        "serviceDetail.noErrors",
+                      )}
                   </td>
                 </tr>
               ))}
 
               {!checks.length && (
                 <tr>
-                  <td colSpan="5">
-                    Aún no existen comprobaciones.
-                  </td>
+                  <td colSpan="5">{t("serviceDetail.noChecks")}</td>
                 </tr>
               )}
             </tbody>

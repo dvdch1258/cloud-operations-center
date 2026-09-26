@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   NavLink,
   Outlet,
@@ -7,6 +8,7 @@ import {
 } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 function navigationClass({ isActive }) {
   return isActive
@@ -104,6 +106,7 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -142,13 +145,104 @@ export default function Layout() {
     }
   }, [location.pathname]);
 
+  // MOBILE_ROUTE_VIEWPORT_RESET
+  useEffect(() => {
+    const resetViewport = () => {
+      if (
+        document.activeElement &&
+        typeof document.activeElement.blur === "function"
+      ) {
+        document.activeElement.blur();
+      }
+
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+
+      document.documentElement.scrollTop = 0;
+      document.documentElement.scrollLeft = 0;
+
+      document.body.scrollTop = 0;
+      document.body.scrollLeft = 0;
+    };
+
+    resetViewport();
+
+    const frame = window.requestAnimationFrame(resetViewport);
+    const timer = window.setTimeout(resetViewport, 180);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [location.pathname]);
+
   async function handleLogout() {
     await logout();
     navigate("/login", { replace: true });
   }
 
-  const username = user?.username || "Usuario";
+  const username = user?.username || t("common.user");
   const initial = username.charAt(0).toUpperCase();
+
+  const mobileSection = (() => {
+    const path = location.pathname;
+
+    if (path.startsWith("/servicios")) {
+      return t("nav.services");
+    }
+
+    if (path.startsWith("/incidentes")) {
+      return t("nav.incidents");
+    }
+
+    if (path.startsWith("/seguridad")) {
+      return t("nav.security");
+    }
+
+    if (path.startsWith("/operaciones")) {
+      return t("nav.operations");
+    }
+
+    if (path.startsWith("/automatizaciones")) {
+      return t("nav.automations");
+    }
+
+    if (path.startsWith("/observabilidad")) {
+      return t("nav.observability");
+    }
+
+    if (path.startsWith("/sistema")) {
+      return t("nav.system");
+    }
+
+    return t("nav.overview");
+  })();
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
 
   return (
     <div
@@ -161,22 +255,26 @@ export default function Layout() {
           to="/"
           end
           className="mobile-header__brand brand-link"
-          aria-label="Ir al resumen"
+          aria-label={t("actions.goToOverview")}
         >
-          <div className="brand__logo">
+          <span className="mobile-header__logo">
             <img src="/favicon.svg" alt="" />
-          </div>
-
-          <div className="brand__copy">
-            <strong>Cloud Operations</strong>
-            <span>Operations Center</span>
-          </div>
+          </span>
+          <strong>COC</strong>
         </NavLink>
+
+        <div className="mobile-header__section" aria-live="polite">
+          {mobileSection}
+        </div>
 
         <button
           type="button"
-          className="menu-button"
-          aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+          className={`menu-button ${menuOpen ? "menu-button--open" : ""}`}
+          aria-label={
+            menuOpen
+              ? t("actions.closeMenu")
+              : t("actions.openMenu")
+          }
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((current) => !current)}
         >
@@ -190,7 +288,7 @@ export default function Layout() {
         <button
           type="button"
           className="sidebar-overlay"
-          aria-label="Cerrar menú"
+          aria-label={t("actions.closeMenu")}
           onClick={() => setMenuOpen(false)}
         />
       )}
@@ -199,8 +297,8 @@ export default function Layout() {
         <button
           type="button"
           className="sidebar-restore-button"
-          aria-label="Mostrar barra lateral"
-          title="Mostrar barra lateral"
+          aria-label={t("actions.showSidebar")}
+          title={t("actions.showSidebar")}
           onClick={() => setSidebarHidden(false)}
         >
           <svg
@@ -225,8 +323,8 @@ export default function Layout() {
         <button
           type="button"
           className="sidebar__collapse-button"
-          aria-label="Ocultar barra lateral"
-          title="Ocultar barra lateral"
+          aria-label={t("actions.hideSidebar")}
+          title={t("actions.hideSidebar")}
           onClick={() => {
             setSidebarHidden(true);
             setAccountOpen(false);
@@ -248,7 +346,7 @@ export default function Layout() {
           to="/"
           end
           className="brand brand-link"
-          aria-label="Ir al resumen"
+          aria-label={t("actions.goToOverview")}
         >
           <div className="brand__logo">
             <img src="/favicon.svg" alt="" />
@@ -260,20 +358,22 @@ export default function Layout() {
           </div>
         </NavLink>
 
+        <LanguageSwitcher />
+
         <nav className="navigation">
           <NavLink to="/" end className={navigationClass}>
             <NavIcon name="summary" />
-            <span>Resumen</span>
+            <span>{t("nav.overview")}</span>
           </NavLink>
 
           <NavLink to="/servicios" className={navigationClass}>
             <NavIcon name="services" />
-            <span>Servicios</span>
+            <span>{t("nav.services")}</span>
           </NavLink>
 
           <NavLink to="/incidentes" className={navigationClass}>
             <NavIcon name="incidents" />
-            <span>Incidentes</span>
+            <span>{t("nav.incidents")}</span>
           </NavLink>
 
           <div className="navigation__group">
@@ -294,7 +394,7 @@ export default function Layout() {
             >
               <span className="navigation__item-main">
                 <NavIcon name="security" />
-                <span>Seguridad</span>
+                <span>{t("nav.security")}</span>
               </span>
 
               <span
@@ -322,8 +422,8 @@ export default function Layout() {
                       : "navigation__subitem"
                   }
                 >
-                  <strong>Actividad</strong>
-                  <span>Autenticación, bloqueos y eventos.</span>
+                  <strong>{t("nav.activity")}</strong>
+                  <span>{t("nav.activityDescription")}</span>
                 </NavLink>
 
                 <NavLink
@@ -334,7 +434,7 @@ export default function Layout() {
                       : "navigation__subitem"
                   }
                 >
-                  Vulnerabilidades
+                  {t("nav.vulnerabilities")}
                 </NavLink>
 
                 <NavLink
@@ -345,7 +445,7 @@ export default function Layout() {
                       : "navigation__subitem"
                   }
                 >
-                  Alertas
+                  {t("nav.alerts")}
                 </NavLink>
 
                 <NavLink
@@ -356,7 +456,7 @@ export default function Layout() {
                       : "navigation__subitem"
                   }
                 >
-                  Compliance
+                  {t("nav.compliance")}
                 </NavLink>
 
                 <NavLink
@@ -367,7 +467,7 @@ export default function Layout() {
                       : "navigation__subitem"
                   }
                 >
-                  Policies
+                  {t("nav.policies")}
                 </NavLink>
               </div>
             )}
@@ -375,22 +475,22 @@ export default function Layout() {
 
           <NavLink to="/operaciones" className={navigationClass}>
             <NavIcon name="operations" />
-            <span>Operaciones</span>
+            <span>{t("nav.operations")}</span>
           </NavLink>
 
           <NavLink to="/automatizaciones" className={navigationClass}>
             <NavIcon name="automations" />
-            <span>Automatizaciones</span>
+            <span>{t("nav.automations")}</span>
           </NavLink>
 
           <NavLink to="/observabilidad" className={navigationClass}>
             <NavIcon name="observability" />
-            <span>Observabilidad</span>
+            <span>{t("nav.observability")}</span>
           </NavLink>
 
           <NavLink to="/sistema" className={navigationClass}>
             <NavIcon name="system" />
-            <span>Sistema</span>
+            <span>{t("nav.system")}</span>
           </NavLink>
         </nav>
 
@@ -407,7 +507,7 @@ export default function Layout() {
               <span className="account-menu__avatar">{initial}</span>
 
               <span className="account-menu__identity">
-                <small>Sesión iniciada</small>
+                <small>{t("common.signedIn")}</small>
                 <strong>{username}</strong>
               </span>
 
@@ -445,7 +545,7 @@ export default function Layout() {
                     <path d="M15 12H3" />
                     <path d="M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" />
                   </svg>
-                  Cerrar sesión
+                  {t("actions.logout")}
                 </button>
               </div>
             )}
@@ -461,6 +561,81 @@ export default function Layout() {
       <main className="content">
         <Outlet />
       </main>
+
+      <nav
+        className="mobile-bottom-nav"
+        aria-label={t("nav.mobileNavigationAria")}
+      >
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) =>
+            `mobile-bottom-nav__item ${
+              isActive ? "mobile-bottom-nav__item--active" : ""
+            }`
+          }
+        >
+          <NavIcon name="summary" />
+          <span>{t("nav.overview")}</span>
+        </NavLink>
+
+        <NavLink
+          to="/servicios"
+          className={({ isActive }) =>
+            `mobile-bottom-nav__item ${
+              isActive ? "mobile-bottom-nav__item--active" : ""
+            }`
+          }
+        >
+          <NavIcon name="services" />
+          <span>{t("nav.services")}</span>
+        </NavLink>
+
+        <NavLink
+          to="/incidentes"
+          className={({ isActive }) =>
+            `mobile-bottom-nav__item ${
+              isActive ? "mobile-bottom-nav__item--active" : ""
+            }`
+          }
+        >
+          <NavIcon name="incidents" />
+          <span>{t("nav.incidents")}</span>
+        </NavLink>
+
+        <NavLink
+          to="/seguridad"
+          className={({ isActive }) =>
+            `mobile-bottom-nav__item ${
+              isActive ? "mobile-bottom-nav__item--active" : ""
+            }`
+          }
+        >
+          <NavIcon name="security" />
+          <span>{t("nav.security")}</span>
+        </NavLink>
+
+        <button
+          type="button"
+          className={`mobile-bottom-nav__item mobile-bottom-nav__more ${
+            menuOpen ? "mobile-bottom-nav__item--active" : ""
+          }`}
+          aria-label={t("nav.openMoreSectionsAria")}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            fill="currentColor"
+          >
+            <circle cx="5" cy="12" r="1.8" />
+            <circle cx="12" cy="12" r="1.8" />
+            <circle cx="19" cy="12" r="1.8" />
+          </svg>
+          <span>{t("nav.more")}</span>
+        </button>
+      </nav>
     </div>
   );
 }

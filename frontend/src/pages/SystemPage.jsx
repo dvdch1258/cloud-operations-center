@@ -4,6 +4,8 @@ import {
   useState,
 } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { api } from "../api/client";
 
 
@@ -26,14 +28,14 @@ function statusIsUp(status) {
 }
 
 
-function statusLabel(status) {
+function statusLabel(status, t) {
   const normalized =
     String(status).toLowerCase();
 
   if (
     ["ok", "up", "healthy"].includes(normalized)
   ) {
-    return "Operativo";
+    return t("system.status.operational");
   }
 
   if (
@@ -42,11 +44,35 @@ function statusLabel(status) {
     )
   ) {
     return normalized === "degraded"
-      ? "Degradado"
-      : "No disponible";
+      ? t("system.status.degraded")
+      : t("system.status.unavailable");
   }
 
-  return "Sin datos";
+  return t("system.status.noData");
+}
+
+
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
+}
+
+
+function formatTime(value, language) {
+  if (!value) {
+    return "—";
+  }
+
+  return value.toLocaleTimeString(
+    localeForLanguage(language),
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
 }
 
 
@@ -54,6 +80,7 @@ function ComponentRow({
   name,
   description,
   status,
+  t,
 }) {
   const healthy = statusIsUp(status);
 
@@ -79,7 +106,7 @@ function ComponentRow({
             : "component-status component-status--down"
         }
       >
-        {statusLabel(status)}
+        {statusLabel(status, t)}
       </span>
     </div>
   );
@@ -102,6 +129,10 @@ function MetaCard({
 
 
 export default function SystemPage() {
+  const { t, i18n } = useTranslation();
+  const language =
+    i18n.resolvedLanguage || i18n.language;
+
   const [health, setHealth] =
     useState(initialHealth);
 
@@ -126,11 +157,14 @@ export default function SystemPage() {
         setHealth(data);
         setLastUpdated(new Date());
       } catch (requestError) {
-        setError(requestError.message);
+        setError(
+          requestError.message ||
+            t("system.errors.load"),
+        );
       } finally {
         setLoading(false);
       }
-    }, []);
+    }, [t]);
 
 
   useEffect(() => {
@@ -164,15 +198,13 @@ export default function SystemPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            PLATAFORMA
+            {t("system.eyebrow")}
           </p>
 
-          <h1>Sistema</h1>
+          <h1>{t("system.title")}</h1>
 
           <p className="subtitle">
-            Información de versión,
-            infraestructura y salud de la
-            plataforma.
+            {t("system.subtitle")}
           </p>
         </div>
 
@@ -182,8 +214,8 @@ export default function SystemPage() {
           disabled={loading}
         >
           {loading
-            ? "Actualizando..."
-            : "Actualizar"}
+            ? t("system.refreshing")
+            : t("system.refresh")}
         </button>
       </header>
 
@@ -191,8 +223,7 @@ export default function SystemPage() {
       {error && (
         <section className="alert alert--error">
           <strong>
-            No se pudo obtener el estado
-            del sistema
+            {t("system.errors.heading")}
           </strong>
 
           <span>{error}</span>
@@ -200,7 +231,7 @@ export default function SystemPage() {
       )}
 
 
-      <section className="platform-status">
+      <section className="platform-status system-platform-status">
         <div>
           <span
             className={
@@ -213,14 +244,19 @@ export default function SystemPage() {
           <div>
             <strong>
               {operational
-                ? "Plataforma operativa"
-                : "Plataforma degradada"}
+                ? t("system.platform.operational")
+                : t("system.platform.degraded")}
             </strong>
 
             <p>
               {lastUpdated
-                ? `Última actualización: ${lastUpdated.toLocaleTimeString()}`
-                : "Esperando datos"}
+                ? t("system.platform.lastUpdated", {
+                    time: formatTime(
+                      lastUpdated,
+                      language,
+                    ),
+                  })
+                : t("system.platform.waitingData")}
             </p>
           </div>
         </div>
@@ -233,27 +269,35 @@ export default function SystemPage() {
 
       <section className="system-meta-grid">
         <MetaCard
-          label="Versión"
+          label={t("system.meta.version")}
           value={`v${health.version}`}
-          description="Release de la aplicación"
+          description={t(
+            "system.meta.versionDescription",
+          )}
         />
 
         <MetaCard
-          label="Build"
+          label={t("system.meta.build")}
           value={shortBuild}
-          description="Commit desplegado"
+          description={t(
+            "system.meta.buildDescription",
+          )}
         />
 
         <MetaCard
-          label="Entorno"
+          label={t("system.meta.environment")}
           value={health.environment}
-          description="Entorno de ejecución"
+          description={t(
+            "system.meta.environmentDescription",
+          )}
         />
 
         <MetaCard
-          label="Orquestación"
+          label={t("system.meta.orchestration")}
           value="Kubernetes"
-          description="Namespace cloud-ops"
+          description={t(
+            "system.meta.orchestrationDescription",
+          )}
         />
       </section>
 
@@ -263,12 +307,11 @@ export default function SystemPage() {
           <div className="panel__header">
             <div>
               <h2>
-                Salud de componentes
+                {t("system.components.title")}
               </h2>
 
               <span>
-                Comprobaciones obtenidas
-                desde el backend
+                {t("system.components.description")}
               </span>
             </div>
           </div>
@@ -276,31 +319,39 @@ export default function SystemPage() {
           <div className="component-list">
             <ComponentRow
               name="PostgreSQL"
-              description="Persistencia principal"
+              description={t(
+                "system.components.databaseDescription",
+              )}
               status={health.database}
+              t={t}
             />
 
             <ComponentRow
               name="Prometheus"
-              description="Métricas y alertas"
+              description={t(
+                "system.components.prometheusDescription",
+              )}
               status={health.prometheus}
+              t={t}
             />
 
             <ComponentRow
               name="Tempo"
-              description="Trazas distribuidas"
+              description={t(
+                "system.components.tempoDescription",
+              )}
               status={health.tempo}
+              t={t}
             />
           </div>
         </article>
 
 
         <article className="panel panel--observability">
-          <h2>Observabilidad</h2>
+          <h2>{t("system.observability.title")}</h2>
 
           <p>
-            Acceso a las herramientas
-            operativas de la plataforma.
+            {t("system.observability.description")}
           </p>
 
           <div className="system-links">
@@ -310,7 +361,7 @@ export default function SystemPage() {
               target="_blank"
               rel="noreferrer"
             >
-              Abrir Grafana
+              {t("system.observability.openGrafana")}
             </a>
 
             <a
@@ -319,7 +370,7 @@ export default function SystemPage() {
               target="_blank"
               rel="noreferrer"
             >
-              Abrir Prometheus
+              {t("system.observability.openPrometheus")}
             </a>
 
             <a
@@ -328,7 +379,7 @@ export default function SystemPage() {
               target="_blank"
               rel="noreferrer"
             >
-              Abrir Argo CD
+              {t("system.observability.openArgoCd")}
             </a>
           </div>
         </article>
@@ -339,64 +390,63 @@ export default function SystemPage() {
         <div className="panel__header">
           <div>
             <h2>
-              Arquitectura operacional
+              {t("system.architecture.title")}
             </h2>
 
             <span>
-              Componentes principales del
-              Cloud Operations Center
+              {t("system.architecture.description")}
             </span>
           </div>
         </div>
 
         <div className="system-stack-grid">
           <div>
-            <span>Aplicación</span>
+            <span>{t("system.architecture.application")}</span>
             <strong>
               React · FastAPI
             </strong>
           </div>
 
           <div>
-            <span>Persistencia</span>
+            <span>{t("system.architecture.persistence")}</span>
             <strong>PostgreSQL</strong>
           </div>
 
           <div>
-            <span>GitOps</span>
+            <span>{t("system.architecture.gitops")}</span>
             <strong>Argo CD</strong>
           </div>
 
           <div>
-            <span>Métricas</span>
+            <span>{t("system.architecture.metrics")}</span>
             <strong>
               Prometheus · Grafana
             </strong>
           </div>
 
           <div>
-            <span>Logs</span>
+            <span>{t("system.architecture.logs")}</span>
             <strong>
               Alloy · Loki
             </strong>
           </div>
 
           <div>
-            <span>Tracing</span>
+            <span>{t("system.architecture.tracing")}</span>
             <strong>
               OpenTelemetry · Tempo
             </strong>
           </div>
 
           <div>
-            <span>Alertas</span>
+            <span>{t("system.architecture.alerts")}</span>
             <strong>
               Alertmanager · Telegram
             </strong>
           </div>
 
           <div>
-            <span>Automatización</span>
+            <span>{t("system.architecture.automation")}</span>
             <strong>
               Service Checker · n8n
             </strong>

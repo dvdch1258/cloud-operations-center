@@ -4,19 +4,37 @@ import {
   useState,
 } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { api } from "../api/client";
 
 
-const SEVERITY_LABELS = {
-  CRITICAL: "Crítica",
-  HIGH: "Alta",
-  MEDIUM: "Media",
-  LOW: "Baja",
-  UNKNOWN: "Desconocida",
-};
+const severityKeys = new Set([
+  "CRITICAL",
+  "HIGH",
+  "MEDIUM",
+  "LOW",
+  "UNKNOWN",
+]);
 
 
-function formatDate(value) {
+function severityLabel(value, t) {
+  return severityKeys.has(value)
+    ? t(`vulnerabilities.severity.${value}`)
+    : value;
+}
+
+
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
+}
+
+
+function formatDate(value, language) {
   if (!value) {
     return "—";
   }
@@ -27,17 +45,23 @@ function formatDate(value) {
     return "—";
   }
 
-  return date.toLocaleString("es-ES", {
+  return date.toLocaleString(
+    localeForLanguage(language),
+    {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit",
-  });
+      minute: "2-digit",
+    },
+  );
 }
 
 
 export default function VulnerabilitiesPage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
+
   const [summary, setSummary] = useState(null);
   const [findings, setFindings] = useState([]);
   const [component, setComponent] = useState("");
@@ -85,7 +109,7 @@ export default function VulnerabilitiesPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-        "No se pudieron cargar las vulnerabilidades.",
+        t("vulnerabilities.errors.load"),
       );
     } finally {
       setLoading(false);
@@ -94,6 +118,7 @@ export default function VulnerabilitiesPage() {
     component,
     severity,
     fixAvailable,
+    t,
   ]);
 
 
@@ -107,14 +132,13 @@ export default function VulnerabilitiesPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            SECURITY OPERATIONS
+            {t("vulnerabilities.eyebrow")}
           </p>
 
-          <h1>Vulnerabilidades</h1>
+          <h1>{t("vulnerabilities.title")}</h1>
 
           <p className="subtitle">
-            Hallazgos detectados por Trivy en las
-            imágenes desplegadas de la plataforma.
+            {t("vulnerabilities.subtitle")}
           </p>
         </div>
 
@@ -125,15 +149,15 @@ export default function VulnerabilitiesPage() {
           onClick={loadVulnerabilities}
         >
           {loading
-            ? "Actualizando..."
-            : "Actualizar"}
+            ? t("vulnerabilities.refreshing")
+            : t("vulnerabilities.refresh")}
         </button>
       </header>
 
       {error && (
         <div className="alert alert--error">
           <strong>
-            No se pudieron cargar las vulnerabilidades
+            {t("vulnerabilities.errors.heading")}
           </strong>
           <span>{error}</span>
         </div>
@@ -141,63 +165,63 @@ export default function VulnerabilitiesPage() {
 
       <div className="metrics-grid vulnerability-metrics">
         <article className="metric-card">
-          <span>Total hallazgos</span>
+          <span>{t("vulnerabilities.kpi.total")}</span>
           <strong className="metric-card__value">
             {loading
               ? "—"
               : summary?.total_findings ?? 0}
           </strong>
-          <p>Último escaneo por componente</p>
+          <p>{t("vulnerabilities.kpi.totalDescription")}</p>
         </article>
 
         <article className="metric-card metric-card--danger">
-          <span>Críticas</span>
+          <span>{t("vulnerabilities.kpi.critical")}</span>
           <strong className="metric-card__value">
             {loading
               ? "—"
               : summary?.critical ?? 0}
           </strong>
-          <p>Prioridad inmediata</p>
+          <p>{t("vulnerabilities.kpi.criticalDescription")}</p>
         </article>
 
         <article className="metric-card metric-card--warning">
-          <span>Altas</span>
+          <span>{t("vulnerabilities.kpi.high")}</span>
           <strong className="metric-card__value">
             {loading
               ? "—"
               : summary?.high ?? 0}
           </strong>
-          <p>Riesgo elevado</p>
+          <p>{t("vulnerabilities.kpi.highDescription")}</p>
         </article>
 
         <article className="metric-card">
-          <span>Medias</span>
+          <span>{t("vulnerabilities.kpi.medium")}</span>
           <strong className="metric-card__value">
             {loading
               ? "—"
               : summary?.medium ?? 0}
           </strong>
-          <p>Revisión recomendada</p>
+          <p>{t("vulnerabilities.kpi.mediumDescription")}</p>
         </article>
 
         <article className="metric-card">
-          <span>Bajas</span>
+          <span>{t("vulnerabilities.kpi.low")}</span>
           <strong className="metric-card__value">
             {loading
               ? "—"
               : summary?.low ?? 0}
           </strong>
-          <p>Impacto reducido</p>
+          <p>{t("vulnerabilities.kpi.lowDescription")}</p>
         </article>
 
         <article className="metric-card">
-          <span>Con solución</span>
+          <span>{t("vulnerabilities.kpi.fixAvailable")}</span>
           <strong className="metric-card__value">
             {loading
               ? "—"
               : summary?.fix_available ?? 0}
           </strong>
-          <p>Versión corregida disponible</p>
+          <p>{t("vulnerabilities.kpi.fixAvailableDescription")}</p>
         </article>
       </div>
 
@@ -205,19 +229,21 @@ export default function VulnerabilitiesPage() {
         <div className="security-panel-header">
           <div>
             <p className="eyebrow">
-              CONTAINER SECURITY
+              {t("vulnerabilities.inventory.eyebrow")}
             </p>
 
-            <h2>Hallazgos detectados</h2>
+            <h2>{t("vulnerabilities.inventory.title")}</h2>
 
             <p>
-              Último análisis disponible de backend
-              y frontend.
+              {t("vulnerabilities.inventory.description")}
             </p>
           </div>
 
           <span className="security-event-count">
-            {findings.length} resultados
+            {t(
+              "vulnerabilities.inventory.results",
+              { count: findings.length },
+            )}
           </span>
         </div>
 
@@ -228,9 +254,15 @@ export default function VulnerabilitiesPage() {
               setComponent(event.target.value)
             }
           >
-            <option value="">Todos los componentes</option>
-            <option value="backend">Backend</option>
-            <option value="frontend">Frontend</option>
+            <option value="">
+              {t("vulnerabilities.filters.allComponents")}
+            </option>
+            <option value="backend">
+              {t("vulnerabilities.filters.backend")}
+            </option>
+            <option value="frontend">
+              {t("vulnerabilities.filters.frontend")}
+            </option>
           </select>
 
           <select
@@ -239,12 +271,24 @@ export default function VulnerabilitiesPage() {
               setSeverity(event.target.value)
             }
           >
-            <option value="">Todas las severidades</option>
-            <option value="CRITICAL">Crítica</option>
-            <option value="HIGH">Alta</option>
-            <option value="MEDIUM">Media</option>
-            <option value="LOW">Baja</option>
-            <option value="UNKNOWN">Desconocida</option>
+            <option value="">
+              {t("vulnerabilities.filters.allSeverities")}
+            </option>
+            <option value="CRITICAL">
+              {severityLabel("CRITICAL", t)}
+            </option>
+            <option value="HIGH">
+              {severityLabel("HIGH", t)}
+            </option>
+            <option value="MEDIUM">
+              {severityLabel("MEDIUM", t)}
+            </option>
+            <option value="LOW">
+              {severityLabel("LOW", t)}
+            </option>
+            <option value="UNKNOWN">
+              {severityLabel("UNKNOWN", t)}
+            </option>
           </select>
 
           <select
@@ -253,31 +297,36 @@ export default function VulnerabilitiesPage() {
               setFixAvailable(event.target.value)
             }
           >
-            <option value="">Cualquier estado</option>
+            <option value="">
+              {t("vulnerabilities.filters.anyFixStatus")}
+            </option>
             <option value="true">
-              Con corrección disponible
+              {t("vulnerabilities.filters.fixAvailable")}
             </option>
             <option value="false">
-              Sin corrección disponible
+              {t("vulnerabilities.filters.noFixAvailable")}
             </option>
           </select>
         </div>
 
         <p className="vulnerability-scan-date">
-          Último escaneo:{" "}
+          {t("vulnerabilities.inventory.lastScan")}{" "}
           <strong>
-            {formatDate(summary?.last_scanned_at)}
+            {formatDate(
+              summary?.last_scanned_at,
+              language,
+            )}
           </strong>
         </p>
 
         {loading ? (
           <div className="security-empty">
-            Cargando vulnerabilidades...
+            {t("vulnerabilities.inventory.loading")}
           </div>
         ) : findings.length === 0 ? (
           <div className="security-empty">
             <strong>
-              No hay vulnerabilidades para estos filtros
+              {t("vulnerabilities.inventory.empty")}
             </strong>
           </div>
         ) : (
@@ -285,13 +334,13 @@ export default function VulnerabilitiesPage() {
             <table className="security-table vulnerability-table">
               <thead>
                 <tr>
-                  <th>Severidad</th>
-                  <th>CVE</th>
-                  <th>Componente</th>
-                  <th>Paquete</th>
-                  <th>Versión instalada</th>
-                  <th>Corrección</th>
-                  <th>Estado</th>
+                  <th>{t("vulnerabilities.table.severity")}</th>
+                  <th>{t("vulnerabilities.table.cve")}</th>
+                  <th>{t("vulnerabilities.table.component")}</th>
+                  <th>{t("vulnerabilities.table.package")}</th>
+                  <th>{t("vulnerabilities.table.installedVersion")}</th>
+                  <th>{t("vulnerabilities.table.fix")}</th>
+                  <th>{t("vulnerabilities.table.status")}</th>
                 </tr>
               </thead>
 
@@ -305,8 +354,10 @@ export default function VulnerabilitiesPage() {
                           `security-severity--${finding.severity.toLowerCase()}`
                         }
                       >
-                        {SEVERITY_LABELS[finding.severity] ||
-                          finding.severity}
+                        {severityLabel(
+                          finding.severity,
+                          t,
+                        )}
                       </span>
                     </td>
 

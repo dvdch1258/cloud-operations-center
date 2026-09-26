@@ -4,28 +4,42 @@ import {
   useState,
 } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { api } from "../api/client";
+import { policyText, policySource } from "../i18n/securityContent";
 
 
-const CATEGORY_LABELS = {
-  authentication: "Autenticación",
-  vulnerabilities: "Vulnerabilidades",
-  scanning: "Escaneo",
-};
+const categoryKeys = new Set([
+  "authentication",
+  "vulnerabilities",
+  "scanning",
+]);
 
-const UNIT_LABELS = {
-  attempts: "intentos",
-  minutes: "minutos",
-  hours: "horas",
-};
+const unitKeys = new Set([
+  "attempts",
+  "minutes",
+  "hours",
+]);
 
 
-function formatValue(policy) {
+function categoryLabel(value, t) {
+  return categoryKeys.has(value)
+    ? t(`policies.category.${value}`)
+    : value;
+}
+
+
+function formatValue(policy, t) {
   if (typeof policy.value === "boolean") {
-    return policy.value ? "Activado" : "Desactivado";
+    return policy.value
+      ? t("policies.values.enabled")
+      : t("policies.values.disabled");
   }
 
-  const unit = UNIT_LABELS[policy.unit];
+  const unit = unitKeys.has(policy.unit)
+    ? t(`policies.units.${policy.unit}`)
+    : null;
 
   return unit
     ? `${policy.value} ${unit}`
@@ -34,6 +48,9 @@ function formatValue(policy) {
 
 
 export default function PoliciesPage() {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage || i18n.language;
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -51,12 +68,12 @@ export default function PoliciesPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-        "No se pudieron cargar las políticas.",
+        t("policies.errors.load"),
       );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
 
   useEffect(() => {
@@ -69,14 +86,13 @@ export default function PoliciesPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            SECURITY GOVERNANCE
+            {t("policies.eyebrow")}
           </p>
 
-          <h1>Policies</h1>
+          <h1>{t("policies.title")}</h1>
 
           <p className="subtitle">
-            Políticas técnicas que gobiernan la
-            seguridad de la plataforma.
+            {t("policies.subtitle")}
           </p>
         </div>
 
@@ -86,14 +102,16 @@ export default function PoliciesPage() {
           disabled={loading}
           onClick={loadPolicies}
         >
-          {loading ? "Cargando..." : "Actualizar"}
+          {loading
+            ? t("policies.loading")
+            : t("policies.refresh")}
         </button>
       </header>
 
       {error && (
         <div className="alert alert--error">
           <strong>
-            No se pudieron cargar las políticas
+            {t("policies.errors.heading")}
           </strong>
           <span>{error}</span>
         </div>
@@ -101,27 +119,27 @@ export default function PoliciesPage() {
 
       <div className="metrics-grid policies-metrics">
         <article className="metric-card">
-          <span>Políticas</span>
+          <span>{t("policies.kpi.policies")}</span>
           <strong className="metric-card__value">
             {loading ? "—" : data?.total ?? 0}
           </strong>
-          <p>Políticas definidas</p>
+          <p>{t("policies.kpi.policiesDescription")}</p>
         </article>
 
         <article className="metric-card">
-          <span>Activas</span>
+          <span>{t("policies.kpi.active")}</span>
           <strong className="metric-card__value">
             {loading ? "—" : data?.enabled ?? 0}
           </strong>
-          <p>Actualmente habilitadas</p>
+          <p>{t("policies.kpi.activeDescription")}</p>
         </article>
 
         <article className="metric-card">
-          <span>Enforced</span>
+          <span>{t("policies.kpi.enforced")}</span>
           <strong className="metric-card__value">
             {loading ? "—" : data?.enforced ?? 0}
           </strong>
-          <p>Aplicadas por el backend</p>
+          <p>{t("policies.kpi.enforcedDescription")}</p>
         </article>
       </div>
 
@@ -129,25 +147,24 @@ export default function PoliciesPage() {
         <div className="security-panel-header">
           <div>
             <p className="eyebrow">
-              EFFECTIVE POLICIES
+              {t("policies.inventory.eyebrow")}
             </p>
 
-            <h2>Políticas aplicadas</h2>
+            <h2>{t("policies.inventory.title")}</h2>
 
             <p>
-              Configuración efectiva utilizada por
-              los controles de seguridad.
+              {t("policies.inventory.description")}
             </p>
           </div>
         </div>
 
         {loading ? (
           <div className="security-empty">
-            Cargando políticas...
+            {t("policies.inventory.loading")}
           </div>
         ) : !data?.policies?.length ? (
           <div className="security-empty">
-            No hay políticas disponibles.
+            {t("policies.inventory.empty")}
           </div>
         ) : (
           <div className="policies-list">
@@ -163,29 +180,34 @@ export default function PoliciesPage() {
                     </span>
 
                     <span className="policy-card__category">
-                      {CATEGORY_LABELS[policy.category] ||
-                        policy.category}
+                      {categoryLabel(
+                        policy.category,
+                        t,
+                      )}
                     </span>
                   </div>
 
                   <span className="policy-enforcement">
-                    Aplicada
+                    {t("policies.inventory.applied")}
                   </span>
                 </div>
 
                 <div className="policy-card__content">
                   <div>
-                    <h3>{policy.name}</h3>
-                    <p>{policy.description}</p>
+                    <h3>{policyText(policy, "name", language)}</h3>
+                    <p>{policyText(policy, "description", language)}</p>
                   </div>
 
                   <strong className="policy-card__value">
-                    {formatValue(policy)}
+                    {formatValue(policy, t)}
                   </strong>
                 </div>
 
                 <div className="policy-card__meta">
-                  Fuente: {policy.source}
+                  {t(
+                    "policies.inventory.source",
+                    { source: policySource(policy.source, language) },
+                  )}
                 </div>
               </article>
             ))}

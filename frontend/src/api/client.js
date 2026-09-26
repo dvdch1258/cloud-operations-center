@@ -1,21 +1,78 @@
+import i18n from "../i18n/index.js";
+
 const API_URL =
   import.meta.env.VITE_API_URL || "/api";
 
 
-async function request(path, options = {}) {
-  const response = await fetch(
-    `${API_URL}${path}`,
-    {
-      ...options,
+/* V2_API_ERROR_NORMALIZATION */
 
-      credentials: "include",
+function apiErrorMessage(status, path) {
+  if (
+    status === 401 &&
+    path === "/auth/login"
+  ) {
+    return i18n.t(
+      "apiErrors.invalidCredentials",
+    );
+  }
 
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    },
+  const errorKeys = {
+    400: "apiErrors.badRequest",
+    401: "apiErrors.unauthorized",
+    403: "apiErrors.forbidden",
+    404: "apiErrors.notFound",
+    409: "apiErrors.conflict",
+    422: "apiErrors.validation",
+    429: "apiErrors.rateLimit",
+  };
+
+  if (errorKeys[status]) {
+    return i18n.t(errorKeys[status]);
+  }
+
+  if (status >= 500) {
+    return i18n.t("apiErrors.server");
+  }
+
+  return i18n.t(
+    "apiErrors.generic",
+    { status },
   );
+}
+
+
+async function request(path, options = {}) {
+  let response;
+
+  try {
+    response = await fetch(
+      `${API_URL}${path}`,
+      {
+        ...options,
+
+        credentials: "include",
+
+        headers: {
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
+      },
+    );
+  } catch (cause) {
+    const error = new Error(
+      i18n.t("apiErrors.network"),
+    );
+
+    error.status = 0;
+    error.networkError = true;
+
+    error.detail =
+      cause instanceof Error
+        ? cause.message
+        : String(cause);
+
+    throw error;
+  }
 
   if (
     response.status === 401 &&
@@ -27,19 +84,33 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    let message =
-      `Error HTTP ${response.status}`;
+    let detail = null;
 
     try {
       const body = await response.json();
-      message = body.detail || message;
+
+      if (
+        body &&
+        Object.prototype.hasOwnProperty.call(
+          body,
+          "detail",
+        )
+      ) {
+        detail = body.detail;
+      }
     } catch {
       // La respuesta puede no contener JSON.
     }
 
-    const error = new Error(message);
+    const error = new Error(
+      apiErrorMessage(
+        response.status,
+        path,
+      ),
+    );
 
     error.status = response.status;
+    error.detail = detail;
 
     const retryAfterHeader =
       response.headers.get("Retry-After");

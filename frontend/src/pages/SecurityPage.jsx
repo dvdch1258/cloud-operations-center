@@ -5,6 +5,8 @@ import {
   useState,
 } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { Link } from "react-router-dom";
 
 import { api } from "../api/client";
@@ -12,75 +14,81 @@ import { api } from "../api/client";
 import "./SecurityPage.css";
 
 
-const EVENT_LABELS = {
-  login_success: "Inicio de sesión",
-  login_failed: "Login fallido",
-  login_blocked: "Login bloqueado",
-  account_locked: "Cuenta bloqueada",
-  account_unlocked: "Cuenta desbloqueada",
-};
-
-
-const SEVERITY_LABELS = {
-  info: "Info",
-  low: "Baja",
-  medium: "Media",
-  high: "Alta",
-  critical: "Crítica",
-  INFO: "Info",
-  LOW: "Baja",
-  MEDIUM: "Media",
-  HIGH: "Alta",
-  CRITICAL: "Crítica",
-  UNKNOWN: "Desconocida",
-};
-
-
 const ALERT_STATUS_LABELS = {
-  open: "Abierta",
-  acknowledged: "Reconocida",
-  resolved: "Resuelta",
+  open: "security.activityUi.statusOpen",
+  acknowledged: "security.activityUi.statusAcknowledged",
+  resolved: "security.activityUi.statusResolved",
 };
 
 
 const SECURITY_AREAS = [
   {
     path: "/seguridad/vulnerabilidades",
-    eyebrow: "EXPOSURE",
-    title: "Vulnerabilidades",
-    description:
-      "Findings detectados, severidad, componentes y versiones con corrección.",
+    eyebrow: "security.activityUi.exposureEyebrow",
+    title: "security.activityUi.exposureTitle",
+    description: "security.activityUi.exposureDescription",
   },
   {
     path: "/seguridad/alertas",
-    eyebrow: "DETECTION",
-    title: "Alertas",
-    description:
-      "Señales activas que requieren reconocimiento o resolución operativa.",
+    eyebrow: "security.activityUi.detectionEyebrow",
+    title: "security.activityUi.detectionTitle",
+    description: "security.activityUi.detectionDescription",
   },
   {
     path: "/seguridad/compliance",
-    eyebrow: "CONTROL",
-    title: "Compliance",
-    description:
-      "Controles técnicos evaluados contra el estado real de la plataforma.",
+    eyebrow: "security.activityUi.controlEyebrow",
+    title: "security.activityUi.controlTitle",
+    description: "security.activityUi.controlDescription",
   },
   {
     path: "/seguridad/policies",
-    eyebrow: "GOVERNANCE",
-    title: "Policies",
-    description:
-      "Políticas efectivas aplicadas por los controles de seguridad.",
+    eyebrow: "security.activityUi.governanceEyebrow",
+    title: "security.activityUi.governanceTitle",
+    description: "security.activityUi.governanceDescription",
   },
 ];
 
 
-function formatEventType(value) {
-  return EVENT_LABELS[value] || value || "Evento";
+function formatEventType(value, t) {
+  if (!value) {
+    return t("security.common.unknown");
+  }
+
+  return t(
+    `security.events.${value}`,
+    {
+      defaultValue: value,
+    },
+  );
+}
+
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
 }
 
 
-function formatDate(value) {
+function severityLabel(value, t) {
+  const normalized =
+    String(value || "unknown")
+      .toLowerCase();
+
+  return t(
+    `security.severity.${normalized}`,
+    {
+      defaultValue:
+        value ||
+        t("security.common.unknown"),
+    },
+  );
+}
+
+
+
+function formatDate(value, language) {
   if (!value) {
     return "—";
   }
@@ -91,7 +99,7 @@ function formatDate(value) {
     return value;
   }
 
-  return date.toLocaleString("es-ES", {
+  return date.toLocaleString(localeForLanguage(language), {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -100,9 +108,9 @@ function formatDate(value) {
 }
 
 
-function formatFullDate(value) {
+function formatFullDate(value, language, t) {
   if (!value) {
-    return "Sin datos";
+    return t("security.common.noData");
   }
 
   const date = new Date(value);
@@ -111,7 +119,7 @@ function formatFullDate(value) {
     return value;
   }
 
-  return date.toLocaleString("es-ES", {
+  return date.toLocaleString(localeForLanguage(language), {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -121,15 +129,15 @@ function formatFullDate(value) {
 }
 
 
-function formatRelative(value) {
+function formatRelative(value, t) {
   if (!value) {
-    return "sin actividad";
+    return t("security.finalUi.noActivity");
   }
 
   const timestamp = new Date(value).getTime();
 
   if (Number.isNaN(timestamp)) {
-    return "fecha desconocida";
+    return t("security.finalUi.unknownDate");
   }
 
   const diffMinutes = Math.max(
@@ -138,22 +146,22 @@ function formatRelative(value) {
   );
 
   if (diffMinutes < 1) {
-    return "ahora";
+    return t("security.finalUi.now");
   }
 
   if (diffMinutes < 60) {
-    return `hace ${diffMinutes} min`;
+    return t("security.finalUi.minutesAgo", { count: diffMinutes });
   }
 
   const hours = Math.round(diffMinutes / 60);
 
   if (hours < 24) {
-    return `hace ${hours} h`;
+    return t("security.finalUi.hoursAgo", { count: hours });
   }
 
   const days = Math.round(hours / 24);
 
-  return `hace ${days} d`;
+  return t("security.finalUi.daysAgo", { count: days });
 }
 
 
@@ -193,9 +201,9 @@ function getSecurityState({
   if (criticalSignals > 0) {
     return {
       tone: "critical",
-      label: "Atención crítica",
+      label: "security.stateUi.criticalLabel",
       description:
-        "Hay señales críticas activas en la superficie de seguridad.",
+        "security.stateUi.criticalDescription",
     };
   }
 
@@ -208,17 +216,17 @@ function getSecurityState({
   if (warningSignals > 0) {
     return {
       tone: "warning",
-      label: "Revisión recomendada",
+      label: "security.stateUi.warningLabel",
       description:
-        "Hay señales que requieren seguimiento operativo.",
+        "security.stateUi.warningDescription",
     };
   }
 
   return {
     tone: "healthy",
-    label: "Postura estable",
+    label: "security.stateUi.healthyLabel",
     description:
-      "No hay señales críticas o altas activas en los controles actuales.",
+      "security.stateUi.healthyDescription",
   };
 }
 
@@ -246,6 +254,12 @@ function Metric({
 
 
 export default function SecurityPage() {
+  const { t, i18n } = useTranslation();
+
+  const language =
+    i18n.resolvedLanguage ||
+    i18n.language;
+
   const [data, setData] = useState({
     summary: null,
     events: [],
@@ -303,13 +317,13 @@ export default function SecurityPage() {
     } catch (requestError) {
       setError(
         requestError.message ||
-        "No se pudo cargar el Security Command Center.",
+        t("security.errors.load"),
       );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
 
   useEffect(() => {
@@ -351,21 +365,22 @@ export default function SecurityPage() {
       <header className="topbar security-v2__topbar">
         <div>
           <p className="eyebrow">
-            SECURITY COMMAND CENTER
+            {t("security.page.eyebrow")}
           </p>
 
-          <h1>Seguridad</h1>
+          <h1>
+            {t("security.page.title")}
+          </h1>
 
           <p className="subtitle">
-            Riesgo, detección, autenticación y controles
-            técnicos de la plataforma en una única vista.
+            {t("security.page.subtitle")}
           </p>
         </div>
 
         <div className="security-v2__actions">
           <span className="security-v2__live">
             <i />
-            LIVE CONTROL PLANE
+            {t("security.page.live")} {t("security.controlPlane.eyebrow")}
           </span>
 
           <button
@@ -377,8 +392,8 @@ export default function SecurityPage() {
             }
           >
             {refreshing
-              ? "Actualizando..."
-              : "Actualizar"}
+              ? t("security.page.refreshing")
+              : t("security.page.refresh")}
           </button>
         </div>
       </header>
@@ -387,7 +402,7 @@ export default function SecurityPage() {
       {error && (
         <div className="alert alert--error">
           <strong>
-            No se pudo cargar Seguridad
+            {t("security.page.errorHeading")}
           </strong>
           <span>{error}</span>
         </div>
@@ -407,48 +422,40 @@ export default function SecurityPage() {
 
           <div>
             <span className="security-v2__state-kicker">
-              CURRENT SECURITY STATE
+              {t("security.state.kicker")}
             </span>
 
             <strong>
-              {loading
-                ? "Evaluando señales..."
-                : securityState.label}
+              {loading ? t("security.time.waiting") : t(securityState.label)}
             </strong>
 
             <p>
-              {loading
-                ? "Consultando controles y telemetría de seguridad."
-                : securityState.description}
+              {loading ? t("security.state.description") : t(securityState.description)}
             </p>
           </div>
         </div>
 
         <div className="security-v2__state-meta">
           <div>
-            <span>Último scan</span>
+            <span>{t("security.finalUi.lastScan")}</span>
             <strong>
               {loading
                 ? "—"
-                : formatRelative(
-                    data.vulnerability?.last_scanned_at,
-                  )}
+                : formatRelative(data.vulnerability?.last_scanned_at, t)}
             </strong>
           </div>
 
           <div>
-            <span>Última alerta</span>
+            <span>{t("security.state.lastAlert")}</span>
             <strong>
               {loading
                 ? "—"
-                : formatRelative(
-                    data.alertSummary?.last_seen_at,
-                  )}
+                : formatRelative(data.alertSummary?.last_seen_at, t)}
             </strong>
           </div>
 
           <span className="environment-badge">
-            Producción
+            {t("security.state.environment")}
           </span>
         </div>
       </section>
@@ -459,13 +466,15 @@ export default function SecurityPage() {
           <div className="security-v2__section-heading">
             <div>
               <p className="eyebrow">
-                CONTROL POSTURE
+                {t("security.posture.eyebrow")}
               </p>
-              <h2>Security posture</h2>
+              <h2>
+                {t("security.posture.title")}
+              </h2>
             </div>
 
             <span className="security-v2__micro-badge">
-              COMPLIANCE
+              {t("security.posture.badge")}
             </span>
           </div>
 
@@ -474,7 +483,7 @@ export default function SecurityPage() {
               <svg
                 viewBox="0 0 120 120"
                 role="img"
-                aria-label={`Compliance ${complianceScore}%`}
+                aria-label={t("security.finalUi.complianceScore", { score: complianceScore })}
               >
                 <defs>
                   <linearGradient
@@ -522,13 +531,13 @@ export default function SecurityPage() {
                     ? "—"
                     : `${complianceScore}%`}
                 </strong>
-                <span>compliance</span>
+                <span>{t("security.sections.compliance.title")}</span>
               </div>
             </div>
 
             <div className="security-v2__posture-stats">
               <div>
-                <span>Passed controls</span>
+                <span>{t("security.finalUi.passedControls")}</span>
                 <strong>
                   {loading
                     ? "—"
@@ -537,7 +546,7 @@ export default function SecurityPage() {
               </div>
 
               <div>
-                <span>Failed controls</span>
+                <span>{t("security.finalUi.failedControls")}</span>
                 <strong>
                   {loading
                     ? "—"
@@ -546,7 +555,7 @@ export default function SecurityPage() {
               </div>
 
               <div>
-                <span>Evaluated</span>
+                <span>{t("security.finalUi.totalControls")}</span>
                 <strong>
                   {loading
                     ? "—"
@@ -558,15 +567,13 @@ export default function SecurityPage() {
 
           <div className="security-v2__posture-footer">
             <span>
-              Última evaluación
+              {t("security.finalUi.lastEvaluation")}
             </span>
 
             <strong>
               {loading
                 ? "—"
-                : formatFullDate(
-                    data.compliance?.evaluated_at,
-                  )}
+                : formatFullDate(data.compliance?.evaluated_at, language, t)}
             </strong>
           </div>
         </section>
@@ -576,14 +583,15 @@ export default function SecurityPage() {
           <div className="security-v2__section-heading">
             <div>
               <p className="eyebrow">
-                SECURITY SIGNALS
+                {t("security.radar.eyebrow")}
               </p>
-              <h2>Superficie activa</h2>
+              <h2>
+                {t("security.radar.title")}
+              </h2>
             </div>
 
             <span className="security-v2__signal-status">
-              <i />
-              REAL-TIME VIEW
+              {t("security.radar.status")}
             </span>
           </div>
 
@@ -617,7 +625,7 @@ export default function SecurityPage() {
             <div className="security-v2__signal-list">
               <article>
                 <span>
-                  Critical findings
+                  {t("security.posture.stats.critical")}
                 </span>
                 <strong>
                   {loading
@@ -628,7 +636,7 @@ export default function SecurityPage() {
 
               <article>
                 <span>
-                  Active alerts
+                  {t("security.metrics.activeAlerts")}
                 </span>
                 <strong>
                   {loading ? "—" : activeAlerts}
@@ -637,7 +645,7 @@ export default function SecurityPage() {
 
               <article>
                 <span>
-                  Locked accounts
+                  {t("security.finalUi.lockedAccounts")}
                 </span>
                 <strong>
                   {loading
@@ -648,7 +656,7 @@ export default function SecurityPage() {
 
               <article>
                 <span>
-                  Failed controls
+                  {t("security.finalUi.failedControls")}
                 </span>
                 <strong>
                   {loading
@@ -664,23 +672,23 @@ export default function SecurityPage() {
 
       <div className="security-v2__metrics">
         <Metric
-          label="Eventos · 24h"
+          label={t("security.metrics.events24h")}
           value={
             loading
               ? "—"
               : data.summary?.events_last_24h ?? 0
           }
-          detail="Actividad de autenticación registrada"
+          detail={t("security.metrics.authenticationActivity")}
         />
 
         <Metric
-          label="Logins fallidos · 24h"
+          label={t("security.metrics.failedLogins24h")}
           value={
             loading
               ? "—"
               : data.summary?.failed_logins_last_24h ?? 0
           }
-          detail="Intentos de autenticación fallidos"
+          detail={t("security.metrics.failedAuthenticationAttempts")}
           tone={
             Number(
               data.summary?.failed_logins_last_24h || 0,
@@ -691,9 +699,9 @@ export default function SecurityPage() {
         />
 
         <Metric
-          label="Alertas activas"
+          label={t("security.metrics.activeAlerts")}
           value={loading ? "—" : activeAlerts}
-          detail="Abiertas o reconocidas"
+          detail={t("security.metrics.openOrAcknowledged")}
           tone={
             Number(
               data.alertSummary?.critical_active || 0,
@@ -706,9 +714,9 @@ export default function SecurityPage() {
         />
 
         <Metric
-          label="High + Critical"
+          label={t("security.metrics.highCritical")}
           value={loading ? "—" : highRiskFindings}
-          detail="Findings de mayor severidad"
+          detail={t("security.metrics.highestSeverityFindings")}
           tone={
             Number(
               data.vulnerability?.critical || 0,
@@ -727,12 +735,11 @@ export default function SecurityPage() {
           <div className="security-v2__section-heading">
             <div>
               <p className="eyebrow">
-                VULNERABILITY EXPOSURE
+                {t("security.exposure.eyebrow")}
               </p>
-              <h2>Risk distribution</h2>
+              <h2>{t("security.exposure.title")}</h2>
               <p>
-                Findings del último scan disponible
-                por componente.
+                {t("security.exposure.description")}
               </p>
             </div>
 
@@ -740,13 +747,13 @@ export default function SecurityPage() {
               className="security-v2__text-link"
               to="/seguridad/vulnerabilidades"
             >
-              Ver findings →
+              {t("security.exposure.viewFindings")}
             </Link>
           </div>
 
           <div className="security-v2__exposure-total">
             <div>
-              <span>Total findings</span>
+              <span>{t("security.exposure.totalFindings")}</span>
               <strong>
                 {loading
                   ? "—"
@@ -755,7 +762,7 @@ export default function SecurityPage() {
             </div>
 
             <div>
-              <span>Fix available</span>
+              <span>{t("security.exposure.fixAvailable")}</span>
               <strong>
                 {loading
                   ? "—"
@@ -764,7 +771,7 @@ export default function SecurityPage() {
             </div>
 
             <div>
-              <span>Components</span>
+              <span>{t("security.exposure.components")}</span>
               <strong>
                 {loading
                   ? "—"
@@ -839,27 +846,27 @@ export default function SecurityPage() {
             {[
               [
                 "critical",
-                "Critical",
+                t("security.severity.critical"),
                 data.vulnerability?.critical,
               ],
               [
                 "high",
-                "High",
+                t("security.severity.high"),
                 data.vulnerability?.high,
               ],
               [
                 "medium",
-                "Medium",
+                t("security.severity.medium"),
                 data.vulnerability?.medium,
               ],
               [
                 "low",
-                "Low",
+                t("security.severity.low"),
                 data.vulnerability?.low,
               ],
               [
                 "unknown",
-                "Unknown",
+                t("security.severity.unknown"),
                 data.vulnerability?.unknown,
               ],
             ].map(([severity, label, value]) => (
@@ -885,15 +892,13 @@ export default function SecurityPage() {
 
           <div className="security-v2__scan-meta">
             <span>
-              LAST SCAN
+              {t("security.exposure.lastScan")}
             </span>
 
             <strong>
               {loading
                 ? "—"
-                : formatFullDate(
-                    data.vulnerability?.last_scanned_at,
-                  )}
+                : formatFullDate(data.vulnerability?.last_scanned_at, language, t)}
             </strong>
           </div>
         </section>
@@ -903,12 +908,11 @@ export default function SecurityPage() {
           <div className="security-v2__section-heading">
             <div>
               <p className="eyebrow">
-                CONTROL PLANE
+                {t("security.controlPlane.eyebrow")}
               </p>
-              <h2>Governance status</h2>
+              <h2>{t("security.controlPlane.title")}</h2>
               <p>
-                Compliance y políticas efectivas
-                aplicadas por el backend.
+                {t("security.controlPlane.description")}
               </p>
             </div>
           </div>
@@ -919,7 +923,7 @@ export default function SecurityPage() {
               className="security-v2__control-card"
             >
               <div>
-                <span>Compliance</span>
+                <span>{t("security.sections.compliance.title")}</span>
                 <strong>
                   {loading
                     ? "—"
@@ -929,12 +933,11 @@ export default function SecurityPage() {
 
               <p>
                 {loading
-                  ? "Evaluando controles..."
-                  : `${
-                      data.compliance?.passed ?? 0
-                    } passed · ${
-                      data.compliance?.failed ?? 0
-                    } failed`}
+                  ? t("security.controlPlane.evaluating")
+                  : t("security.controlPlane.complianceSummary", {
+                        passed: data.compliance?.passed ?? 0,
+                        failed: data.compliance?.failed ?? 0,
+                      })}
               </p>
 
               <span className="security-v2__control-arrow">
@@ -947,7 +950,7 @@ export default function SecurityPage() {
               className="security-v2__control-card"
             >
               <div>
-                <span>Policies</span>
+                <span>{t("security.sections.policies.title")}</span>
                 <strong>
                   {loading
                     ? "—"
@@ -957,12 +960,11 @@ export default function SecurityPage() {
 
               <p>
                 {loading
-                  ? "Cargando políticas..."
-                  : `${
-                      data.policies?.enforced ?? 0
-                    } enforced · ${
-                      data.policies?.enabled ?? 0
-                    } enabled`}
+                  ? t("security.controlPlane.loadingPolicies")
+                  : t("security.controlPlane.policySummary", {
+                        enforced: data.policies?.enforced ?? 0,
+                        enabled: data.policies?.enabled ?? 0,
+                      })}
               </p>
 
               <span className="security-v2__control-arrow">
@@ -973,7 +975,7 @@ export default function SecurityPage() {
 
           <div className="security-v2__control-preview">
             <div className="security-v2__control-preview-head">
-              <span>CONTROL STATUS</span>
+              <span>{t("security.controlPlane.controlStatus")}</span>
               <strong>
                 {loading
                   ? "—"
@@ -1020,12 +1022,11 @@ export default function SecurityPage() {
           <div className="security-v2__section-heading">
             <div>
               <p className="eyebrow">
-                ACTIVE DETECTIONS
+                {t("security.activityUi.alertsEyebrow")}
               </p>
-              <h2>Alert stream</h2>
+              <h2>{t("security.activityUi.alertsTitle")}</h2>
               <p>
-                Últimas señales registradas por
-                los controles de seguridad.
+                {t("security.activityUi.alertsDescription")}
               </p>
             </div>
 
@@ -1033,22 +1034,22 @@ export default function SecurityPage() {
               className="security-v2__text-link"
               to="/seguridad/alertas"
             >
-              Ver alertas →
+              {t("security.activityUi.viewAlerts")}
             </Link>
           </div>
 
           <div className="security-v2__alert-list">
             {loading ? (
               <div className="security-v2__empty">
-                Cargando alertas...
+                {t("security.activityUi.loadingAlerts")}
               </div>
             ) : data.alerts.length === 0 ? (
               <div className="security-v2__empty">
                 <strong>
-                  No hay alertas registradas
+                  {t("security.activityUi.noAlerts")}
                 </strong>
                 <span>
-                  Las nuevas detecciones aparecerán aquí.
+                  {t("security.activityUi.noAlertsHint")}
                 </span>
               </div>
             ) : (
@@ -1076,23 +1077,22 @@ export default function SecurityPage() {
                           `security-alert-status--${alert.status}`
                         }
                       >
-                        {ALERT_STATUS_LABELS[alert.status] ||
-                          alert.status}
+                        {t(ALERT_STATUS_LABELS[alert.status] || "security.common.unknown", { defaultValue: alert.status || t("security.common.unknown") })}
                       </span>
                     </div>
 
                     <p>
                       {alert.component ||
                         alert.category ||
-                        "security"}
+                        t("security.activityUi.security")}
                       {" · "}
-                      {SEVERITY_LABELS[alert.severity] ||
+                      {severityLabel(alert.severity, t) ||
                         alert.severity}
                     </p>
                   </div>
 
                   <time>
-                    {formatRelative(alert.last_seen_at)}
+                    {formatRelative(alert.last_seen_at, t)}
                   </time>
                 </article>
               ))
@@ -1105,32 +1105,31 @@ export default function SecurityPage() {
           <div className="security-v2__section-heading">
             <div>
               <p className="eyebrow">
-                AUTHENTICATION AUDIT
+                {t("security.activityUi.activityEyebrow")}
               </p>
-              <h2>Security activity</h2>
+              <h2>{t("security.activityUi.activityTitle")}</h2>
               <p>
-                Eventos recientes del sistema
-                de autenticación.
+                {t("security.activityUi.activityDescription")}
               </p>
             </div>
 
             <span className="security-v2__micro-badge">
-              {data.events.length} EVENTS
+              {t("security.activityUi.eventCount", { count: data.events.length })}
             </span>
           </div>
 
           <div className="security-v2__timeline">
             {loading ? (
               <div className="security-v2__empty">
-                Cargando actividad...
+                {t("security.activityUi.loadingActivity")}
               </div>
             ) : data.events.length === 0 ? (
               <div className="security-v2__empty">
                 <strong>
-                  Sin eventos recientes
+                  {t("security.activityUi.noEvents")}
                 </strong>
                 <span>
-                  La actividad aparecerá aquí.
+                  {t("security.activityUi.noEventsHint")}
                 </span>
               </div>
             ) : (
@@ -1152,21 +1151,21 @@ export default function SecurityPage() {
                     <div>
                       <strong>
                         {formatEventType(
-                          event.event_type,
+                          event.event_type, t
                         )}
                       </strong>
 
                       <time>
-                        {formatDate(event.created_at)}
+                        {formatDate(event.created_at, language)}
                       </time>
                     </div>
 
                     <p>{event.description}</p>
 
                     <span>
-                      {event.username || "sistema"}
+                      {event.username || t("security.activityUi.system")}
                       {" · "}
-                      {event.ip_address || "IP no disponible"}
+                      {event.ip_address || t("security.activityUi.ipUnavailable")}
                     </span>
                   </div>
                 </article>
@@ -1181,15 +1180,14 @@ export default function SecurityPage() {
         <div className="security-v2__navigation-heading">
           <div>
             <p className="eyebrow">
-              SECURITY WORKSPACE
+              {t("security.activityUi.workspaceEyebrow")}
             </p>
 
-            <h2>Investiga cada capa</h2>
+            <h2>{t("security.activityUi.workspaceTitle")}</h2>
           </div>
 
           <p>
-            Accede al detalle de exposición,
-            detección, controles y gobierno.
+            {t("security.activityUi.workspaceDescription")}
           </p>
         </div>
 
@@ -1205,9 +1203,9 @@ export default function SecurityPage() {
               </span>
 
               <div>
-                <p>{area.eyebrow}</p>
-                <h3>{area.title}</h3>
-                <span>{area.description}</span>
+                <p>{t(area.eyebrow)}</p>
+                <h3>{t(area.title)}</h3>
+                <span>{t(area.description)}</span>
               </div>
 
               <strong>↗</strong>

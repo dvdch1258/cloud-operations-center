@@ -5,6 +5,8 @@ import {
   useState,
 } from "react";
 
+import { useTranslation } from "react-i18next";
+
 import { api } from "../api/client";
 
 
@@ -17,7 +19,16 @@ const initialForm = {
 };
 
 
-function formatDate(value) {
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
+}
+
+
+function formatDate(value, language) {
   if (!value) {
     return "—";
   }
@@ -28,7 +39,9 @@ function formatDate(value) {
     return "—";
   }
 
-  return date.toLocaleString();
+  return date.toLocaleString(
+    localeForLanguage(language),
+  );
 }
 
 
@@ -47,62 +60,62 @@ function formatDuration(value) {
 }
 
 
-function executionStatusLabel(status) {
+function executionStatusLabel(status, t) {
   switch (status) {
     case "success":
-      return "Completada";
+      return t("automations.executionStatus.success");
     case "failed":
-      return "Fallida";
+      return t("automations.executionStatus.failed");
     case "running":
-      return "En ejecución";
+      return t("automations.executionStatus.running");
     case "skipped":
-      return "Omitida";
+      return t("automations.executionStatus.skipped");
     default:
-      return status || "Desconocido";
+      return status || t("automations.common.unknown");
   }
 }
 
 
-function triggerLabel(trigger) {
+function triggerLabel(trigger, t) {
   if (trigger === "service_down") {
-    return "Servicio caído";
+    return t("automations.trigger.service_down");
   }
 
   if (trigger === "service_recovered") {
-    return "Servicio recuperado";
+    return t("automations.trigger.service_recovered");
   }
 
   return trigger || "—";
 }
 
 
-function actionLabel(action) {
+function actionLabel(action, t) {
   if (action === "notify_webhook") {
-    return "Notificar webhook";
+    return t("automations.action.notify_webhook");
   }
 
   return action || "—";
 }
 
 
-function executionSourceLabel(source) {
+function executionSourceLabel(source, t) {
   if (source === "manual_test") {
-    return "Prueba manual";
+    return t("automations.executionSource.manual_test");
   }
 
   if (source === "trigger") {
-    return "Automática";
+    return t("automations.executionSource.trigger");
   }
 
   return source || "—";
 }
 
 
-function cooldownLabel(seconds) {
+function cooldownLabel(seconds, t) {
   const value = Number(seconds);
 
   if (!Number.isFinite(value) || value <= 0) {
-    return "Desactivado";
+    return t("automations.cooldown.disabled");
   }
 
   if (value < 60) {
@@ -110,19 +123,15 @@ function cooldownLabel(seconds) {
   }
 
   if (value % 3600 === 0) {
-    const hours = value / 3600;
-
-    return hours === 1
-      ? "1 hora"
-      : `${hours} horas`;
+    return t("automations.cooldown.hour", {
+      count: value / 3600,
+    });
   }
 
   if (value % 60 === 0) {
-    const minutes = value / 60;
-
-    return minutes === 1
-      ? "1 minuto"
-      : `${minutes} minutos`;
+    return t("automations.cooldown.minute", {
+      count: value / 60,
+    });
   }
 
   return `${value} s`;
@@ -145,6 +154,10 @@ function SummaryCard({
 
 
 export default function AutomationsPage() {
+  const { t, i18n } = useTranslation();
+  const language =
+    i18n.resolvedLanguage || i18n.language;
+
   const [rules, setRules] =
     useState([]);
 
@@ -225,11 +238,14 @@ export default function AutomationsPage() {
         setExecutions(executionsData);
         setServices(servicesData);
       } catch (requestError) {
-        setError(requestError.message);
+        setError(
+          requestError.message ||
+            t("automations.errors.load")
+        );
       } finally {
         setLoading(false);
       }
-    }, []);
+    }, [t]);
 
 
   useEffect(() => {
@@ -265,7 +281,7 @@ export default function AutomationsPage() {
 
   function serviceName(serviceId) {
     if (serviceId === null) {
-      return "Todos los servicios";
+      return t("automations.service.all");
     }
 
     const service = services.find(
@@ -274,7 +290,9 @@ export default function AutomationsPage() {
 
     return service
       ? service.name
-      : `Servicio #${serviceId}`;
+      : t("automations.service.fallback", {
+          id: serviceId,
+        });
   }
 
 
@@ -309,12 +327,15 @@ export default function AutomationsPage() {
       setForm(initialForm);
 
       setSuccessMessage(
-        "Automatización creada correctamente."
+        t("automations.messages.created")
       );
 
       await loadData();
     } catch (requestError) {
-      setError(requestError.message);
+      setError(
+        requestError.message ||
+          t("automations.errors.action")
+      );
     } finally {
       setSaving(false);
     }
@@ -340,13 +361,16 @@ export default function AutomationsPage() {
 
       setSuccessMessage(
         rule.enabled
-          ? "Automatización desactivada."
-          : "Automatización activada."
+          ? t("automations.messages.disabled")
+          : t("automations.messages.enabled")
       );
 
       await loadData();
     } catch (requestError) {
-      setError(requestError.message);
+      setError(
+        requestError.message ||
+          t("automations.errors.action")
+      );
     } finally {
       setBusyRuleId(null);
     }
@@ -366,8 +390,9 @@ export default function AutomationsPage() {
 
       if (!selectedServiceId) {
         setError(
-          "Selecciona un servicio para probar " +
-          "esta regla global."
+          t(
+            "automations.messages.testServiceRequired"
+          )
         );
         return;
       }
@@ -391,19 +416,25 @@ export default function AutomationsPage() {
 
       if (execution.status === "success") {
         setSuccessMessage(
-          `Prueba de "${rule.name}" ` +
-          "completada correctamente."
+          t("automations.messages.testSuccess", {
+            name: rule.name,
+          })
         );
       } else {
         setError(
           execution.error ||
-          `La prueba de "${rule.name}" falló.`
+            t("automations.messages.testFailed", {
+              name: rule.name,
+            })
         );
       }
 
       await loadData();
     } catch (requestError) {
-      setError(requestError.message);
+      setError(
+        requestError.message ||
+          t("automations.errors.action")
+      );
     } finally {
       setTestingRuleId(null);
       setBusyRuleId(null);
@@ -427,7 +458,8 @@ export default function AutomationsPage() {
       setSelectedExecution(detail);
     } catch (requestError) {
       setExecutionDetailError(
-        requestError.message
+        requestError.message ||
+          t("automations.errors.detail")
       );
     } finally {
       setExecutionDetailLoading(false);
@@ -449,7 +481,9 @@ export default function AutomationsPage() {
 
     const confirmed =
       window.confirm(
-        `¿Eliminar la automatización "${rule.name}"?`
+        t("automations.messages.deleteConfirm", {
+          name: rule.name,
+        })
       );
 
     if (!confirmed) {
@@ -466,13 +500,15 @@ export default function AutomationsPage() {
       );
 
       setSuccessMessage(
-        "Automatización eliminada. " +
-        "Su historial permanece disponible."
+        t("automations.messages.deleted")
       );
 
       await loadData();
     } catch (requestError) {
-      setError(requestError.message);
+      setError(
+        requestError.message ||
+          t("automations.errors.action")
+      );
     } finally {
       setBusyRuleId(null);
     }
@@ -525,15 +561,13 @@ export default function AutomationsPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">
-            AUTOMATION
+            {t("automations.page.eyebrow")}
           </p>
 
-          <h1>Automatizaciones</h1>
+          <h1>{t("automations.page.title")}</h1>
 
           <p className="subtitle">
-            Define reglas operativas y consulta
-            cada ejecución realizada por la
-            plataforma.
+            {t("automations.page.subtitle")}
           </p>
         </div>
 
@@ -544,8 +578,8 @@ export default function AutomationsPage() {
           disabled={loading || saving}
         >
           {loading
-            ? "Actualizando..."
-            : "Actualizar"}
+            ? t("automations.page.refreshing")
+            : t("automations.page.refresh")}
         </button>
       </header>
 
@@ -553,7 +587,7 @@ export default function AutomationsPage() {
       {error && (
         <section className="alert alert--error">
           <strong>
-            No se pudo completar la acción
+            {t("automations.errors.action")}
           </strong>
 
           <span>{error}</span>
@@ -564,7 +598,7 @@ export default function AutomationsPage() {
       {successMessage && (
         <section className="alert alert--success">
           <strong>
-            Automation
+            {t("automations.page.successHeading")}
           </strong>
 
           <span>{successMessage}</span>
@@ -574,27 +608,35 @@ export default function AutomationsPage() {
 
       <section className="automation-summary-grid">
         <SummaryCard
-          label="Reglas"
+          label={t("automations.summary.rules")}
           value={rules.length}
-          description="Automatizaciones configuradas"
+          description={t(
+            "automations.summary.rulesDescription"
+          )}
         />
 
         <SummaryCard
-          label="Activas"
+          label={t("automations.summary.active")}
           value={activeRules}
-          description="Reglas evaluadas por el motor"
+          description={t(
+            "automations.summary.activeDescription"
+          )}
         />
 
         <SummaryCard
-          label="Ejecuciones"
+          label={t("automations.summary.executions")}
           value={executions.length}
-          description="Historial registrado"
+          description={t(
+            "automations.summary.executionsDescription"
+          )}
         />
 
         <SummaryCard
-          label="Fallidas"
+          label={t("automations.summary.failed")}
           value={failedExecutions}
-          description="Acciones que requieren revisión"
+          description={t(
+            "automations.summary.failedDescription"
+          )}
         />
       </section>
 
@@ -604,16 +646,15 @@ export default function AutomationsPage() {
           <div className="panel__header">
             <div>
               <p className="eyebrow">
-                NUEVA REGLA
+                {t("automations.form.eyebrow")}
               </p>
 
               <h2>
-                Crear automatización
+                {t("automations.form.title")}
               </h2>
 
               <span>
-                Define cuándo debe reaccionar
-                automáticamente la plataforma.
+                {t("automations.form.description")}
               </span>
             </div>
           </div>
@@ -624,12 +665,14 @@ export default function AutomationsPage() {
             onSubmit={handleCreate}
           >
             <label>
-              <span>Nombre</span>
+              <span>{t("automations.form.name")}</span>
 
               <input
                 type="text"
                 value={form.name}
-                placeholder="Ej. Avisar caída Backend API"
+                placeholder={t(
+                  "automations.form.namePlaceholder"
+                )}
                 maxLength={150}
                 required
                 onChange={(event) =>
@@ -643,14 +686,15 @@ export default function AutomationsPage() {
 
 
             <label>
-              <span>Descripción</span>
+              <span>
+                {t("automations.form.descriptionLabel")}
+              </span>
 
               <textarea
                 value={form.description}
-                placeholder={
-                  "Describe brevemente qué " +
-                  "hace esta automatización."
-                }
+                placeholder={t(
+                  "automations.form.descriptionPlaceholder"
+                )}
                 rows={3}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -664,7 +708,7 @@ export default function AutomationsPage() {
 
 
             <label>
-              <span>Servicio</span>
+              <span>{t("automations.form.service")}</span>
 
               <select
                 value={form.serviceId}
@@ -677,7 +721,7 @@ export default function AutomationsPage() {
                 }
               >
                 <option value="">
-                  Todos los servicios
+                  {t("automations.service.all")}
                 </option>
 
                 {services.map((service) => (
@@ -693,7 +737,7 @@ export default function AutomationsPage() {
 
 
             <label>
-              <span>Cooldown</span>
+              <span>{t("automations.form.cooldown")}</span>
 
               <select
                 value={form.cooldownSeconds}
@@ -706,36 +750,45 @@ export default function AutomationsPage() {
                 }
               >
                 <option value="0">
-                  Desactivado
+                  {t(
+                    "automations.form.cooldownOptions.disabled"
+                  )}
                 </option>
 
                 <option value="60">
-                  1 minuto
+                  {t(
+                    "automations.form.cooldownOptions.oneMinute"
+                  )}
                 </option>
 
                 <option value="300">
-                  5 minutos
+                  {t(
+                    "automations.form.cooldownOptions.fiveMinutes"
+                  )}
                 </option>
 
                 <option value="900">
-                  15 minutos
+                  {t(
+                    "automations.form.cooldownOptions.fifteenMinutes"
+                  )}
                 </option>
 
                 <option value="3600">
-                  1 hora
+                  {t(
+                    "automations.form.cooldownOptions.oneHour"
+                  )}
                 </option>
               </select>
 
               <small className="automation-field-hint">
-                Evita ejecuciones automáticas repetidas
-                para el mismo servicio.
+                {t("automations.form.cooldownHint")}
               </small>
             </label>
 
 
             <div className="automation-fixed-grid">
               <div>
-                <span>Trigger</span>
+                <span>{t("automations.form.trigger")}</span>
 
                 <select
                   value={form.triggerType}
@@ -748,19 +801,21 @@ export default function AutomationsPage() {
                   }
                 >
                   <option value="service_down">
-                    Servicio caído
+                    {t("automations.trigger.service_down")}
                   </option>
 
                   <option value="service_recovered">
-                    Servicio recuperado
+                    {t(
+                      "automations.trigger.service_recovered"
+                    )}
                   </option>
                 </select>
               </div>
 
               <div>
-                <span>Acción</span>
+                <span>{t("automations.form.action")}</span>
                 <strong>
-                  Notificar webhook
+                  {t("automations.action.notify_webhook")}
                 </strong>
               </div>
             </div>
@@ -775,8 +830,8 @@ export default function AutomationsPage() {
               }
             >
               {saving
-                ? "Creando..."
-                : "Crear automatización"}
+                ? t("automations.form.creating")
+                : t("automations.form.create")}
             </button>
           </form>
         </article>
@@ -786,14 +841,13 @@ export default function AutomationsPage() {
           <div className="panel__header">
             <div>
               <p className="eyebrow">
-                MOTOR
+                {t("automations.engine.eyebrow")}
               </p>
 
-              <h2>Estado de Automation</h2>
+              <h2>{t("automations.engine.title")}</h2>
 
               <span>
-                Flujo operativo de las reglas
-                configuradas.
+                {t("automations.engine.description")}
               </span>
             </div>
           </div>
@@ -802,59 +856,71 @@ export default function AutomationsPage() {
           <div className="automation-engine-flow">
             <div>
               <span>1</span>
-              <strong>Detectar</strong>
+              <strong>
+                {t("automations.engine.detect")}
+              </strong>
               <p>
-                El checker detecta una transición
-                real hacia down.
+                {t("automations.engine.detectDescription")}
               </p>
             </div>
 
             <div>
               <span>2</span>
-              <strong>Evaluar</strong>
+              <strong>
+                {t("automations.engine.evaluate")}
+              </strong>
               <p>
-                El motor localiza las reglas
-                activas aplicables al servicio.
+                {t(
+                  "automations.engine.evaluateDescription"
+                )}
               </p>
             </div>
 
             <div>
               <span>3</span>
-              <strong>Actuar</strong>
+              <strong>
+                {t("automations.engine.act")}
+              </strong>
               <p>
-                La acción configurada se ejecuta
-                mediante el webhook seguro.
+                {t("automations.engine.actDescription")}
               </p>
             </div>
 
             <div>
               <span>4</span>
-              <strong>Auditar</strong>
+              <strong>
+                {t("automations.engine.audit")}
+              </strong>
               <p>
-                Resultado, duración y errores
-                quedan persistidos.
+                {t("automations.engine.auditDescription")}
               </p>
             </div>
           </div>
 
 
           <div className="automation-engine-latest">
-            <span>Última ejecución</span>
+            <span>
+              {t("automations.engine.latestExecution")}
+            </span>
 
             <strong>
               {latestExecution
                 ? executionStatusLabel(
-                    latestExecution.status
+                    latestExecution.status,
+                    t,
                   )
-                : "Sin ejecuciones"}
+                : t("automations.engine.noExecutions")}
             </strong>
 
             <small>
               {latestExecution
                 ? formatDate(
-                    latestExecution.started_at
+                    latestExecution.started_at,
+                    language,
                   )
-                : "Esperando actividad"}
+                : t(
+                    "automations.engine.waitingActivity"
+                  )}
             </small>
           </div>
         </article>
@@ -864,27 +930,28 @@ export default function AutomationsPage() {
       <section className="panel automation-rules-panel">
         <div className="panel__header">
           <div>
-            <h2>Reglas</h2>
+            <h2>{t("automations.rules.title")}</h2>
 
             <span>
-              Configuración activa del motor
-              de automatización.
+              {t("automations.rules.description")}
             </span>
           </div>
 
           <span className="automation-count">
-            {rules.length} reglas
+            {t("automations.rules.count", {
+              count: rules.length,
+            })}
           </span>
         </div>
 
 
         {loading && rules.length === 0 ? (
           <div className="empty-state">
-            Cargando reglas...
+            {t("automations.rules.loading")}
           </div>
         ) : rules.length === 0 ? (
           <div className="empty-state">
-            No hay automatizaciones configuradas.
+            {t("automations.rules.empty")}
           </div>
         ) : (
           <div className="automation-rules-list">
@@ -908,8 +975,8 @@ export default function AutomationsPage() {
 
                   <span>
                     {rule.enabled
-                      ? "Activa"
-                      : "Inactiva"}
+                      ? t("automations.rules.active")
+                      : t("automations.rules.inactive")}
                   </span>
                 </div>
 
@@ -921,32 +988,40 @@ export default function AutomationsPage() {
 
                   <p>
                     {rule.description ||
-                      "Sin descripción"}
+                      t("automations.rules.noDescription")}
                   </p>
                 </div>
 
 
                 <div className="automation-rule__meta">
                   <div>
-                    <span>Trigger</span>
+                    <span>
+                      {t("automations.rules.trigger")}
+                    </span>
                     <strong>
                       {triggerLabel(
-                        rule.trigger_type
+                        rule.trigger_type,
+                        t,
                       )}
                     </strong>
                   </div>
 
                   <div>
-                    <span>Acción</span>
+                    <span>
+                      {t("automations.rules.action")}
+                    </span>
                     <strong>
                       {actionLabel(
-                        rule.action_type
+                        rule.action_type,
+                        t,
                       )}
                     </strong>
                   </div>
 
                   <div>
-                    <span>Ámbito</span>
+                    <span>
+                      {t("automations.rules.scope")}
+                    </span>
                     <strong>
                       {serviceName(
                         rule.service_id
@@ -955,16 +1030,21 @@ export default function AutomationsPage() {
                   </div>
 
                   <div>
-                    <span>Cooldown</span>
+                    <span>
+                      {t("automations.rules.cooldown")}
+                    </span>
                     <strong>
                       {cooldownLabel(
-                        rule.cooldown_seconds
+                        rule.cooldown_seconds,
+                        t,
                       )}
                     </strong>
                   </div>
 
                   <div>
-                    <span>Creada por</span>
+                    <span>
+                      {t("automations.rules.createdBy")}
+                    </span>
                     <strong>
                       {rule.created_by_username}
                     </strong>
@@ -995,7 +1075,7 @@ export default function AutomationsPage() {
                       }
                     >
                       <option value="">
-                        Servicio de prueba
+                        {t("automations.rules.testService")}
                       </option>
 
                       {services.map(
@@ -1022,8 +1102,8 @@ export default function AutomationsPage() {
                     }
                   >
                     {testingRuleId === rule.id
-                      ? "Probando..."
-                      : "Probar"}
+                      ? t("automations.rules.testing")
+                      : t("automations.rules.test")}
                   </button>
 
                   <button
@@ -1037,10 +1117,10 @@ export default function AutomationsPage() {
                     }
                   >
                     {busyRuleId === rule.id
-                      ? "Procesando..."
+                      ? t("automations.rules.processing")
                       : rule.enabled
-                        ? "Desactivar"
-                        : "Activar"}
+                        ? t("automations.rules.deactivate")
+                        : t("automations.rules.activate")}
                   </button>
 
                   <button
@@ -1053,7 +1133,7 @@ export default function AutomationsPage() {
                       handleDelete(rule)
                     }
                   >
-                    Eliminar
+                    {t("automations.rules.delete")}
                   </button>
                 </div>
               </article>
@@ -1067,18 +1147,17 @@ export default function AutomationsPage() {
         <div className="panel__header">
           <div>
             <h2>
-              Historial de ejecuciones
+              {t("automations.history.title")}
             </h2>
 
             <span>
-              Resultado auditable de cada
-              automatización disparada.
+              {t("automations.history.description")}
             </span>
           </div>
 
           <div className="automation-history-filter">
             <label htmlFor="automation-status">
-              Estado
+              {t("automations.history.filterStatus")}
             </label>
 
             <select
@@ -1091,19 +1170,19 @@ export default function AutomationsPage() {
               }
             >
               <option value="">
-                Todos
+                {t("automations.history.filterAll")}
               </option>
 
               <option value="success">
-                Completadas
+                {t("automations.executionStatus.success")}
               </option>
 
               <option value="failed">
-                Fallidas
+                {t("automations.executionStatus.failed")}
               </option>
 
               <option value="running">
-                En ejecución
+                {t("automations.executionStatus.running")}
               </option>
 
               <option value="skipped">
@@ -1117,22 +1196,22 @@ export default function AutomationsPage() {
         {loading &&
         executions.length === 0 ? (
           <div className="empty-state">
-            Cargando historial...
+            {t("automations.history.loading")}
           </div>
         ) : visibleExecutions.length === 0 ? (
           <div className="empty-state">
-            No hay ejecuciones para mostrar.
+            {t("automations.history.empty")}
           </div>
         ) : (
           <div className="automation-history-table">
             <div className="automation-history-row automation-history-row--header">
-              <span>Regla</span>
-              <span>Estado</span>
-              <span>Fuente</span>
-              <span>Trigger</span>
-              <span>Servicio</span>
-              <span>Duración</span>
-              <span>Fecha</span>
+              <span>{t("automations.history.columns.rule")}</span>
+              <span>{t("automations.history.columns.status")}</span>
+              <span>{t("automations.history.columns.source")}</span>
+              <span>{t("automations.history.columns.trigger")}</span>
+              <span>{t("automations.history.columns.service")}</span>
+              <span>{t("automations.history.columns.duration")}</span>
+              <span>{t("automations.history.columns.started")}</span>
             </div>
 
             {visibleExecutions.map(
@@ -1165,7 +1244,8 @@ export default function AutomationsPage() {
                     }
                   >
                     {executionStatusLabel(
-                      execution.status
+                      execution.status,
+                      t,
                     )}
                   </span>
 
@@ -1180,13 +1260,15 @@ export default function AutomationsPage() {
                   >
                     {executionSourceLabel(
                       execution.execution_source ||
-                      "trigger"
+                      "trigger",
+                      t,
                     )}
                   </span>
 
                   <span>
                     {triggerLabel(
-                      execution.trigger_type
+                      execution.trigger_type,
+                      t,
                     )}
                   </span>
 
@@ -1208,7 +1290,8 @@ export default function AutomationsPage() {
                     }
                   >
                     {formatDate(
-                      execution.started_at
+                      execution.started_at,
+                      language,
                     )}
                   </time>
                 </button>
@@ -1236,11 +1319,13 @@ export default function AutomationsPage() {
             <header className="automation-execution-drawer__header">
               <div>
                 <p className="eyebrow">
-                  EJECUCIÓN #{selectedExecution.id}
+                  {t("automations.detail.eyebrow")}
                 </p>
 
                 <h2 id="automation-execution-title">
-                  Detalle de ejecución
+                  {t("automations.detail.title", {
+                    id: selectedExecution.id,
+                  })}
                 </h2>
 
                 <span>
@@ -1252,7 +1337,7 @@ export default function AutomationsPage() {
                 type="button"
                 className="automation-execution-close"
                 onClick={handleCloseExecution}
-                aria-label="Cerrar detalle"
+                aria-label={t("automations.detail.closeAria")}
               >
                 ×
               </button>
@@ -1261,7 +1346,7 @@ export default function AutomationsPage() {
 
             {executionDetailLoading && (
               <div className="automation-execution-loading">
-                Actualizando detalle...
+                {t("automations.detail.loading")}
               </div>
             )}
 
@@ -1269,7 +1354,7 @@ export default function AutomationsPage() {
             {executionDetailError && (
               <div className="alert alert--error">
                 <strong>
-                  No se pudo actualizar el detalle
+                  {t("automations.detail.errorHeading")}
                 </strong>
 
                 <span>
@@ -1281,7 +1366,7 @@ export default function AutomationsPage() {
 
             <section className="automation-execution-summary">
               <div>
-                <span>Estado</span>
+                <span>{t("automations.detail.status")}</span>
 
                 <strong
                   className={
@@ -1292,13 +1377,14 @@ export default function AutomationsPage() {
                   }
                 >
                   {executionStatusLabel(
-                    selectedExecution.status
+                    selectedExecution.status,
+                    t,
                   )}
                 </strong>
               </div>
 
               <div>
-                <span>Fuente</span>
+                <span>{t("automations.detail.source")}</span>
 
                 <strong
                   className={
@@ -1313,30 +1399,32 @@ export default function AutomationsPage() {
                   {executionSourceLabel(
                     selectedExecution
                       .execution_source ||
-                    "trigger"
+                    "trigger",
+                    t,
                   )}
                 </strong>
               </div>
 
               <div>
-                <span>Regla</span>
+                <span>{t("automations.detail.rule")}</span>
                 <strong>
                   {selectedExecution.rule_name}
                 </strong>
               </div>
 
               <div>
-                <span>Trigger</span>
+                <span>{t("automations.detail.trigger")}</span>
                 <strong>
                   {triggerLabel(
                     selectedExecution
-                      .trigger_type
+                      .trigger_type,
+                    t,
                   )}
                 </strong>
               </div>
 
               <div>
-                <span>Servicio</span>
+                <span>{t("automations.detail.service")}</span>
                 <strong>
                   {serviceName(
                     selectedExecution.service_id
@@ -1345,7 +1433,7 @@ export default function AutomationsPage() {
               </div>
 
               <div>
-                <span>Duración</span>
+                <span>{t("automations.detail.duration")}</span>
                 <strong>
                   {formatDuration(
                     selectedExecution.duration_ms
@@ -1354,19 +1442,21 @@ export default function AutomationsPage() {
               </div>
 
               <div>
-                <span>Inicio</span>
+                <span>{t("automations.detail.started")}</span>
                 <strong>
                   {formatDate(
-                    selectedExecution.started_at
+                    selectedExecution.started_at,
+                    language,
                   )}
                 </strong>
               </div>
 
               <div>
-                <span>Finalización</span>
+                <span>{t("automations.detail.finished")}</span>
                 <strong>
                   {formatDate(
-                    selectedExecution.finished_at
+                    selectedExecution.finished_at,
+                    language,
                   )}
                 </strong>
               </div>
@@ -1380,34 +1470,51 @@ export default function AutomationsPage() {
                 <section className="automation-execution-callout">
                   <div>
                     <p className="eyebrow">
-                      PROTECCIÓN ANTI-TORMENTA
+                      {t(
+                        "automations.detail.cooldownProtection.eyebrow"
+                      )}
                     </p>
 
                     <h3>
-                      Omitida por cooldown
+                      {t(
+                        "automations.detail.cooldownProtection.title"
+                      )}
                     </h3>
                   </div>
 
                   <dl>
                     <div>
-                      <dt>Motivo</dt>
-                      <dd>Cooldown activo</dd>
-                    </div>
-
-                    <div>
-                      <dt>Cooldown</dt>
+                      <dt>
+                        {t(
+                          "automations.detail.cooldownProtection.reason"
+                        )}
+                      </dt>
                       <dd>
-                        {cooldownLabel(
-                          selectedExecution
-                            .result
-                            ?.cooldown_seconds
+                        {t(
+                          "automations.detail.cooldownProtection.active"
                         )}
                       </dd>
                     </div>
 
                     <div>
                       <dt>
-                        Ejecución anterior
+                        {t("automations.detail.cooldown")}
+                      </dt>
+                      <dd>
+                        {cooldownLabel(
+                          selectedExecution
+                            .result
+                            ?.cooldown_seconds,
+                          t,
+                        )}
+                      </dd>
+                    </div>
+
+                    <div>
+                      <dt>
+                        {t(
+                          "automations.detail.cooldownProtection.previousExecution"
+                        )}
                       </dt>
                       <dd>
                         #
@@ -1427,24 +1534,30 @@ export default function AutomationsPage() {
                 <section className="automation-execution-callout">
                   <div>
                     <p className="eyebrow">
-                      PRUEBA MANUAL
+                      {t(
+                        "automations.detail.manualTest.eyebrow"
+                      )}
                     </p>
 
                     <h3>
-                      Ejecución iniciada por usuario
+                      {t(
+                        "automations.detail.manualTest.title"
+                      )}
                     </h3>
                   </div>
 
                   <p>
-                    Esta ejecución no fue provocada
-                    por un cambio real de estado del
-                    servicio.
+                    {t(
+                      "automations.detail.manualTest.description"
+                    )}
                   </p>
 
                   <dl>
                     <div>
                       <dt>
-                        Trigger configurado
+                        {t(
+                          "automations.detail.configuredTrigger"
+                        )}
                       </dt>
                       <dd>
                         {triggerLabel(
@@ -1452,7 +1565,8 @@ export default function AutomationsPage() {
                             .trigger_payload
                             ?.configured_trigger_type ||
                           selectedExecution
-                            .trigger_type
+                            .trigger_type,
+                          t,
                         )}
                       </dd>
                     </div>
@@ -1463,7 +1577,9 @@ export default function AutomationsPage() {
 
             {selectedExecution.error && (
               <section className="automation-execution-block">
-                <h3>Error</h3>
+                <h3>
+                  {t("automations.detail.executionError")}
+                </h3>
 
                 <pre className="automation-execution-error">
                   {selectedExecution.error}
@@ -1474,7 +1590,9 @@ export default function AutomationsPage() {
 
             {selectedExecution.result && (
               <section className="automation-execution-block">
-                <h3>Resultado</h3>
+                <h3>
+                  {t("automations.detail.result")}
+                </h3>
 
                 <pre>
                   {JSON.stringify(
@@ -1490,7 +1608,7 @@ export default function AutomationsPage() {
             {selectedExecution.trigger_payload && (
               <section className="automation-execution-block">
                 <h3>
-                  Payload del trigger
+                  {t("automations.detail.triggerPayload")}
                 </h3>
 
                 <pre>

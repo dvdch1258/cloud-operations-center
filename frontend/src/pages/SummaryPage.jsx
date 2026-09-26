@@ -1,3 +1,5 @@
+/* SUMMARY_I18N_FOUNDATION */
+/* SUMMARY_I18N_VISIBLE */
 import {
   useCallback,
   useEffect,
@@ -5,6 +7,7 @@ import {
   useState,
 } from "react";
 
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { api } from "../api/client";
@@ -27,27 +30,41 @@ const initialHealth = {
   environment: "—",
 };
 
-const SECURITY_EVENT_LABELS = {
-  login_success: "Inicio de sesión",
-  login_failed: "Login fallido",
-  login_blocked: "Login bloqueado",
-  account_locked: "Cuenta bloqueada",
-  account_unlocked: "Cuenta desbloqueada",
+const SECURITY_EVENT_KEYS = {
+  login_success:
+    "summary.security.events.loginSuccess",
+  login_failed:
+    "summary.security.events.loginFailed",
+  login_blocked:
+    "summary.security.events.loginBlocked",
+  account_locked:
+    "summary.security.events.accountLocked",
+  account_unlocked:
+    "summary.security.events.accountUnlocked",
 };
 
-const INCIDENT_STATUS_LABELS = {
-  open: "Abierto",
-  investigating: "Investigando",
-  resolved: "Resuelto",
-  closed: "Cerrado",
+const INCIDENT_STATUS_KEYS = {
+  open:
+    "summary.incidents.status.open",
+  investigating:
+    "summary.incidents.status.investigating",
+  resolved:
+    "summary.incidents.status.resolved",
+  closed:
+    "summary.incidents.status.closed",
 };
 
-const SEVERITY_LABELS = {
-  info: "Info",
-  low: "Baja",
-  medium: "Media",
-  high: "Alta",
-  critical: "Crítica",
+const SEVERITY_KEYS = {
+  info:
+    "summary.security.severity.info",
+  low:
+    "summary.security.severity.low",
+  medium:
+    "summary.security.severity.medium",
+  high:
+    "summary.security.severity.high",
+  critical:
+    "summary.security.severity.critical",
 };
 
 const ACTIVE_INCIDENT_STATUSES =
@@ -66,63 +83,155 @@ function statusIsHealthy(value) {
 }
 
 
-function statusLabel(value) {
-  const normalized = normalizedStatus(value);
+function statusLabel(
+  value,
+  t,
+) {
+  const normalized =
+    normalizedStatus(value);
 
   if (
-    ["ok", "up", "healthy", "available"].includes(normalized)
+    [
+      "ok",
+      "up",
+      "healthy",
+      "available",
+    ].includes(normalized)
   ) {
-    return "Operativo";
+    return t("status.operational");
   }
 
   if (normalized === "degraded") {
-    return "Degradado";
+    return t("status.degraded");
   }
 
   if (
-    ["down", "unhealthy", "unavailable", "error"].includes(
-      normalized,
-    )
+    [
+      "down",
+      "unhealthy",
+      "unavailable",
+      "error",
+    ].includes(normalized)
   ) {
-    return "No disponible";
+    return t("status.unavailable");
   }
 
-  return "Sin datos";
+  return t("status.noData");
 }
 
 
-function formatDateTime(value) {
+function localeForLanguage(language) {
+  return String(language || "")
+    .toLowerCase()
+    .startsWith("es")
+    ? "es-ES"
+    : "en-GB";
+}
+
+
+function formatDateTime(
+  value,
+  language,
+  t,
+) {
   if (!value) {
-    return "Sin fecha";
+    return t("common.noDate");
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Sin fecha";
+    return t("common.noDate");
   }
 
-  return date.toLocaleString("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return date.toLocaleString(
+    localeForLanguage(language),
+    {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
 }
 
 
-function formatUpdateTime(value) {
+function formatUpdateTime(
+  value,
+  language,
+  t,
+) {
   if (!value) {
-    return "Esperando datos";
+    return t(
+      "common.waitingForData",
+    );
   }
 
-  return value.toLocaleTimeString("es-ES", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  return value.toLocaleTimeString(
+    localeForLanguage(language),
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    },
+  );
 }
 
+
+function translatedLabel(
+  map,
+  value,
+  t,
+) {
+  const key = map[value];
+
+  return key
+    ? t(key)
+    : value;
+}
+
+
+function environmentLabel(
+  value,
+  t,
+) {
+  const normalized =
+    String(value || "")
+      .trim()
+      .toLowerCase();
+
+  if (
+    !normalized ||
+    normalized === "—" ||
+    normalized === "production" ||
+    normalized === "producción"
+  ) {
+    return t(
+      "environment.production",
+    );
+  }
+
+  if (
+    normalized === "development" ||
+    normalized === "desarrollo"
+  ) {
+    return t(
+      "environment.development",
+    );
+  }
+
+  if (
+    normalized === "staging" ||
+    normalized === "preproduction" ||
+    normalized === "preproducción"
+  ) {
+    return t(
+      "environment.staging",
+    );
+  }
+
+  return value;
+}
 
 function KpiCard({
   label,
@@ -154,7 +263,11 @@ function HealthItem({
   description,
   status,
 }) {
-  const healthy = statusIsHealthy(status);
+  const { t } =
+    useTranslation();
+
+  const healthy =
+    statusIsHealthy(status);
 
   return (
     <div className="summary-v2-health-item">
@@ -178,7 +291,7 @@ function HealthItem({
             : "summary-v2-health-item__status summary-v2-health-item__status--down"
         }
       >
-        {statusLabel(status)}
+        {statusLabel(status, t)}
       </span>
     </div>
   );
@@ -186,6 +299,15 @@ function HealthItem({
 
 
 export default function SummaryPage() {
+  const {
+    t,
+    i18n,
+  } = useTranslation();
+
+  const language =
+    i18n.resolvedLanguage ||
+    i18n.language;
+
   const [summary, setSummary] =
     useState(initialSummary);
 
@@ -237,12 +359,12 @@ export default function SummaryPage() {
       ]);
 
       const labels = [
-        "resumen",
-        "salud del sistema",
-        "incidentes",
-        "servicios",
-        "seguridad",
-        "actividad de seguridad",
+        "summary.modules.overview",
+        "summary.modules.systemHealth",
+        "summary.modules.incidents",
+        "summary.modules.services",
+        "summary.modules.security",
+        "summary.modules.securityActivity",
       ];
 
       const failures = [];
@@ -395,17 +517,27 @@ export default function SummaryPage() {
             CLOUD OPERATIONS CENTER
           </p>
 
-          <h1>Resumen</h1>
+          <h1>
+            {t("summary.title")}
+          </h1>
 
           <p className="subtitle">
-            Estado operativo de la plataforma,
-            infraestructura, incidentes y seguridad.
+            {t("summary.subtitle")}
           </p>
         </div>
 
         <div className="summary-v2__topbar-actions">
           <span className="summary-v2__updated">
-            Actualizado · {formatUpdateTime(lastUpdated)}
+            {t(
+              "summary.updated",
+              {
+                time: formatUpdateTime(
+                  lastUpdated,
+                  language,
+                  t,
+                ),
+              },
+            )}
           </span>
 
           <button
@@ -417,8 +549,8 @@ export default function SummaryPage() {
             }
           >
             {refreshing
-              ? "Actualizando..."
-              : "Actualizar"}
+              ? t("common.refreshing")
+              : t("common.refresh")}
           </button>
         </div>
       </header>
@@ -427,14 +559,39 @@ export default function SummaryPage() {
       {partialFailures.length > 0 && (
         <div className="alert alert--error">
           <strong>
-            Algunos módulos no han respondido
+            {t(
+              "summary.partialFailureTitle",
+            )}
           </strong>
 
           <span>
-            No se pudieron actualizar:{" "}
-            {partialFailures.join(", ")}.
-            El resto del dashboard continúa disponible.
+            {t(
+              "summary.partialFailureDescription",
+              {
+                modules:
+                  partialFailures
+                    .map((key) => t(key))
+                    .join(", "),
+              },
+            )}
           </span>
+
+          <div className="v2-error-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={refreshing}
+              onClick={() =>
+                loadDashboard({
+                  refresh: true,
+                })
+              }
+            >
+              {refreshing
+                ? t("common.refreshing")
+                : t("common.refresh")}
+            </button>
+          </div>
         </div>
       )}
 
@@ -457,28 +614,38 @@ export default function SummaryPage() {
 
           <div>
             <span className="summary-v2-hero__label">
-              ESTADO GENERAL
+              {t("summary.hero.label")}
             </span>
 
             <strong>
               {loading
-                ? "Comprobando plataforma..."
+                ? t("summary.hero.checking")
                 : operational
-                  ? "Todos los sistemas operativos"
-                  : "La plataforma requiere atención"}
+                  ? t("summary.hero.operational")
+                  : t("summary.hero.attention")}
             </strong>
 
             <p>
               {operational
-                ? "No se detectan servicios caídos ni incidentes activos."
-                : `${servicesDown} servicios caídos · ${activeIncidentCount} incidentes activos`}
+                ? t("summary.hero.healthyDescription")
+                : t(
+                    "summary.hero.attentionDescription",
+                    {
+                      servicesDown,
+                      activeIncidents:
+                        activeIncidentCount,
+                    },
+                  )}
             </p>
           </div>
         </div>
 
         <div className="summary-v2-hero__meta">
           <span>
-            {health.environment || "Producción"}
+            {environmentLabel(
+              health.environment,
+              t,
+            )}
           </span>
 
           <span>Kubernetes · cloud-ops</span>
@@ -492,26 +659,41 @@ export default function SummaryPage() {
 
       <section className="summary-v2-kpis">
         <KpiCard
-          label="Servicios"
+          label={t("nav.services")}
           value={loading ? "—" : servicesTotal}
-          description="Servicios registrados"
+          description={t(
+            "summary.kpi.servicesRegistered",
+          )}
           tone="neutral"
         />
 
         <KpiCard
-          label="Operativos"
+          label={t(
+            "summary.kpi.healthyServices",
+          )}
           value={loading ? "—" : servicesUp}
-          description={`${availability}% disponibles`}
+          description={t(
+            "summary.kpi.available",
+            {
+              value: availability,
+            },
+          )}
           tone="success"
         />
 
         <KpiCard
-          label="Servicios caídos"
+          label={t(
+            "summary.kpi.servicesDown",
+          )}
           value={loading ? "—" : servicesDown}
           description={
             servicesDown > 0
-              ? "Requieren intervención"
-              : "Sin interrupciones"
+              ? t(
+                  "summary.kpi.interventionRequired",
+                )
+              : t(
+                  "summary.kpi.noInterruptions",
+                )
           }
           tone={
             servicesDown > 0
@@ -521,13 +703,17 @@ export default function SummaryPage() {
         />
 
         <KpiCard
-          label="Incidentes activos"
+          label={t(
+            "summary.kpi.activeIncidents",
+          )}
           value={
             loading
               ? "—"
               : activeIncidentCount
           }
-          description="Abiertos o investigando"
+          description={t(
+            "summary.kpi.activeIncidentsDescription",
+          )}
           tone={
             activeIncidentCount > 0
               ? "warning"
@@ -536,18 +722,24 @@ export default function SummaryPage() {
         />
 
         <KpiCard
-          label="Eventos seguridad · 24h"
+          label={t(
+            "summary.kpi.securityEvents",
+          )}
           value={
             loading
               ? "—"
               : securitySummary?.events_last_24h ?? 0
           }
-          description="Actividad registrada"
+          description={t(
+            "summary.kpi.activityRecorded",
+          )}
           tone="neutral"
         />
 
         <KpiCard
-          label="Logins fallidos · 24h"
+          label={t(
+            "summary.kpi.failedLogins",
+          )}
           value={
             loading
               ? "—"
@@ -555,8 +747,12 @@ export default function SummaryPage() {
           }
           description={
             securityAttention
-              ? "Revisar actividad"
-              : "Sin actividad anómala"
+              ? t(
+                  "summary.kpi.reviewActivity",
+                )
+              : t(
+                  "summary.kpi.noAnomalousActivity",
+                )
           }
           tone={
             securityAttention
@@ -572,49 +768,72 @@ export default function SummaryPage() {
           <div className="summary-v2-panel__header">
             <div>
               <span className="summary-v2-panel__eyebrow">
-                INFRAESTRUCTURA
+                {t(
+                  "summary.infrastructure.eyebrow",
+                )}
               </span>
 
-              <h2>Salud de la plataforma</h2>
+              <h2>
+                {t(
+                  "summary.infrastructure.title",
+                )}
+              </h2>
             </div>
 
             <Link
               to="/sistema"
               className="summary-v2-panel__link"
             >
-              Ver sistema →
+              {t(
+                "summary.infrastructure.viewSystem",
+              )}
             </Link>
           </div>
 
           <div className="summary-v2-health">
             <HealthItem
               label="PostgreSQL"
-              description="Base de datos principal"
+              description={t(
+                "summary.infrastructure.database",
+              )}
               status={health.database}
             />
 
             <HealthItem
               label="Prometheus"
-              description="Métricas y monitorización"
+              description={t(
+                "summary.infrastructure.prometheus",
+              )}
               status={health.prometheus}
             />
 
             <HealthItem
               label="Tempo"
-              description="Trazas distribuidas"
+              description={t(
+                "summary.infrastructure.tempo",
+              )}
               status={health.tempo}
             />
           </div>
 
           <div className="summary-v2-availability">
             <div>
-              <span>Disponibilidad de servicios</span>
+              <span>
+                {t(
+                  "summary.infrastructure.availability",
+                )}
+              </span>
               <strong>{availability}%</strong>
             </div>
 
             <div
               className="summary-v2-availability__track"
-              aria-label={`Disponibilidad ${availability}%`}
+              aria-label={t(
+                "summary.infrastructure.availabilityAria",
+                {
+                  value: availability,
+                },
+              )}
             >
               <span
                 style={{
@@ -627,8 +846,13 @@ export default function SummaryPage() {
             </div>
 
             <small>
-              {servicesUp} de {servicesTotal} servicios
-              operativos
+              {t(
+                "summary.infrastructure.operationalServices",
+                {
+                  up: servicesUp,
+                  total: servicesTotal,
+                },
+              )}
             </small>
           </div>
         </section>
@@ -638,17 +862,25 @@ export default function SummaryPage() {
           <div className="summary-v2-panel__header">
             <div>
               <span className="summary-v2-panel__eyebrow">
-                INCIDENT MANAGEMENT
+                {t(
+                  "summary.incidents.eyebrow",
+                )}
               </span>
 
-              <h2>Incidentes recientes</h2>
+              <h2>
+                {t(
+                  "summary.incidents.title",
+                )}
+              </h2>
             </div>
 
             <Link
               to="/incidentes"
               className="summary-v2-panel__link"
             >
-              Ver todos →
+              {t(
+                "summary.incidents.viewAll",
+              )}
             </Link>
           </div>
 
@@ -661,9 +893,15 @@ export default function SummaryPage() {
                   </span>
 
                   <div>
-                    <strong>Sin incidentes</strong>
+                    <strong>
+                      {t(
+                        "summary.incidents.noneTitle",
+                      )}
+                    </strong>
                     <span>
-                      No hay incidentes registrados.
+                      {t(
+                        "summary.incidents.noneDescription",
+                      )}
                     </span>
                   </div>
                 </div>
@@ -690,7 +928,9 @@ export default function SummaryPage() {
                     {serviceMap.get(
                       incident.service_id,
                     ) ||
-                      "Servicio sin asignar"}
+                      t(
+                        "summary.incidents.unassignedService",
+                      )}
                   </span>
                 </div>
 
@@ -700,14 +940,18 @@ export default function SummaryPage() {
                       incident.status || "open"
                     }`}
                   >
-                    {INCIDENT_STATUS_LABELS[
-                      incident.status
-                    ] || incident.status}
+                    {translatedLabel(
+                      INCIDENT_STATUS_KEYS,
+                      incident.status,
+                      t,
+                    )}
                   </span>
 
                   <small>
                     {formatDateTime(
                       incident.created_at,
+                      language,
+                      t,
                     )}
                   </small>
                 </div>
@@ -723,17 +967,25 @@ export default function SummaryPage() {
           <div className="summary-v2-panel__header">
             <div>
               <span className="summary-v2-panel__eyebrow">
-                SECURITY OPERATIONS
+                {t(
+                  "summary.security.eyebrow",
+                )}
               </span>
 
-              <h2>Actividad reciente</h2>
+              <h2>
+                {t(
+                  "summary.security.title",
+                )}
+              </h2>
             </div>
 
             <Link
               to="/seguridad"
               className="summary-v2-panel__link"
             >
-              Ver seguridad →
+              {t(
+                "summary.security.viewSecurity",
+              )}
             </Link>
           </div>
 
@@ -743,12 +995,15 @@ export default function SummaryPage() {
                 <div className="summary-v2-empty">
                   <div>
                     <strong>
-                      Sin eventos recientes
+                      {t(
+                        "summary.security.noneTitle",
+                      )}
                     </strong>
 
                     <span>
-                      No hay actividad de seguridad
-                      reciente.
+                      {t(
+                        "summary.security.noneDescription",
+                      )}
                     </span>
                   </div>
                 </div>
@@ -783,25 +1038,35 @@ export default function SummaryPage() {
 
                     <div>
                       <strong>
-                        {SECURITY_EVENT_LABELS[type] ||
-                          type}
+                        {translatedLabel(
+                          SECURITY_EVENT_KEYS,
+                          type,
+                          t,
+                        )}
                       </strong>
 
                       <span>
                         {event.username ||
                           event.ip_address ||
-                          "Plataforma"}
+                          t("summary.security.platform")}
                       </span>
                     </div>
 
                     <div className="summary-v2-event__meta">
                       <span>
-                        {SEVERITY_LABELS[severity] ||
-                          severity}
+                        {translatedLabel(
+                          SEVERITY_KEYS,
+                          severity,
+                          t,
+                        )}
                       </span>
 
                       <small>
-                        {formatDateTime(timestamp)}
+                        {formatDateTime(
+                          timestamp,
+                          language,
+                          t,
+                        )}
                       </small>
                     </div>
                   </div>
@@ -815,10 +1080,16 @@ export default function SummaryPage() {
           <div className="summary-v2-panel__header">
             <div>
               <span className="summary-v2-panel__eyebrow">
-                NAVEGACIÓN
+                {t(
+                  "summary.quick.eyebrow",
+                )}
               </span>
 
-              <h2>Acceso rápido</h2>
+              <h2>
+                {t(
+                  "summary.quick.title",
+                )}
+              </h2>
             </div>
           </div>
 
@@ -827,40 +1098,82 @@ export default function SummaryPage() {
               to="/servicios"
               className="summary-v2-quick-link"
             >
-              <span>Servicios</span>
+              <span>{t("nav.services")}</span>
               <strong>
                 {servicesUp}/{servicesTotal}
               </strong>
-              <small>Estado y disponibilidad</small>
+              <small>
+                {t(
+                  "summary.quick.servicesHint",
+                )}
+              </small>
             </Link>
 
             <Link
               to="/incidentes"
               className="summary-v2-quick-link"
             >
-              <span>Incidentes</span>
+              <span>{t("nav.incidents")}</span>
               <strong>{activeIncidentCount}</strong>
-              <small>Gestión operativa</small>
+              <small>
+                {t(
+                  "summary.quick.incidentsHint",
+                )}
+              </small>
             </Link>
 
             <Link
               to="/observabilidad"
               className="summary-v2-quick-link"
             >
-              <span>Observabilidad</span>
-              <strong>Metrics</strong>
-              <small>Logs, métricas y trazas</small>
+              <span>{t("nav.observability")}</span>
+              <strong>
+                {t(
+                  "summary.quick.metrics",
+                )}
+              </strong>
+              <small>
+                {t(
+                  "summary.quick.observabilityHint",
+                )}
+              </small>
             </Link>
 
             <Link
               to="/seguridad"
               className="summary-v2-quick-link"
             >
-              <span>Seguridad</span>
+              <span>{t("nav.security")}</span>
               <strong>
                 {securitySummary?.locked_users ?? 0}
               </strong>
-              <small>Bloqueos activos</small>
+              <small>
+                {t(
+                  "summary.quick.securityHint",
+                )}
+              </small>
+            </Link>
+
+            {/* V2_NAVIGATION_INTEGRATION */}
+            <Link
+              to="/operaciones"
+              className="summary-v2-quick-link summary-v2-quick-link--operations"
+            >
+              <span>
+                {t("nav.operations")}
+              </span>
+
+              <strong>
+                {t(
+                  "summary.quick.operations",
+                )}
+              </strong>
+
+              <small>
+                {t(
+                  "summary.quick.operationsHint",
+                )}
+              </small>
             </Link>
           </div>
         </section>
