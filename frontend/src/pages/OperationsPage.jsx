@@ -362,9 +362,6 @@ export default function OperationsPage() {
       latestExecution,
     );
 
-  const latestResult =
-    latestOperation.result;
-
   const successfulExecutions =
     useMemo(
       () =>
@@ -502,7 +499,6 @@ export default function OperationsPage() {
       historyStatus,
       historySearch,
       historyIssuesOnly,
-      language,
       t,
     ]);
 

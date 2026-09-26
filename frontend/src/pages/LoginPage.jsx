@@ -13,7 +13,7 @@ import {
   useTranslation,
 } from "react-i18next";
 
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/useAuth";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 
