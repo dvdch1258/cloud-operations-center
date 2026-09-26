@@ -19,6 +19,11 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
+# Ensure the runtime contains the patched OpenSSL 3.3 packages.
+RUN apk add --no-cache --upgrade \
+    'libcrypto3>=3.3.7-r0' \
+    'libssl3>=3.3.7-r0'
+
 ARG APP_VERSION=1.0.1
 ARG BUILD_SHA=development
 
