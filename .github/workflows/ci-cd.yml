@@ -324,7 +324,7 @@ jobs:
   publish-vulnerability-reports:
     name: Publish vulnerability reports
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     needs:
       - security-scan
@@ -336,6 +336,7 @@ jobs:
       contents: read
 
     env:
+      DEPLOYMENT_HEALTH_URL: https://api.cloudopscenter.es/health/detailed
       VULNERABILITY_INGEST_URL: https://api.cloudopscenter.es/internal/security/vulnerabilities/import
       VULNERABILITY_INGEST_API_KEY: ${{ secrets.VULNERABILITY_INGEST_API_KEY }}
 
@@ -359,6 +360,56 @@ jobs:
           test -s trivy-reports/trivy-backend.json
           test -s trivy-reports/trivy-frontend.json
 
+      - name: Wait for deployed backend build
+        shell: bash
+        env:
+          EXPECTED_BUILD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          expected_short="${EXPECTED_BUILD_SHA:0:7}"
+          consecutive_matches=0
+          required_matches=3
+
+          for attempt in $(seq 1 60); do
+            response="$(
+              curl -fsS \
+                --connect-timeout 10 \
+                --max-time 20 \
+                "$DEPLOYMENT_HEALTH_URL" \
+                || true
+            )"
+
+            deployed_sha="$(
+              jq -r '.build_sha // empty' \
+                <<<"$response" \
+                2>/dev/null \
+                || true
+            )"
+
+            deployed_short="${deployed_sha:0:7}"
+
+            if [ "$deployed_short" = "$expected_short" ]; then
+              consecutive_matches=$((consecutive_matches + 1))
+
+              echo                 "Deployment match ${consecutive_matches}/${required_matches}: sha-${deployed_short}"
+
+              if [ "$consecutive_matches" -ge "$required_matches" ]; then
+                echo                   "Backend deployment stabilized on sha-${expected_short}."
+                exit 0
+              fi
+            else
+              consecutive_matches=0
+
+              echo                 "Waiting for sha-${expected_short}; current build: ${deployed_sha:-unknown} (attempt ${attempt}/60)"
+            fi
+
+            sleep 10
+          done
+
+          echo             "::error::Backend did not stabilize on sha-${expected_short} within 10 minutes"
+          exit 1
+
       - name: Publish vulnerability reports
         shell: bash
         run: |
@@ -372,9 +423,9 @@ jobs:
 
             response_file="$(mktemp)"
 
-            for attempt in $(seq 1 30); do
+            for attempt in $(seq 1 5); do
               echo
-              echo "Publishing ${component} report (attempt ${attempt}/30)..."
+              echo "Publishing ${component} report (attempt ${attempt}/5)..."
 
               status="$(
                 curl -sS \
@@ -422,13 +473,13 @@ jobs:
                   ;;
               esac
 
-              if [ "$attempt" -lt 30 ]; then
-                echo "Retrying in 10 seconds..."
-                sleep 10
+              if [ "$attempt" -lt 5 ]; then
+                echo "Retrying in 5 seconds..."
+                sleep 5
               fi
             done
 
-            echo "::error::Unable to publish ${component} report after 30 attempts"
+            echo "::error::Unable to publish ${component} report after 5 attempts"
             rm -f "$response_file"
             return 1
           }
