@@ -16171,3 +16171,13 @@ tbody tr:hover {
     width: 100%;
   }
 }
+
+
+.route-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  gap: 14px;
+  color: #8292aa;
+}
