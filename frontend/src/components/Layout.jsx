@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   NavLink,
@@ -559,7 +559,25 @@ export default function Layout() {
       </aside>
 
       <main className="content">
-        <Outlet />
+        <Suspense
+          fallback={
+            <div
+              className="route-loading"
+              role="status"
+              aria-live="polite"
+            >
+              <div
+                className="brand__logo"
+                aria-hidden="true"
+              >
+                CO
+              </div>
+              <span>{t("common.loading")}</span>
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
 
       <nav

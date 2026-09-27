@@ -1,4 +1,11 @@
 import {
+  lazy,
+  Suspense,
+} from "react";
+
+import { useTranslation } from "react-i18next";
+
+import {
   Navigate,
   Route,
   Routes,
@@ -6,23 +13,94 @@ import {
 
 import ProtectedRoute from "./auth/ProtectedRoute";
 import Layout from "./components/Layout";
-import IncidentsPage from "./pages/IncidentsPage";
-import IncidentDetailPage from "./pages/IncidentDetailPage";
-import LoginPage from "./pages/LoginPage";
-import LandingPage from "./pages/LandingPage";
-import ServiceDetailPage from "./pages/ServiceDetailPage";
-import ServicesPage from "./pages/ServicesPage";
-import SecurityPage from "./pages/SecurityPage";
-import VulnerabilitiesPage from "./pages/VulnerabilitiesPage";
-import AlertsPage from "./pages/AlertsPage";
-import CompliancePage from "./pages/CompliancePage";
-import PoliciesPage from "./pages/PoliciesPage";
-import ObservabilityPage from "./pages/ObservabilityPage";
-import OperationsPage from "./pages/OperationsPage";
-import AutomationsPage from "./pages/AutomationsPage";
-import SummaryPage from "./pages/SummaryPage";
-import SystemPage from "./pages/SystemPage";
 import "./App.css";
+
+
+const IncidentsPage = lazy(
+  () => import("./pages/IncidentsPage"),
+);
+
+const IncidentDetailPage = lazy(
+  () => import("./pages/IncidentDetailPage"),
+);
+
+const LoginPage = lazy(
+  () => import("./pages/LoginPage"),
+);
+
+const LandingPage = lazy(
+  () => import("./pages/LandingPage"),
+);
+
+const ServiceDetailPage = lazy(
+  () => import("./pages/ServiceDetailPage"),
+);
+
+const ServicesPage = lazy(
+  () => import("./pages/ServicesPage"),
+);
+
+const SecurityPage = lazy(
+  () => import("./pages/SecurityPage"),
+);
+
+const VulnerabilitiesPage = lazy(
+  () => import("./pages/VulnerabilitiesPage"),
+);
+
+const AlertsPage = lazy(
+  () => import("./pages/AlertsPage"),
+);
+
+const CompliancePage = lazy(
+  () => import("./pages/CompliancePage"),
+);
+
+const PoliciesPage = lazy(
+  () => import("./pages/PoliciesPage"),
+);
+
+const ObservabilityPage = lazy(
+  () => import("./pages/ObservabilityPage"),
+);
+
+const OperationsPage = lazy(
+  () => import("./pages/OperationsPage"),
+);
+
+const AutomationsPage = lazy(
+  () => import("./pages/AutomationsPage"),
+);
+
+const SummaryPage = lazy(
+  () => import("./pages/SummaryPage"),
+);
+
+const SystemPage = lazy(
+  () => import("./pages/SystemPage"),
+);
+
+
+function FullPageFallback() {
+  const { t } = useTranslation();
+
+  return (
+    <div
+      className="auth-loading"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        className="brand__logo"
+        aria-hidden="true"
+      >
+        CO
+      </div>
+
+      <span>{t("common.loading")}</span>
+    </div>
+  );
+}
 
 
 export default function App() {
@@ -33,19 +111,34 @@ export default function App() {
     hostname === "cloudopscenter.es" ||
     hostname === "www.cloudopscenter.es";
 
+
   if (marketingHost) {
-    return <LandingPage />;
+    return (
+      <Suspense fallback={<FullPageFallback />}>
+        <LandingPage />
+      </Suspense>
+    );
   }
+
 
   return (
     <Routes>
       <Route
         path="/landing"
-        element={<LandingPage />}
+        element={
+          <Suspense fallback={<FullPageFallback />}>
+            <LandingPage />
+          </Suspense>
+        }
       />
+
       <Route
         path="/login"
-        element={<LoginPage />}
+        element={
+          <Suspense fallback={<FullPageFallback />}>
+            <LoginPage />
+          </Suspense>
+        }
       />
 
       <Route element={<ProtectedRoute />}>
@@ -69,7 +162,11 @@ export default function App() {
             path="incidentes"
             element={<IncidentsPage />}
           />
-          <Route path="incidentes/:incidentId" element={<IncidentDetailPage />} />
+
+          <Route
+            path="incidentes/:incidentId"
+            element={<IncidentDetailPage />}
+          />
 
           <Route
             path="seguridad"

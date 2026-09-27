@@ -26,6 +26,7 @@ const resources = {
       },
 
       common: {
+        loading: "Loading...",
         user: "User",
         refresh: "Refresh",
         refreshing: "Refreshing...",
@@ -450,6 +451,7 @@ const resources = {
       },
 
       common: {
+        loading: "Cargando...",
         user: "Usuario",
         refresh: "Actualizar",
         refreshing: "Actualizando...",
